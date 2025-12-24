@@ -102,10 +102,17 @@ export function TermsModal({ isOpen, onAccept, onDecline }: TermsModalProps) {
             <div>
               <h3 className="text-lg font-semibold text-slate-900 mb-4">4. Privacidade e Dados</h3>
               <p className="mb-3">
-                Os dados inseridos são armazenados em servidores Firebase. Embora implementemos medidas básicas de segurança, não oferecemos garantias absolutas de proteção de dados.
+                Os dados inseridos são armazenados em servidores Firebase. Embora implementemos medidas básicas de segurança, não oferecemos garantias absolutas de proteção de dados contra ataques cibernéticos.
               </p>
+              
+              <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg mb-3">
+                 <p className="text-sm text-blue-800">
+                    <strong>Recomendação de Segurança:</strong> Por se tratar de um ambiente de estudo, recomendamos fortemente que você <strong>NÃO</strong> insira dados sensíveis reais (como senhas bancárias reais, números de documentos oficiais ou informações financeiras críticas). Utilize valores fictícios para testar a plataforma.
+                 </p>
+              </div>
+
               <p>
-                O usuário concorda que seus dados podem ser utilizados para fins de demonstração e estudo do projeto.
+                Ao utilizar o sistema, você concorda que os dados inseridos fazem parte de um banco de dados de teste e podem ser excluídos a qualquer momento sem aviso prévio.
               </p>
             </div>
 
