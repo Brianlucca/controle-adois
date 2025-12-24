@@ -19,7 +19,6 @@ export default function LandingPage() {
         }}
       ></div>
 
-
       <header className="fixed top-0 w-full border-b border-white/10 bg-slate-900/80 backdrop-blur-md z-50 transition-all">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 font-bold text-xl tracking-tight text-white">
@@ -52,20 +51,20 @@ export default function LandingPage() {
 
           <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold uppercase tracking-widest mb-6">
-              <ShieldCheck size={14} /> Private Beta
+              <ShieldCheck size={14} /> Lorem Ipsum
             </div>
 
             <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-8 leading-tight">
-              Gestão financeira <br className="hidden md:block" />
+              Lorem ipsum dolor <br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">
-                de alta performance.
+                sit amet consectetur.
               </span>
             </h1>
 
             <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed font-light">
-              Centralize o patrimônio familiar e empresarial em uma única
-              plataforma segura. Clareza total para casais e sócios que
-              constroem o futuro juntos.
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
+              eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
+              enim ad minim veniam, quis nostrud exercitation.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -96,18 +95,18 @@ export default function LandingPage() {
             <div className="grid md:grid-cols-3 gap-8">
               <Feature
                 icon={<Lock className="w-6 h-6 text-emerald-400" />}
-                title="Segurança Bancária"
-                desc="Criptografia de ponta a ponta e proteção de dados rigorosa. Suas informações são apenas suas."
+                title="Lorem Ipsum"
+                desc="Neque porro quisquam est qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit."
               />
               <Feature
                 icon={<Wallet className="w-6 h-6 text-indigo-400" />}
-                title="Visão Unificada"
-                desc="Consolide contas bancárias, investimentos e despesas em um painel executivo claro e objetivo."
+                title="Dolor Sit Amet"
+                desc="Curabitur pretium tincidunt lacus. Nulla gravida orci a odio. Nullam varius, turpis et commodo pharetra."
               />
               <Feature
                 icon={<CheckCircle2 className="w-6 h-6 text-cyan-400" />}
-                title="Sincronia Total"
-                desc="Atualizações em tempo real. Tome decisões conjuntas com base em dados precisos, sem achismos."
+                title="Consectetur Elit"
+                desc="Fusce egestas elit eget lorem. Suspendisse nisl elit, rhoncus eget, elementum ac, condimentum eget, diam."
               />
             </div>
           </div>
@@ -119,7 +118,7 @@ export default function LandingPage() {
           <Building2 size={20} /> Controle A Dois
         </div>
         <p className="text-slate-500 text-sm">
-          © {new Date().getFullYear()} | Todos os direitos reservados.
+          © {new Date().getFullYear()} | Lorem ipsum dolor sit amet.
         </p>
       </footer>
     </div>
