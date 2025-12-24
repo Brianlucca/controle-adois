@@ -1,65 +1,141 @@
-import Image from "next/image";
+import Link from "next/link";
+import {
+  ArrowRight,
+  CheckCircle2,
+  ShieldCheck,
+  Wallet,
+  Building2,
+  Lock,
+} from "lucide-react";
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen bg-slate-900 text-slate-50 flex flex-col selection:bg-indigo-500/30">
+      <div
+        className="fixed inset-0 opacity-[0.02] pointer-events-none z-0"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+        }}
+      ></div>
+
+
+      <header className="fixed top-0 w-full border-b border-white/10 bg-slate-900/80 backdrop-blur-md z-50 transition-all">
+        <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3 font-bold text-xl tracking-tight text-white">
+            <div className="bg-white/10 p-2 rounded-lg">
+              <Building2 size={20} className="text-white" />
+            </div>
+            Controle A Dois
+          </div>
+
+          <div className="flex items-center gap-6">
+            <Link
+              href="/auth/login"
+              className="text-sm font-medium text-slate-300 hover:text-white transition-colors"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              Entrar
+            </Link>
+            <Link
+              href="/auth/register"
+              className="hidden sm:inline-flex text-sm font-bold bg-white text-slate-900 px-5 py-2.5 rounded-lg hover:bg-slate-200 transition-colors"
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              Abrir Conta
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+      </header>
+
+      <main className="flex-1 relative z-10 pt-32">
+        <section className="py-20 px-6 text-center relative overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-600/20 blur-[120px] rounded-full -z-10"></div>
+
+          <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold uppercase tracking-widest mb-6">
+              <ShieldCheck size={14} /> Private Beta
+            </div>
+
+            <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-8 leading-tight">
+              Gestão financeira <br className="hidden md:block" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">
+                de alta performance.
+              </span>
+            </h1>
+
+            <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed font-light">
+              Centralize o patrimônio familiar e empresarial em uma única
+              plataforma segura. Clareza total para casais e sócios que
+              constroem o futuro juntos.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                href="/auth/register"
+                className="group relative inline-flex items-center justify-center px-8 py-4 text-base font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-900/20 hover:-translate-y-1 overflow-hidden"
+              >
+                <span className="relative z-10 flex items-center gap-2">
+                  Começar Agora{" "}
+                  <ArrowRight
+                    size={18}
+                    className="group-hover:translate-x-1 transition-transform"
+                  />
+                </span>
+              </Link>
+              <Link
+                href="/auth/login"
+                className="px-8 py-4 text-base font-medium text-slate-400 hover:text-white transition-colors"
+              >
+                Já tenho conta
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-24 border-t border-white/5 bg-slate-900/50 backdrop-blur-sm">
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="grid md:grid-cols-3 gap-8">
+              <Feature
+                icon={<Lock className="w-6 h-6 text-emerald-400" />}
+                title="Segurança Bancária"
+                desc="Criptografia de ponta a ponta e proteção de dados rigorosa. Suas informações são apenas suas."
+              />
+              <Feature
+                icon={<Wallet className="w-6 h-6 text-indigo-400" />}
+                title="Visão Unificada"
+                desc="Consolide contas bancárias, investimentos e despesas em um painel executivo claro e objetivo."
+              />
+              <Feature
+                icon={<CheckCircle2 className="w-6 h-6 text-cyan-400" />}
+                title="Sincronia Total"
+                desc="Atualizações em tempo real. Tome decisões conjuntas com base em dados precisos, sem achismos."
+              />
+            </div>
+          </div>
+        </section>
       </main>
+
+      <footer className="py-10 text-center border-t border-white/10 bg-slate-900 relative z-10">
+        <div className="flex items-center justify-center gap-2 mb-4 text-white font-bold opacity-50">
+          <Building2 size={20} /> Controle A Dois
+        </div>
+        <p className="text-slate-500 text-sm">
+          © {new Date().getFullYear()} | Todos os direitos reservados.
+        </p>
+      </footer>
+    </div>
+  );
+}
+
+function Feature({ icon, title, desc }: any) {
+  return (
+    <div className="bg-white/5 p-8 rounded-2xl border border-white/5 hover:border-indigo-500/30 transition-all hover:bg-white/[0.07] group">
+      <div className="mb-6 bg-white/5 w-14 h-14 rounded-xl flex items-center justify-center border border-white/5 group-hover:scale-110 transition-transform duration-300">
+        {icon}
+      </div>
+      <h3 className="text-lg font-bold text-white mb-3 group-hover:text-indigo-300 transition-colors">
+        {title}
+      </h3>
+      <p className="text-slate-400 leading-relaxed text-sm">{desc}</p>
     </div>
   );
 }
