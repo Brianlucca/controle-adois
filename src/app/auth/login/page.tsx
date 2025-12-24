@@ -28,15 +28,9 @@ export default function LoginPage() {
 
   const handleAcceptTerms = async (userAgent: string) => {
     try {
-      const result = await recordTermsAcceptance('anonymous', userAgent);
-
-      if (result.success) {
-        localStorage.setItem("termsAccepted", "true");
-        setShowTermsModal(false);
-      } else {
-        localStorage.setItem("termsAccepted", "true");
-        setShowTermsModal(false);
-      }
+      await recordTermsAcceptance('anonymous', userAgent).catch(() => {});
+      localStorage.setItem("termsAccepted", "true");
+      setShowTermsModal(false);
     } catch (error) {
       localStorage.setItem("termsAccepted", "true");
       setShowTermsModal(false);
@@ -70,24 +64,30 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-
-      const idToken = await userCredential.user.getIdToken();
+      const idToken = await userCredential.user.getIdToken(true);
+      
       const result = await createSession(idToken);
 
       if (result.success) {
-        await recordTermsAcceptance(userCredential.user.uid, navigator.userAgent);
+        try {
+            await recordTermsAcceptance(userCredential.user.uid, navigator.userAgent);
+        } catch (termErr) {
+        }
 
-        router.push("/dashboard");
         router.refresh();
+        router.push("/dashboard"); 
       } else {
         setError("Erro ao criar sessão segura.");
+        setLoading(false);
       }
     } catch (err: any) {
+
       if (err.code === "auth/invalid-credential") setError("Credenciais inválidas.");
       else if (err.code === "auth/user-not-found") setError("Usuário não encontrado.");
       else if (err.code === "auth/wrong-password") setError("Senha incorreta.");
-      else setError("Falha na autenticação.");
-    } finally {
+      else if (err.code === "auth/too-many-requests") setError("Muitas tentativas. Tente mais tarde.");
+      else setError("Falha na autenticação. Tente novamente.");
+      
       setLoading(false);
     }
   }
@@ -190,22 +190,22 @@ export default function LoginPage() {
         <div className="relative z-10 h-full flex flex-col justify-end p-16 xl:p-24 text-white max-w-2xl">
             <div className="mb-8">
                 <h2 className="text-4xl font-bold leading-tight mb-4">
-                    Lorem ipsum dolor sit amet <br/>
-                    <span className="text-indigo-400">consectetur adipiscing elit.</span>
+                    Gerencie suas finanças <br/>
+                    <span className="text-indigo-400">com total controle.</span>
                 </h2>
                 <p className="text-lg text-slate-300 leading-relaxed font-light">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                    Tenha visibilidade completa das entradas e saídas, gerencie múltiplos espaços e tome decisões mais inteligentes.
                 </p>
             </div>
             
             <div className="flex gap-8 border-t border-slate-700/50 pt-6">
                  <div>
-                    <p className="text-2xl font-bold text-white">20k+</p>
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">Lorem ipsum</p>
+                    <p className="text-2xl font-bold text-white">Simples</p>
+                    <p className="text-xs text-slate-400 uppercase tracking-wider">De usar</p>
                  </div>
                  <div>
-                    <p className="text-2xl font-bold text-white">4.9/5</p>
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">Lorem ipsum</p>
+                    <p className="text-2xl font-bold text-white">Seguro</p>
+                    <p className="text-xs text-slate-400 uppercase tracking-wider">Criptografado</p>
                  </div>
             </div>
         </div>

@@ -1,45 +1,35 @@
 import "server-only";
-import { initializeApp, getApps, cert, getApp, App } from "firebase-admin/app";
+import { initializeApp, getApps, cert, getApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { getDatabase } from "firebase-admin/database";
 
-interface ServiceAccount {
-  projectId?: string;
-  clientEmail?: string;
-  privateKey?: string;
-}
-
-let serviceAccount: ServiceAccount | null = null;
-
-try {
-  serviceAccount = require("../../serviceAccountKey.json");
-} catch (error) {
+function formatPrivateKey(key: string | undefined) {
+  return key?.replace(/\\n/g, "\n");
 }
 
 if (getApps().length === 0) {
-  try {
-    const options: any = {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+  if (projectId && clientEmail && privateKey) {
+    initializeApp({
+      credential: cert({
+        projectId,
+        clientEmail,
+        privateKey: formatPrivateKey(privateKey),
+      }),
       databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
-    };
-
-    if (serviceAccount) {
-      options.credential = cert(serviceAccount);
-    }
-
-    initializeApp(options);
-  } catch (error) {
+    });
+  } else {
   }
 }
 
-function getAdminApp(): App {
-  if (!getApps().length) {
-  }
-  return getApp();
-}
+const app = getApp();
 
-export const adminDb = getFirestore(getAdminApp());
-export const adminAuth = getAuth(getAdminApp());
-export const adminRdb = getDatabase(getAdminApp());
+export const adminDb = getFirestore(app);
+export const adminAuth = getAuth(app);
+export const adminRdb = getDatabase(app);
 
 export const db = adminDb;
