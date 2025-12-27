@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
-import { getTransactions, addTransaction, deleteTransaction, updateTransactionStatus } from "@/actions/finance-actions";
+import { getTransactions, addTransaction, deleteTransaction, updateTransactionStatus, editTransaction } from "@/actions/finance-actions";
 import { Transaction } from "@/lib/types";
 
 export function useFinance() {
@@ -58,13 +58,21 @@ export function useFinance() {
       else alert(res.error);
       return res;
     },
+    editTransaction: async (id: string, data: any) => {
+      const res = await editTransaction(id, data);
+      if (res.success) refresh();
+      else alert(res.error);
+      return res;
+    },
     deleteTransaction: async (id: string) => {
-      await deleteTransaction(id);
-      refresh();
+      const res = await deleteTransaction(id);
+      if (res.success) refresh();
+      return res;
     },
     updateTransactionStatus: async (id: string, status: 'paid' | 'pending') => {
-      await updateTransactionStatus(id, status);
-      refresh();
+      const res = await updateTransactionStatus(id, status);
+      if (res.success) refresh();
+      return res;
     }
   };
 }

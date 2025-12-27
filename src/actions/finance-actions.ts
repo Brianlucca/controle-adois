@@ -83,6 +83,7 @@ export async function addTransaction(data: any) {
     });
 
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard/transactions");
     return { success: true };
   } catch (error) {
     return { success: false, error: "Erro interno ao salvar." };
@@ -100,6 +101,7 @@ export async function deleteTransaction(id: string) {
     await adminDb.collection("workspaces").doc(workspaceId).collection("transactions").doc(id).delete();
     
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard/transactions");
     return { success: true };
   } catch (error) {
     return { success: false, error: "Erro ao excluir." };
@@ -120,8 +122,39 @@ export async function updateTransactionStatus(id: string, status: string) {
     });
     
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard/transactions");
     return { success: true };
   } catch (error) {
     return { success: false };
+  }
+}
+
+export async function editTransaction(id: string, data: any) {
+  const user = await getAuthenticatedUser();
+  if (!user) return { success: false, error: "unauthenticated" };
+  
+  const workspaceId = await getActiveWorkspaceId(user.uid);
+  if (!workspaceId) return { success: false, error: "Workspace não encontrado." };
+
+  try {
+    await adminDb.collection("workspaces").doc(workspaceId).collection("transactions").doc(id).update({
+      description: data.description,
+      amount: data.amount,
+      category: data.category,
+      type: data.type,
+      status: data.status,
+      dueDate: data.dueDate,
+      pixCode: data.pixCode || null,
+      barCode: data.barCode || null,
+      observation: data.observation || null,
+      isRecurrent: data.isRecurrent || false,
+      paidAt: data.status === 'paid' ? new Date() : null
+    });
+    
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/transactions");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Erro ao atualizar." };
   }
 }

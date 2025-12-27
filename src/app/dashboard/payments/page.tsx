@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFinance } from "@/hooks/use-finance";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,26 +12,33 @@ import {
   Copy,
   CalendarClock,
   AlertTriangle,
-  ArrowRight,
+  QrCode,
+  Barcode,
 } from "lucide-react";
-import { useState } from "react";
 
 export default function PaymentsPage() {
-  const { transactions, updateTransactionStatus, loading } = useFinance();
+  const { transactions, updateTransactionStatus, loading, setDateRange } =
+    useFinance();
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  useEffect(() => {
+    setDateRange({ from: "2020-01-01", to: "2030-12-31" });
+  }, [setDateRange]);
+
   const bills = transactions
-    .filter(
-      (t) =>
-        t.type === "expense" &&
-        t.status === "pending" &&
-        (t.pixCode || t.barCode)
-    )
+    .filter((t) => {
+      const isExpense = t.type === "expense";
+      const isPending = t.status === "pending";
+      const hasPix = t.pixCode && t.pixCode.trim().length > 5;
+      const hasBarCode = t.barCode && t.barCode.trim().length > 5;
+
+      return isExpense && isPending && (hasPix || hasBarCode);
+    })
     .sort(
       (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     );
 
-  const totalToPay = bills.reduce((acc, curr) => acc + curr.amount, 0);
+  const totalToPay = bills.reduce((acc, curr) => acc + Number(curr.amount), 0);
 
   const handleCopy = async (text: string, id: string) => {
     try {
@@ -38,28 +46,14 @@ export default function PaymentsPage() {
       setCopiedId(id);
       setTimeout(() => setCopiedId(null), 2000);
     } catch (err) {
-      try {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-
-        textArea.style.position = "fixed";
-        textArea.style.left = "-9999px";
-        textArea.style.top = "0";
-        document.body.appendChild(textArea);
-
-        textArea.focus();
-        textArea.select();
-
-        document.execCommand("copy");
-        document.body.removeChild(textArea);
-
-        setCopiedId(id);
-        setTimeout(() => setCopiedId(null), 2000);
-      } catch (fallbackErr) {
-        alert(
-          "Não foi possível copiar automaticamente. Selecione o texto manualmente."
-        );
-      }
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
     }
   };
 
@@ -86,35 +80,33 @@ export default function PaymentsPage() {
 
   if (loading)
     return (
-      <div className="p-12 text-center text-slate-500">
-        Carregando pagamentos...
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3 animate-pulse">
+          <Receipt size={40} className="text-slate-600" />
+          <p className="text-slate-500">Carregando todas as contas...</p>
+        </div>
       </div>
     );
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto animate-in fade-in duration-500 pb-12">
-      <div className="bg-[#1A1D24] p-8 rounded-2xl border border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 blur-[80px] rounded-full pointer-events-none"></div>
-
-        <div className="flex items-center gap-5 z-10">
-          <div className="p-4 bg-gradient-to-br from-orange-500/20 to-orange-600/5 border border-orange-500/20 text-orange-400 rounded-2xl shadow-lg shadow-orange-900/20">
-            <Receipt size={32} />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight">
-              Central de Pagamentos
-            </h2>
-            <p className="text-slate-400 text-sm mt-1">
-              Gerencie boletos e códigos Pix pendentes.
-            </p>
-          </div>
-        </div>
-
-        <div className="text-right bg-[#0B0E14]/50 p-5 rounded-xl border border-white/10 min-w-[240px] backdrop-blur-md z-10">
-          <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-1">
-            Total em Aberto
+    <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-500 pb-20">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-[#13161C] p-6 rounded-2xl border border-white/5 shadow-xl">
+        <div>
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <div className="bg-indigo-600 p-2 rounded-lg">
+              <Receipt size={20} className="text-white" />
+            </div>
+            Pagamentos Pendentes
+          </h2>
+          <p className="text-slate-400 text-sm mt-1">
+            Mostrando todos os boletos e pix pendentes, independente da data.
           </p>
-          <p className="text-3xl font-bold text-white tracking-tight">
+        </div>
+        <div className="text-right bg-white/5 p-4 rounded-xl border border-white/10 min-w-[200px]">
+          <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-1">
+            Total a Pagar
+          </p>
+          <p className="text-2xl font-bold text-white tracking-tight">
             {formatCurrency(totalToPay)}
           </p>
         </div>
@@ -123,129 +115,149 @@ export default function PaymentsPage() {
       <div className="space-y-4">
         {bills.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 bg-[#1A1D24]/50 rounded-2xl border border-white/5 border-dashed">
-            <div className="p-4 bg-emerald-500/10 rounded-full mb-4">
+            <div className="p-4 bg-slate-800/50 rounded-full mb-4 text-slate-500">
               <CheckCircle2 size={40} className="text-emerald-500" />
             </div>
-            <h3 className="text-lg font-bold text-white">Tudo pago!</h3>
-            <p className="text-slate-500 max-w-sm text-center mt-2 text-sm">
-              Não existem contas com códigos de pagamento pendentes para este
-              mês.
+            <h3 className="text-lg font-bold text-white">Tudo em dia!</h3>
+            <p className="text-slate-500 max-w-md text-center mt-2 text-sm px-6">
+              Você não tem nenhuma conta pendente com código de barras ou Pix
+              cadastrado.
             </p>
           </div>
         ) : (
           bills.map((bill) => {
             const status = getUrgency(bill.dueDate);
+            const dateObj = new Date(bill.dueDate + "T12:00:00");
+
             return (
               <Card
                 key={bill.id}
-                className="bg-[#1A1D24] border-white/5 hover:border-white/10 hover:bg-[#20242D] transition-all group overflow-hidden"
+                className="bg-[#1A1D24] border-white/5 hover:border-white/10 transition-all overflow-hidden group"
               >
                 <CardContent className="p-0 flex flex-col md:flex-row">
-                  <div className="p-6 flex flex-col items-center justify-center min-w-[140px] border-b md:border-b-0 md:border-r border-white/5 bg-[#16181D]">
-                    <span
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full border flex items-center gap-1.5 mb-3 ${status.color}`}
+                  <div className="p-5 flex flex-row md:flex-col items-center justify-between md:justify-center gap-2 bg-white/[0.02] border-b md:border-b-0 md:border-r border-white/5 md:w-32 shrink-0">
+                    <div className="flex flex-col items-center">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                        Vence em
+                      </span>
+                      <span className="text-2xl font-bold text-white">
+                        {dateObj.getDate()}
+                      </span>
+                      <span className="text-xs font-bold text-slate-400 uppercase">
+                        {dateObj
+                          .toLocaleDateString("pt-BR", { month: "short" })
+                          .replace(".", "")}
+                        /{dateObj.getFullYear()}
+                      </span>
+                    </div>
+                    <div
+                      className={`px-2 py-1 rounded text-[10px] font-bold border flex items-center gap-1 ${status.color}`}
                     >
                       {status.icon} {status.label}
-                    </span>
-                    <span className="text-4xl font-bold text-white tracking-tighter">
-                      {bill.dueDate.split("-")[2]}
-                    </span>
-                    <span className="text-xs uppercase font-bold text-slate-500 tracking-widest mt-1">
-                      {new Date(bill.dueDate).toLocaleDateString("pt-BR", {
-                        month: "long",
-                      })}
-                    </span>
+                    </div>
                   </div>
 
-                  <div className="flex-1 p-6">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-bold text-lg text-white">
+                  <div className="flex-1 p-5 flex flex-col justify-center gap-4 min-w-0">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-white text-lg truncate">
                           {bill.description}
                         </h3>
-                        <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide font-bold">
+                        <p className="text-sm text-slate-400 font-medium">
                           {bill.category}
                         </p>
                       </div>
-                      <span className="text-xs text-slate-600 bg-white/5 px-2 py-1 rounded">
-                        Criado por{" "}
-                        {bill.userName
-                          ? bill.userName.split(" ")[0]
-                          : "Usuário"}
-                      </span>
+                      <div className="text-right block md:hidden shrink-0">
+                        <p className="text-lg font-bold text-white">
+                          {formatCurrency(Number(bill.amount))}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="flex flex-col gap-3 mt-5">
-                      {bill.pixCode && (
-                        <div className="flex items-center gap-3 bg-[#0B0E14] p-3 rounded-lg border border-white/5 group-hover:border-indigo-500/30 transition-colors">
-                          <div className="h-8 w-8 bg-indigo-500/20 rounded flex items-center justify-center shrink-0">
-                            <span className="text-[10px] font-bold text-indigo-400">
-                              PIX
-                            </span>
+                    <div className="flex flex-col gap-2 w-full">
+                      {bill.pixCode && bill.pixCode.trim().length > 5 && (
+                        <div className="flex items-center gap-2 w-full">
+                          <div className="h-9 w-9 bg-indigo-500/10 rounded-lg flex items-center justify-center shrink-0 border border-indigo-500/20">
+                            <QrCode size={18} className="text-indigo-400" />
                           </div>
-                          <p className="text-xs font-mono truncate flex-1 text-slate-300">
-                            {bill.pixCode}
-                          </p>
+                          <div className="flex-1 bg-black/20 rounded-lg border border-white/5 h-9 flex items-center px-3 min-w-0 overflow-hidden">
+                            <p className="text-xs text-slate-400 font-mono truncate w-full block">
+                              {bill.pixCode}
+                            </p>
+                          </div>
                           <Button
-                            type="button"
                             size="sm"
-                            variant="ghost"
-                            className="h-8 px-3 hover:bg-indigo-500/20 hover:text-indigo-300 text-slate-400"
-                            onClick={() => handleCopy(bill.pixCode!, bill.id)}
+                            className="h-9 bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500/50 shadow-md shadow-indigo-900/20 shrink-0"
+                            onClick={() =>
+                              handleCopy(bill.pixCode!, bill.id + "pix")
+                            }
                           >
-                            {copiedId === bill.id ? (
-                              <span className="text-emerald-400 text-xs font-bold flex gap-1">
-                                <CheckCircle2 size={14} /> Copiado
-                              </span>
+                            {copiedId === bill.id + "pix" ? (
+                              <CheckCircle2 size={16} />
                             ) : (
-                              <span className="flex gap-1 text-xs">
-                                <Copy size={14} /> Copiar
-                              </span>
+                              <Copy size={16} />
                             )}
+                            <span className="ml-2 hidden sm:inline">
+                              {copiedId === bill.id + "pix"
+                                ? "Copiado"
+                                : "Copiar"}
+                            </span>
                           </Button>
                         </div>
                       )}
-                      {bill.barCode && (
-                        <div className="flex items-center gap-3 bg-[#0B0E14] p-3 rounded-lg border border-white/5 group-hover:border-white/20 transition-colors">
-                          <div className="h-8 w-8 bg-slate-700/30 rounded flex items-center justify-center shrink-0">
-                            <span className="text-[10px] font-bold text-slate-400">
-                              CÓD
-                            </span>
+
+                      {bill.barCode && bill.barCode.trim().length > 5 && (
+                        <div className="flex items-center gap-2 w-full">
+                          <div className="h-9 w-9 bg-slate-700/20 rounded-lg flex items-center justify-center shrink-0 border border-white/10">
+                            <Barcode size={18} className="text-slate-400" />
                           </div>
-                          <p className="text-xs font-mono truncate flex-1 text-slate-300">
-                            {bill.barCode}
-                          </p>
+                          <div className="flex-1 bg-black/20 rounded-lg border border-white/5 h-9 flex items-center px-3 min-w-0 overflow-hidden">
+                            <p className="text-xs text-slate-400 font-mono truncate w-full block">
+                              {bill.barCode}
+                            </p>
+                          </div>
                           <Button
-                            type="button"
                             size="sm"
-                            variant="ghost"
-                            className="h-8 px-3 hover:bg-white/10 hover:text-white text-slate-400"
-                            onClick={() => handleCopy(bill.barCode!, bill.id)}
+                            variant="outline"
+                            className="h-9 bg-white/10 hover:bg-white/20 text-slate-200 border border-white/10 shrink-0"
+                            onClick={() =>
+                              handleCopy(bill.barCode!, bill.id + "bar")
+                            }
                           >
-                            {copiedId === bill.id ? (
-                              <span className="text-emerald-400 text-xs font-bold flex gap-1">
-                                <CheckCircle2 size={14} /> Copiado
-                              </span>
+                            {copiedId === bill.id + "bar" ? (
+                              <CheckCircle2
+                                size={16}
+                                className="text-emerald-400"
+                              />
                             ) : (
-                              <span className="flex gap-1 text-xs">
-                                <Copy size={14} /> Copiar
-                              </span>
+                              <Copy size={16} />
                             )}
+                            <span className="ml-2 hidden sm:inline">
+                              {copiedId === bill.id + "bar"
+                                ? "Copiado"
+                                : "Copiar"}
+                            </span>
                           </Button>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <div className="p-6 flex flex-col justify-center items-end gap-3 border-t md:border-t-0 md:border-l border-white/5 min-w-[180px] bg-[#16181D]/50">
-                    <p className="text-2xl font-bold text-white tracking-tight">
-                      {formatCurrency(bill.amount)}
-                    </p>
+                  <div className="p-5 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-end gap-3 border-t md:border-t-0 md:border-l border-white/5 md:w-48 bg-white/[0.01] shrink-0">
+                    <div className="text-left md:text-right hidden md:block">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold">
+                        Valor
+                      </p>
+                      <p className="text-xl font-bold text-white">
+                        {formatCurrency(Number(bill.amount))}
+                      </p>
+                    </div>
+
                     <Button
-                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-900/20"
+                      className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-10 shadow-lg shadow-emerald-900/20"
                       onClick={() => updateTransactionStatus(bill.id, "paid")}
                     >
-                      <CheckCircle2 size={16} className="mr-2" /> Marcar Pago
+                      <CheckCircle2 size={18} className="mr-2" /> Pagar
                     </Button>
                   </div>
                 </CardContent>

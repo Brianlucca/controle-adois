@@ -9,6 +9,11 @@ async function setActiveWorkspaceCookie(id: string) {
   cookieStore.set("active_workspace", id);
 }
 
+export async function getActiveWorkspaceId() {
+  const cookieStore = await cookies();
+  return cookieStore.get("active_workspace")?.value || null;
+}
+
 export async function ensurePersonalWorkspace(userId: string, email: string) {
   try {
     const snapshot = await adminDb.collection("workspaces")

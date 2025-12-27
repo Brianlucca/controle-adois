@@ -244,7 +244,7 @@ export default function WorkspacePage() {
                               <div className="bg-[#0B0E14] p-6 rounded-2xl text-center mb-4 border border-white/10">
                                   <p className="text-3xl font-mono font-bold text-indigo-400 tracking-[0.2em]">{activeData.inviteCode}</p>
                               </div>
-                              <Button variant="outline" className="w-full border-white/10 text-slate-300 hover:text-white hover:bg-white/5 h-12" onClick={handleCopy}>
+                              <Button variant="outline" className="w-full border-white/10 text-slate-800 hover:text-white hover:bg-white/5 h-12" onClick={handleCopy}>
                                   {copied ? <CheckCircle2 size={18} className="mr-2 text-emerald-400"/> : <Copy size={18} className="mr-2"/>} {copied ? "Copiado!" : "Copiar Código"}
                               </Button>
                           </CardContent>
