@@ -9,6 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@fullcalendar/daygrid": "^6.1.20",
+    "@fullcalendar/interaction": "^6.1.20",
+    "@fullcalendar/react": "^6.1.20",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "encoding": "^0.1.13",
@@ -22,7 +25,9 @@
     "recharts": "^3.6.0",
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.4.0",
-    "tesseract.js": "^7.0.0"
+    "tesseract.js": "^7.0.0",
+    "xlsx": "^0.18.5",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@types/node": "^20",
