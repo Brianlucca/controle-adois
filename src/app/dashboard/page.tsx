@@ -1,21 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useFinance } from "@/hooks/use-finance";
 import { usePreferences } from "@/contexts/preferences-context";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { BrandIcon } from "@/components/brand-icon";
+import { DateRangeFilter } from "@/components/date-range-filter";
+import { getWorkspaceDetails } from "@/actions/workspace-actions";
+import { auth } from "@/lib/firebase-client";
 import {
   ArrowUpRight,
   ArrowDownRight,
   Wallet,
-  AlertTriangle,
-  Target,
   Loader2,
-  DollarSign,
   Eye,
   EyeOff,
-  ArrowUpCircle,
-  ArrowDownCircle,
+  Plus,
+  ArrowRight,
+  Calendar,
+  History,
 } from "lucide-react";
 import {
   AreaChart,
@@ -25,24 +29,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
 } from "recharts";
-import { getWorkspaceDetails } from "@/actions/workspace-actions";
-import { auth } from "@/lib/firebase-client";
-import { DateRangeFilter } from "@/components/date-range-filter";
-
-const COLORS = [
-  "#6366f1",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#ec4899",
-  "#06b6d4",
-];
+import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
   const { transactions, loading, dateRange, setDateRange } = useFinance();
@@ -70,31 +58,13 @@ export default function DashboardPage() {
     .filter((t) => t.type === "expense" && t.status === "paid")
     .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
-  const pendingExpense = transactions
-    .filter((t) => t.type === "expense" && t.status === "pending")
-    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-
   const balance = income - expense;
+
   const budgetPercent =
     budgetLimit > 0 ? Math.min((expense / budgetLimit) * 100, 100) : 0;
-
   let budgetColor = "bg-emerald-500";
-  if (budgetPercent > 70) budgetColor = "bg-yellow-500";
+  if (budgetPercent > 70) budgetColor = "bg-amber-500";
   if (budgetPercent > 90) budgetColor = "bg-red-500";
-
-  const categoryMap = transactions
-    .filter((t) => t.type === "expense" && t.status === "paid")
-    .reduce((acc, curr) => {
-      const cat = curr.category || "Outros";
-      const val = Number(curr.amount) || 0;
-      acc[cat] = (acc[cat] || 0) + val;
-      return acc;
-    }, {} as Record<string, number>);
-
-  const categoryData = Object.entries(categoryMap)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 6);
 
   const chartMap = transactions.reduce((acc, curr) => {
     if (!curr.dueDate) return acc;
@@ -109,14 +79,11 @@ export default function DashboardPage() {
         dateSort: new Date(curr.dueDate).getTime(),
       };
     }
-
     const val = Number(curr.amount) || 0;
-
-    if (curr.type === "income" && curr.status === "paid") {
+    if (curr.type === "income" && curr.status === "paid")
       acc[label].Entrada += val;
-    } else if (curr.type === "expense" && curr.status === "paid") {
+    else if (curr.type === "expense" && curr.status === "paid")
       acc[label].Saída += val;
-    }
     return acc;
   }, {} as Record<string, any>);
 
@@ -124,10 +91,25 @@ export default function DashboardPage() {
     (a, b) => a.dateSort - b.dateSort
   );
 
+  const recentTransactions = [...transactions]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt || b.dueDate).getTime() -
+        new Date(a.createdAt || a.dueDate).getTime()
+    )
+    .slice(0, 5);
+
+  const upcomingBills = transactions
+    .filter((t) => t.type === "expense" && t.status === "pending")
+    .sort(
+      (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+    )
+    .slice(0, 4);
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-[#0F1218] border border-white/10 p-3 rounded-xl shadow-xl backdrop-blur-md">
+        <div className="bg-[#1A1D24] border border-white/10 p-3 rounded-xl shadow-xl z-50">
           <p className="text-slate-400 text-xs mb-2 font-bold">{label}</p>
           {payload.map((entry: any, index: number) => (
             <div key={index} className="flex items-center gap-2 text-sm">
@@ -148,49 +130,51 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-end gap-4 bg-[#13161C] p-3 rounded-2xl border border-white/5">
-        <div className="px-2">
+    <div className="space-y-6 animate-in fade-in duration-700 pb-12">
+      <div className="flex flex-col md:flex-row justify-between items-end gap-4 bg-[#13161C] p-4 rounded-2xl border border-white/5 shadow-md">
+        <div>
           <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-            Painel Financeiro
+            Painel de Controle
           </h2>
-          <p className="text-2xl font-bold text-white mt-0.5">Visão Geral</p>
+          <div className="flex items-center gap-3 mt-1">
+            <h1 className="text-2xl font-bold text-white">Visão Geral</h1>
+            <button
+              onClick={toggleHideValues}
+              className="text-slate-500 hover:text-white transition-colors"
+            >
+              {hideValues ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={toggleHideValues}
-            className="h-10 w-10 flex items-center justify-center rounded-lg border border-white/10 bg-[#1A1D24] text-slate-400 hover:text-white hover:border-white/20 transition-all"
-          >
-            {hideValues ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
-
-          <div className="rounded-lg px-2 h-10 flex items-center">
-            <DateRangeFilter
-              from={dateRange.from}
-              to={dateRange.to}
-              onChange={setDateRange}
-            />
-          </div>
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <DateRangeFilter
+            from={dateRange.from}
+            to={dateRange.to}
+            onChange={setDateRange}
+          />
+          <Link href="/dashboard/transactions">
+            <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-900/20">
+              <Plus size={18} className="mr-2" /> Nova Transação
+            </Button>
+          </Link>
         </div>
       </div>
 
       {loading ? (
-        <div className="h-[60vh] flex flex-col items-center justify-center gap-4 bg-[#13161C]/50 rounded-3xl border border-white/5 border-dashed">
+        <div className="h-[400px] flex flex-col items-center justify-center gap-4">
           <Loader2 className="animate-spin text-indigo-500 h-10 w-10" />
-          <p className="text-slate-500 text-sm font-medium animate-pulse">
-            Processando dados...
-          </p>
+          <p className="text-slate-500 text-sm">Atualizando dashboard...</p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-900/40 to-[#13161C] border border-indigo-500/20 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                <DollarSign size={64} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1A1D24] to-[#13161C] border border-white/5 relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+              <div className="absolute right-0 top-0 p-6 opacity-5">
+                <Wallet size={64} />
               </div>
-              <p className="text-xs font-bold text-indigo-300 uppercase tracking-widest mb-2">
-                Saldo Líquido
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
+                Saldo Atual
               </p>
               <h3
                 className={`text-3xl font-bold ${
@@ -199,88 +183,60 @@ export default function DashboardPage() {
               >
                 {displayValue(balance)}
               </h3>
+              <div className="mt-4 h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${budgetColor} transition-all duration-1000`}
+                  style={{ width: `${budgetPercent}%` }}
+                ></div>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1.5 text-right">
+                {Math.round(budgetPercent)}% da meta de gastos consumida
+              </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 hover:border-emerald-500/20 transition-all group">
+            <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 hover:border-emerald-500/30 transition-all">
               <div className="flex justify-between items-start mb-4">
-                <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500 group-hover:scale-110 transition-transform">
+                <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
                   <ArrowUpRight size={24} />
                 </div>
               </div>
-              <p className="text-sm text-slate-400">Receitas</p>
+              <p className="text-sm text-slate-400 font-medium">
+                Receitas Confirmadas
+              </p>
               <h3 className="text-2xl font-bold text-white mt-1">
                 {displayValue(income)}
               </h3>
             </div>
 
-            <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 hover:border-red-500/20 transition-all group">
+            <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 hover:border-red-500/30 transition-all">
               <div className="flex justify-between items-start mb-4">
-                <div className="p-2 bg-red-500/10 rounded-lg text-red-500 group-hover:scale-110 transition-transform">
+                <div className="p-2 bg-red-500/10 rounded-lg text-red-500">
                   <ArrowDownRight size={24} />
                 </div>
               </div>
-              <p className="text-sm text-slate-400">Despesas</p>
+              <p className="text-sm text-slate-400 font-medium">
+                Despesas Pagas
+              </p>
               <h3 className="text-2xl font-bold text-white mt-1">
                 {displayValue(expense)}
               </h3>
             </div>
-
-            <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 hover:border-amber-500/20 transition-all group">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500 group-hover:scale-110 transition-transform">
-                  <AlertTriangle size={24} />
-                </div>
-              </div>
-              <p className="text-sm text-slate-400">A Pagar (Pendente)</p>
-              <h3 className="text-2xl font-bold text-amber-400 mt-1">
-                {displayValue(pendingExpense)}
-              </h3>
-            </div>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5">
-            <div className="flex justify-between items-end mb-3">
-              <div>
-                <h3 className="text-white font-bold flex items-center gap-2">
-                  <Target size={18} className="text-indigo-400" /> Meta de
-                  Gastos
-                </h3>
-                <p className="text-sm text-slate-500 mt-1">
-                  Limite:{" "}
-                  <span className="text-white font-mono">
-                    {displayValue(budgetLimit)}
-                  </span>
-                </p>
-              </div>
-              <div className="text-right">
-                <span
-                  className={`text-2xl font-bold ${
-                    budgetPercent > 100 ? "text-red-400" : "text-white"
-                  }`}
-                >
-                  {Math.round(budgetPercent)}%
-                </span>
-                <p className="text-xs text-slate-500 uppercase">Consumido</p>
-              </div>
-            </div>
-            <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden">
-              <div
-                className={`h-full ${budgetColor} transition-all duration-1000 ease-out`}
-                style={{ width: `${budgetPercent}%` }}
-              ></div>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 p-6 rounded-2xl bg-[#1A1D24] border border-white/5 flex flex-col min-h-[420px]">
-              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                <ArrowUpCircle size={18} className="text-emerald-500" /> Fluxo
-                de Caixa
-              </h3>
-              <div className="flex-1 w-full h-full min-h-0">
+            <div className="lg:col-span-2 flex flex-col rounded-2xl bg-[#1A1D24] border border-white/5 shadow-lg min-h-[400px]">
+              <div className="p-6 border-b border-white/5 flex justify-between items-center">
+                <h3 className="font-bold text-white flex items-center gap-2">
+                  <History size={18} className="text-indigo-400" /> Fluxo Diário
+                </h3>
+              </div>
+              <div className="flex-1 w-full h-full p-4">
                 {chartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
+                    <AreaChart
+                      data={chartData}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                    >
                       <defs>
                         <linearGradient
                           id="colorEntrada"
@@ -323,7 +279,7 @@ export default function DashboardPage() {
                         strokeDasharray="3 3"
                         vertical={false}
                         stroke="#334155"
-                        opacity={0.4}
+                        opacity={0.3}
                       />
                       <XAxis
                         dataKey="name"
@@ -341,10 +297,6 @@ export default function DashboardPage() {
                         tick={{ fill: "#64748b" }}
                       />
                       <Tooltip content={<CustomTooltip />} />
-                      <Legend
-                        iconType="circle"
-                        wrapperStyle={{ paddingTop: "20px" }}
-                      />
                       <Area
                         type="monotone"
                         dataKey="Entrada"
@@ -364,63 +316,105 @@ export default function DashboardPage() {
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-500">
-                    <div className="bg-white/5 p-4 rounded-full mb-3">
-                      <ArrowUpRight size={24} className="opacity-50" />
-                    </div>
-                    <p className="text-sm">Sem dados neste período.</p>
+                  <div className="h-full flex items-center justify-center text-slate-500 text-sm">
+                    Sem dados suficientes para o gráfico.
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 flex flex-col min-h-[420px]">
-              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                <ArrowDownCircle size={18} className="text-red-500" /> Despesas
-              </h3>
-              <div className="flex-1 w-full h-full min-h-0">
-                {categoryData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={categoryData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={70}
-                        outerRadius={90}
-                        paddingAngle={4}
-                        dataKey="value"
-                        stroke="none"
+            <div className="space-y-6">
+              <div className="rounded-2xl bg-[#1A1D24] border border-white/5 shadow-lg overflow-hidden">
+                <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                  <h3 className="font-bold text-white text-sm">
+                    Últimas Movimentações
+                  </h3>
+                  <Link
+                    href="/dashboard/transactions"
+                    className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1"
+                  >
+                    VER TUDO <ArrowRight size={10} />
+                  </Link>
+                </div>
+                <div className="p-2">
+                  {recentTransactions.length > 0 ? (
+                    recentTransactions.map((t) => (
+                      <div
+                        key={t.id}
+                        className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors"
                       >
-                        {categoryData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[index % COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend
-                        iconType="circle"
-                        layout="horizontal"
-                        verticalAlign="bottom"
-                        align="center"
-                        wrapperStyle={{
-                          fontSize: "11px",
-                          color: "#94a3b8",
-                          paddingTop: "20px",
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-500">
-                    <div className="bg-white/5 p-4 rounded-full mb-3">
-                      <ArrowDownRight size={24} className="opacity-50" />
+                        <BrandIcon
+                          description={t.description}
+                          category={t.category}
+                          type={t.type}
+                          className="w-9 h-9 rounded-lg bg-[#0B0E14] border border-white/5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-white truncate">
+                            {t.description}
+                          </p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            {formatDate(t.dueDate)} • {t.category}
+                          </p>
+                        </div>
+                        <span
+                          className={`text-xs font-mono font-bold ${
+                            t.type === "income"
+                              ? "text-emerald-400"
+                              : "text-slate-300"
+                          }`}
+                        >
+                          {t.type === "expense" ? "-" : "+"}{" "}
+                          {displayValue(Number(t.amount))}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-6 text-center text-slate-500 text-xs">
+                      Nenhuma movimentação recente.
                     </div>
-                    <p className="text-sm">Sem despesas registradas.</p>
-                  </div>
-                )}
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-[#1A1D24] border border-white/5 shadow-lg overflow-hidden">
+                <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                  <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                    <Calendar size={14} className="text-amber-500" /> Próximos
+                    Boletos
+                  </h3>
+                </div>
+                <div className="p-2">
+                  {upcomingBills.length > 0 ? (
+                    upcomingBills.map((t) => (
+                      <div
+                        key={t.id}
+                        className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors group"
+                      >
+                        <div className="flex flex-col items-center justify-center w-9 h-9 bg-amber-500/10 rounded-lg text-amber-500 border border-amber-500/20">
+                          <span className="text-xs font-bold">
+                            {t.dueDate.split("-")[2]}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-white truncate">
+                            {t.description}
+                          </p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            Vence em breve
+                          </p>
+                        </div>
+                        <span className="text-xs font-mono font-bold text-amber-400">
+                          {displayValue(Number(t.amount))}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-6 text-center text-slate-500 text-xs">
+                      Nenhuma conta pendente para este período.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
