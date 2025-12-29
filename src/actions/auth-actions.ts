@@ -9,15 +9,15 @@ import "@/lib/firebase-admin";
 export async function createSession(idToken: string) {
   try {
     const decodedToken = await getAuth().verifyIdToken(idToken);
-    
-    if (!decodedToken) {
-      return { success: false, error: "Token inválido" };
+
+    if (!decodedToken.email_verified) {
+      return { success: false, error: "Por favor, verifique seu e-mail antes de entrar." };
     }
 
-    const expiresIn = 60 * 60 * 24 * 5 * 1000;
-    
+    const expiresIn = 60 * 60 * 1000;
+
     const cookieStore = await cookies();
-    
+
     cookieStore.set("__session", idToken, {
       maxAge: expiresIn,
       httpOnly: true,
@@ -35,7 +35,6 @@ export async function createSession(idToken: string) {
 export async function logout() {
   const cookieStore = await cookies();
   cookieStore.delete("__session");
-
   redirect("/auth/login");
 }
 
