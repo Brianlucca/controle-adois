@@ -4,6 +4,22 @@ import { adminDb } from "@/lib/firebase-admin";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { getAuth } from "firebase-admin/auth";
+import { z } from "zod";
+
+const TransactionSchema = z.object({
+  description: z.string().min(2, "A descrição deve ter pelo menos 2 caracteres").max(100),
+  amount: z.coerce.number().positive("O valor deve ser maior que zero"),
+  category: z.string().min(1, "A categoria é obrigatória"),
+  type: z.enum(["income", "expense"]),
+  status: z.enum(["paid", "pending"]),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida (Use YYYY-MM-DD)"),
+  pixCode: z.string().optional().nullable(),
+  barCode: z.string().optional().nullable(),
+  observation: z.string().optional().nullable(),
+  isRecurrent: z.boolean().optional().default(false),
+});
+
+const StatusSchema = z.enum(["paid", "pending"]);
 
 async function getAuthenticatedUser() {
   try {
@@ -35,7 +51,20 @@ async function getActiveWorkspaceId(uid: string) {
   }
 }
 
+async function handleAuthFailure() {
+  const cookieStore = await cookies();
+  cookieStore.delete("__session");
+  return { success: false, error: "unauthenticated" };
+}
+
 export async function getTransactions(uid: string, startDate: string, endDate: string) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    const cookieStore = await cookies();
+    cookieStore.delete("__session");
+    return [];
+  }
+
   const workspaceId = await getActiveWorkspaceId(uid);
   if (!workspaceId) return [];
 
@@ -63,12 +92,18 @@ export async function getTransactions(uid: string, startDate: string, endDate: s
   }
 }
 
-export async function addTransaction(data: any) {
+export async function addTransaction(rawData: any) {
   const user = await getAuthenticatedUser();
-  if (!user) return { success: false, error: "unauthenticated" };
+  if (!user) return await handleAuthFailure();
 
   const workspaceId = await getActiveWorkspaceId(user.uid);
   if (!workspaceId) return { success: false, error: "Nenhum workspace selecionado." };
+
+  const validation = TransactionSchema.safeParse(rawData);
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message };
+  }
+  const data = validation.data;
 
   try {
     await adminDb.collection("workspaces").doc(workspaceId).collection("transactions").add({
@@ -92,7 +127,7 @@ export async function addTransaction(data: any) {
 
 export async function deleteTransaction(id: string) {
   const user = await getAuthenticatedUser();
-  if (!user) return { success: false, error: "unauthenticated" };
+  if (!user) return await handleAuthFailure();
   
   const workspaceId = await getActiveWorkspaceId(user.uid);
   if (!workspaceId) return { success: false, error: "Workspace não encontrado." };
@@ -110,15 +145,19 @@ export async function deleteTransaction(id: string) {
 
 export async function updateTransactionStatus(id: string, status: string) {
   const user = await getAuthenticatedUser();
-  if (!user) return { success: false, error: "unauthenticated" };
+  if (!user) return await handleAuthFailure();
   
   const workspaceId = await getActiveWorkspaceId(user.uid);
   if (!workspaceId) return { success: false };
 
+  const validation = StatusSchema.safeParse(status);
+  if (!validation.success) return { success: false, error: "Status inválido" };
+  const validStatus = validation.data;
+
   try {
     await adminDb.collection("workspaces").doc(workspaceId).collection("transactions").doc(id).update({
-      status,
-      paidAt: status === 'paid' ? new Date() : null
+      status: validStatus,
+      paidAt: validStatus === 'paid' ? new Date() : null
     });
     
     revalidatePath("/dashboard");
@@ -129,12 +168,18 @@ export async function updateTransactionStatus(id: string, status: string) {
   }
 }
 
-export async function editTransaction(id: string, data: any) {
+export async function editTransaction(id: string, rawData: any) {
   const user = await getAuthenticatedUser();
-  if (!user) return { success: false, error: "unauthenticated" };
+  if (!user) return await handleAuthFailure();
   
   const workspaceId = await getActiveWorkspaceId(user.uid);
   if (!workspaceId) return { success: false, error: "Workspace não encontrado." };
+
+  const validation = TransactionSchema.safeParse(rawData);
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message };
+  }
+  const data = validation.data;
 
   try {
     await adminDb.collection("workspaces").doc(workspaceId).collection("transactions").doc(id).update({
