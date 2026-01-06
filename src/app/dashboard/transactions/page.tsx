@@ -31,6 +31,8 @@ import {
   ArrowRight,
   Pencil,
   Save,
+  Filter,
+  Layers,
 } from "lucide-react";
 import {
   formatCurrency,
@@ -68,7 +70,6 @@ export default function TransactionsPage() {
     editTransaction,
     deleteTransaction,
     updateTransactionStatus,
-    dateRange,
     setDateRange,
   } = useFinance();
   const { hideValues, toggleHideValues } = usePreferences();
@@ -83,22 +84,28 @@ export default function TransactionsPage() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [formData, setFormData] = useState({
-    description: "",
-    amount: "",
-    category: "Outros",
-    type: "expense" as "income" | "expense",
-    status: "paid" as "paid" | "pending",
-    dueDate: new Date().toISOString().split("T")[0],
-    pixCode: "",
-    barCode: "",
-    observation: "",
-    isRecurrent: false,
+  const [isGlobalStats, setIsGlobalStats] = useState(true);
+  
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  const [uiDateRange, setUiDateRange] = useState({
+    from: firstDay,
+    to: lastDay,
   });
 
   useEffect(() => {
+    if (isGlobalStats) {
+      setDateRange({ from: "2000-01-01", to: "2099-12-31" });
+    } else {
+      setDateRange(uiDateRange);
+    }
+  }, [isGlobalStats, uiDateRange, setDateRange]);
+
+  useEffect(() => {
     setCurrentPage(1);
-  }, [filterTerm, selectedCategory, statusFilter, dateRange]);
+  }, [filterTerm, selectedCategory, statusFilter, uiDateRange, isGlobalStats]);
 
   const handleAuthError = (response: any) => {
     if (response?.error === "unauthenticated") {
@@ -148,6 +155,19 @@ export default function TransactionsPage() {
     });
     setIsEditing(true);
   };
+
+  const [formData, setFormData] = useState({
+    description: "",
+    amount: "",
+    category: "Outros",
+    type: "expense" as "income" | "expense",
+    status: "paid" as "paid" | "pending",
+    dueDate: new Date().toISOString().split("T")[0],
+    pixCode: "",
+    barCode: "",
+    observation: "",
+    isRecurrent: false,
+  });
 
   const handleSaveWrapper = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,7 +286,10 @@ export default function TransactionsPage() {
       matchesStatus = t.status === "paid" && t.type === "expense";
     if (statusFilter === "received") matchesStatus = t.type === "income";
 
-    return matchesTerm && matchesCategory && matchesStatus;
+    const matchesDate =
+      t.dueDate >= uiDateRange.from && t.dueDate <= uiDateRange.to;
+
+    return matchesTerm && matchesCategory && matchesStatus && matchesDate;
   });
 
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
@@ -438,12 +461,39 @@ export default function TransactionsPage() {
               </select>
             </div>
 
-            <div className="w-full lg:w-auto">
-              <DateRangeFilter
-                from={dateRange.from}
-                to={dateRange.to}
-                onChange={setDateRange}
-              />
+            <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+              <Button
+                variant="outline"
+                onClick={() => setIsGlobalStats(!isGlobalStats)}
+                className={`h-10 px-4 border-white/10 ${
+                  isGlobalStats
+                    ? "bg-[#0B0E14] text-slate-400 hover:text-slate-800"
+                    : "bg-indigo-500/20 text-indigo-300 border-indigo-500/50 hover:bg-indigo-500/30"
+                }`}
+                title={
+                  isGlobalStats
+                    ? "Os cartões mostram o total geral. Clique para filtrar os totais pela data."
+                    : "Os cartões mostram apenas o período selecionado."
+                }
+              >
+                {isGlobalStats ? (
+                  <>
+                    <Layers size={16} className="mr-2" /> Totais Gerais
+                  </>
+                ) : (
+                  <>
+                    <Filter size={16} className="mr-2" /> Filtrar Totais
+                  </>
+                )}
+              </Button>
+
+              <div className="w-full lg:w-auto">
+                <DateRangeFilter
+                  from={uiDateRange.from}
+                  to={uiDateRange.to}
+                  onChange={setUiDateRange}
+                />
+              </div>
             </div>
 
             <Button
@@ -490,8 +540,8 @@ export default function TransactionsPage() {
                     paginatedTransactions.map((t) => (
                       <tr
                         key={t.id}
-                        className="hover:bg-white/[0.03] cursor-pointer transition-colors group"
                         onClick={() => openDetailsModal(t)}
+                        className="hover:bg-white/[0.03] cursor-pointer transition-colors group"
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
