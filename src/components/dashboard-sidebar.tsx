@@ -31,6 +31,7 @@ import {
 } from "@/actions/workspace-actions";
 import { auth } from "@/lib/firebase-client";
 import { onAuthStateChanged } from "firebase/auth";
+import { useWorkspace } from "@/contexts/workspace-context";
 
 export function DashboardSidebar() {
   const pathname = usePathname();
@@ -44,6 +45,7 @@ export function DashboardSidebar() {
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [activeWsId, setActiveWsId] = useState("");
   const [activeWsName, setActiveWsName] = useState("");
+  const workspaceContext = useWorkspace();
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -51,7 +53,7 @@ export function DashboardSidebar() {
         const list = await getUserWorkspaces(user.uid);
         setWorkspaces(list);
 
-        const storedActiveId = await getActiveWorkspaceId();
+        const storedActiveId = await getActiveWorkspaceId(user.uid);
 
         if (list.length > 0) {
           const current = list.find((w) => w.id === storedActiveId) || list[0];
@@ -80,11 +82,21 @@ export function DashboardSidebar() {
     if (targetWs) {
       setActiveWsId(targetWs.id);
       setActiveWsName(targetWs.name);
+      localStorage.setItem("lastActiveWorkspaceId", targetWs.id);
     }
 
     setIsSwitcherOpen(false);
-    await switchActiveWorkspace(wsId);
-    window.location.href = "/dashboard";
+    await switchActiveWorkspace(wsId, auth.currentUser?.uid);
+    if (targetWs && workspaceContext?.setActiveWorkspace) {
+      await workspaceContext.setActiveWorkspace({
+        id: targetWs.id,
+        name: targetWs.name,
+        ownerId: targetWs.isOwner ? auth.currentUser?.uid || "" : "",
+        currency: "BRL",
+      });
+    }
+    router.refresh();
+    window.location.href = pathname;
   };
 
   return (
