@@ -25,7 +25,10 @@ export default function CalendarPage() {
   const calendarRef = useRef<FullCalendar>(null);
   const [currentTitle, setCurrentTitle] = useState("");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [selectedDayEvents, setSelectedDayEvents] = useState<any[]>([]);
+  const [selectedDayTitle, setSelectedDayTitle] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDayModalOpen, setIsDayModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -42,6 +45,19 @@ export default function CalendarPage() {
     const txData = info.event.extendedProps.originalData;
     setSelectedEvent(txData);
     setIsModalOpen(true);
+  };
+
+  const handleMoreLinkClick = (arg: any) => {
+    const dayEvents = arg.allSegs
+      .map((seg: any) => seg.event.extendedProps.originalData)
+      .filter(Boolean)
+      .sort((a: any, b: any) => Number(b.amount) - Number(a.amount));
+
+    setSelectedDayEvents(dayEvents);
+    setSelectedDayTitle(formatDate(arg.date.toISOString().split("T")[0]));
+    setIsDayModalOpen(true);
+
+    return "none";
   };
 
   const events = transactions.map((t) => {
@@ -129,6 +145,7 @@ export default function CalendarPage() {
           dayMaxEvents={3}
           datesSet={handleDatesSet}
           eventClick={handleEventClick}
+          moreLinkClick={handleMoreLinkClick}
           eventContent={(arg) => {
             const { amount, status, type } = arg.event.extendedProps;
             const isPaid = status === "paid" && type === "expense";
@@ -166,6 +183,80 @@ export default function CalendarPage() {
           }}
         />
       </div>
+
+      {mounted &&
+        isDayModalOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[99998] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setIsDayModalOpen(false)}
+          >
+            <div
+              className="bg-[#1A1D24] w-full max-w-lg rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-white/10 bg-[#13161C] px-5 py-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Transações do dia
+                  </p>
+                  <h3 className="text-lg font-bold text-white">
+                    {selectedDayTitle}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsDayModalOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="max-h-[70vh] overflow-y-auto p-3 custom-scrollbar">
+                {selectedDayEvents.map((tx) => (
+                  <button
+                    key={tx.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedEvent(tx);
+                      setIsDayModalOpen(false);
+                      setIsModalOpen(true);
+                    }}
+                    className={`mb-2 flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors ${
+                      tx.type === "income"
+                        ? "border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/15"
+                        : tx.status === "paid"
+                        ? "border-white/10 bg-white/5 hover:bg-white/10"
+                        : "border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/15"
+                    }`}
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <BrandIcon
+                        description={tx.description}
+                        category={tx.category}
+                        type={tx.type}
+                        className="h-9 w-9 rounded-lg bg-white/10"
+                      />
+                      <div className="min-w-0">
+                        <p className={`truncate text-sm font-bold ${tx.status === "paid" && tx.type === "expense" ? "text-slate-400 line-through" : "text-white"}`}>
+                          {tx.description}
+                        </p>
+                        <p className="truncate text-xs text-slate-500">
+                          {tx.category}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`shrink-0 text-sm font-bold ${tx.type === "income" ? "text-emerald-400" : "text-slate-200"}`}>
+                      {tx.type === "expense" ? "- " : "+ "}
+                      {formatCurrency(tx.amount)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {mounted &&
         isModalOpen &&
