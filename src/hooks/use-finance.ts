@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase-client";
-import { getTransactions, addTransaction, deleteTransaction, updateTransactionStatus, editTransaction } from "@/actions/finance-actions";
+import { getTransactions, addTransaction, deleteTransaction, updateTransactionStatus, editTransaction, importTransactions, deleteRecurrence } from "@/actions/finance-actions";
 import { logout } from "@/actions/auth-actions";
 import { Transaction } from "@/lib/types";
 
@@ -36,15 +36,17 @@ export function useFinance() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        fetchData(currentUser.uid);
-      } else {
+      if (!currentUser) {
         setTransactions([]);
         setLoading(false);
       }
     });
     return () => unsub();
-  }, [dateRange]);
+  }, []);
+
+  useEffect(() => {
+    if (user) fetchData(user.uid);
+  }, [user, dateRange.from, dateRange.to]);
 
   async function fetchData(uid: string) {
     setLoading(true);
@@ -88,11 +90,27 @@ export function useFinance() {
       if (res.success) refresh();
       return res;
     },
+    deleteRecurrence: async (id: string) => {
+      const res = await deleteRecurrence(id);
+      if (await handleAuthError(res)) return res;
+
+      if (res.success) refresh();
+      else alert((res as any).error);
+      return res;
+    },
     updateTransactionStatus: async (id: string, status: 'paid' | 'pending') => {
       const res = await updateTransactionStatus(id, status);
       if (await handleAuthError(res)) return res;
 
       if (res.success) refresh();
+      return res;
+    },
+    importTransactions: async (items: any[]) => {
+      const res = await importTransactions(items);
+      if (await handleAuthError(res)) return res;
+
+      if (res.success) refresh();
+      else alert((res as any).error);
       return res;
     }
   };
