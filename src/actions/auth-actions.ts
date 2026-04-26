@@ -14,12 +14,13 @@ export async function createSession(idToken: string) {
       return { success: false, error: "Por favor, verifique seu e-mail antes de entrar." };
     }
 
-    const expiresIn = 60 * 60 * 1000;
+    const expiresIn = 7 * 24 * 60 * 60 * 1000;
+    const sessionCookie = await getAuth().createSessionCookie(idToken, { expiresIn });
 
     const cookieStore = await cookies();
 
-    cookieStore.set("__session", idToken, {
-      maxAge: expiresIn,
+    cookieStore.set("__session", sessionCookie, {
+      maxAge: expiresIn / 1000,
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       path: "/",
