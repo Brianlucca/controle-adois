@@ -1,46 +1,118 @@
-import { 
-  ShoppingBag, 
-  Utensils, 
-  Car, 
-  Home, 
-  Zap, 
-  HeartPulse, 
-  Gamepad2, 
-  GraduationCap, 
-  Plane, 
-  HelpCircle, 
-  PiggyBank, 
-  ArrowUpCircle, 
-  ArrowDownCircle, 
-  CreditCard, 
+import { useState } from "react";
+import {
+  ArrowUpCircle,
+  Baby,
   Banknote,
+  Beef,
+  BookOpen,
+  BriefcaseBusiness,
+  Building2,
+  Bus,
+  Car,
+  Clapperboard,
+  Coffee,
+  Coins,
+  CreditCard,
+  Droplets,
+  Dumbbell,
+  Fuel,
+  Gamepad2,
+  Gift,
+  GraduationCap,
+  HeartPulse,
+  HelpCircle,
+  Home,
+  Landmark,
+  Music,
+  PawPrint,
+  Phone,
+  PiggyBank,
+  Plane,
+  ReceiptText,
   Repeat,
+  ShieldCheck,
+  Shirt,
+  ShoppingBag,
+  Smartphone,
+  Stethoscope,
+  Scissors,
+  Tv,
+  Utensils,
+  WalletCards,
   Wifi,
-  Smartphone
+  Wrench,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const brands: Record<string, string> = {
   spotify: "spotify",
+  spotfy: "spotify",
   netflix: "netflix",
   youtube: "youtube",
+  "youtube premium": "youtube",
   hbo: "hbo",
+  max: "hbo",
   disney: "disneyplus",
+  disneyplus: "disneyplus",
   globoplay: "globo",
   globo: "globo",
   prime: "amazon",
+  "prime video": "amazon",
+  amazonprime: "amazon",
   twitch: "twitch",
   steam: "steam",
   playstation: "playstation",
+  psn: "playstation",
   xbox: "xbox",
   nintendo: "nintendo",
   paramount: "paramountplus",
   crunchyroll: "crunchyroll",
   deezer: "deezer",
   apple: "apple",
+  "apple music": "applemusic",
+  "apple tv": "appletv",
   icloud: "icloud",
-
+  notion: "notion",
+  canva: "canva",
+  figma: "figma",
+  github: "github",
+  gitlab: "gitlab",
+  vercel: "vercel",
+  hostinger: "hostinger",
+  godaddy: "godaddy",
+  cloudflare: "cloudflare",
+  dropbox: "dropbox",
+  zoom: "zoom",
+  slack: "slack",
+  trello: "trello",
+  asana: "asana",
+  jira: "jira",
+  linkedin: "linkedin",
   nubank: "nubank",
+  neon: "neon",
+  next: "next",
+  will: "will",
+  "will bank": "will",
+  original: "bancooriginal",
+  "banco original": "bancooriginal",
+  pan: "bancopan",
+  "banco pan": "bancopan",
+  sofisa: "sofisa",
+  "banco master": "bancomaster",
+  "banco safra": "safra",
+  safra: "safra",
+  bmg: "bmg",
+  sicoob: "sicoob",
+  sicredi: "sicredi",
+  stone: "stone",
+  ton: "ton",
+  getnet: "getnet",
+  cielo: "cielo",
+  pagseguro: "pagseguro",
+  "pag seguro": "pagseguro",
+  infinitepay: "infinitepay",
+  "infinite pay": "infinitepay",
   inter: "bancointer",
   itau: "itau",
   itaú: "itau",
@@ -51,6 +123,8 @@ const brands: Record<string, string> = {
   "banco do brasil": "bancodobrasil",
   c6: "c6bank",
   picpay: "picpay",
+  "mercado pago": "mercadopago",
+  mercadopago: "mercadopago",
   paypal: "paypal",
   wise: "wise",
   mastercard: "mastercard",
@@ -60,11 +134,20 @@ const brands: Record<string, string> = {
   btg: "btg pactual",
   xp: "xp",
   rico: "xp",
+  clear: "clear",
+  modal: "modalmais",
+  "modal mais": "modalmais",
 
   uber: "uber",
+  "uber eats": "ubereats",
   "99": "99",
+  "99pop": "99",
   airbnb: "airbnb",
   booking: "booking",
+  blablacar: "blablacar",
+  "bla bla car": "blablacar",
+  waze: "waze",
+  moovit: "moovit",
   shell: "shell",
   ipiranga: "ipiranga",
   petrobras: "petrobras",
@@ -73,12 +156,16 @@ const brands: Record<string, string> = {
   gol: "gol",
   localiza: "localiza",
   movida: "movida",
-  seminove: "seminove",
+  unidas: "unidas",
 
   ifood: "ifood",
+  "i food": "ifood",
   rappi: "rappi",
+  "ze delivery": "zedelivery",
   "zé delivery": "zedelivery",
+  zedelivery: "zedelivery",
   mc: "mcdonalds",
+  mcdonald: "mcdonalds",
   mcdonalds: "mcdonalds",
   bk: "burgerking",
   "burger king": "burgerking",
@@ -86,10 +173,20 @@ const brands: Record<string, string> = {
   starbucks: "starbucks",
   dominos: "dominos",
   pizza: "pizzahut",
+  pizzahut: "pizzahut",
   kfc: "kfc",
   cocacola: "cocacola",
+  coca: "cocacola",
   pepsi: "pepsi",
   nespresso: "nespresso",
+  outback: "outbacksteakhouse",
+  habibs: "habibs",
+  "china in box": "chinainbox",
+  giraffas: "giraffas",
+  "bob's": "bobs",
+  bobs: "bobs",
+  cacau: "cacaushow",
+  "cacau show": "cacaushow",
 
   "mercado livre": "mercadolibre",
   mercadolivre: "mercadolibre",
@@ -105,25 +202,58 @@ const brands: Record<string, string> = {
   renner: "lojasrenner",
   riachuelo: "riachuelo",
   cea: "canda",
+  "c&a": "canda",
   decathlon: "decathlon",
   centauro: "centauro",
   sephora: "sephora",
   boticario: "oboticario",
+  "o boticario": "oboticario",
   natura: "natura",
   avon: "avon",
   paguemenos: "paguemenos",
   drogasil: "drogaraia",
+  raia: "drogaraia",
+  "droga raia": "drogaraia",
+  panvel: "panvel",
+  ultrafarma: "ultrafarma",
+  "sao paulo drogaria": "drogariasaopaulo",
+  "drogaria sao paulo": "drogariasaopaulo",
+  "drogaria são paulo": "drogariasaopaulo",
+  araujo: "drogariaaraujo",
+  "drogaria araujo": "drogariaaraujo",
 
   assai: "assai",
+  assaí: "assai",
   carrefour: "carrefour",
+  "pao de acucar": "groupecasino",
   "pão de açúcar": "groupecasino",
   extra: "groupecasino",
   walmart: "walmart",
   sams: "samsclub",
   atacadao: "carrefour",
+  atacadão: "carrefour",
+  tenda: "tenda",
+  obah: "obahortifruti",
+  oba: "obahortifruti",
+  "oba hortifruti": "obahortifruti",
+  hortifruti: "hortifruti",
+  dia: "dia",
+  "supermercado dia": "dia",
+  prezunic: "prezunic",
+  mundial: "mundial",
+  guanabara: "guanabara",
+  "super bom": "superbom",
+  superbom: "superbom",
+  savegnago: "savegnago",
+  zafari: "zaffari",
+  zaffari: "zaffari",
+  muffato: "muffato",
 
   google: "google",
+  gmail: "gmail",
+  drive: "googledrive",
   microsoft: "microsoft",
+  office: "microsoftoffice",
   adobe: "adobe",
   chatgpt: "openai",
   openai: "openai",
@@ -136,29 +266,486 @@ const brands: Record<string, string> = {
   smartfit: "smartfit",
   bluefit: "bluefit",
   gympass: "gympass",
-  totalpass: "totalpass"
+  totalpass: "totalpass",
+  porto: "portoseguro",
+  "porto seguro": "portoseguro",
+  tokio: "tokiomarine",
+  "tokio marine": "tokiomarine",
+  mapfre: "mapfre",
+  allianz: "allianz",
+  petlove: "petlove",
+  cobasi: "cobasi",
+  petz: "petz",
+  cvc: "cvc",
+  decolar: "decolar",
+  "123milhas": "123milhas",
 };
 
 const categoryIcons: Record<string, any> = {
-  "alimentação": Utensils,
-  "transporte": Car,
-  "moradia": Home,
-  "lazer": Gamepad2,
-  "saúde": HeartPulse,
-  "educação": GraduationCap,
-  "salário": ArrowUpCircle,
-  "investimento": PiggyBank,
-  "cartão de crédito": CreditCard,
-  "empréstimo": Banknote,
-  "outros": HelpCircle,
-  "compras": ShoppingBag,
-  "contas": Zap,
-  "viagem": Plane,
-  "assinatura": Repeat,
-  "internet": Wifi,
-  "telefone": Smartphone,
-  "celular": Smartphone
+  alimentacao: Utensils,
+  transporte: Car,
+  moradia: Home,
+  lazer: Gamepad2,
+  saude: HeartPulse,
+  educacao: GraduationCap,
+  salario: ArrowUpCircle,
+  investimento: PiggyBank,
+  "cartao de credito": CreditCard,
+  emprestimo: Banknote,
+  outros: HelpCircle,
+  compras: ShoppingBag,
+  contas: Zap,
+  viagem: Plane,
+  assinatura: Repeat,
+  internet: Wifi,
+  telefone: Phone,
+  celular: Smartphone,
 };
+
+const keywordIcons: Array<{ keys: string[]; icon: any; color: string }> = [
+  {
+    keys: ["academia", "musculacao", "treino", "crossfit"],
+    icon: Dumbbell,
+    color: "bg-lime-500/10 text-lime-400",
+  },
+  {
+    keys: [
+      "farmacia",
+      "remedio",
+      "medicamento",
+      "medico",
+      "consulta",
+      "exame",
+      "laboratorio",
+      "vacina",
+      "hospital",
+      "clinica",
+      "dentista",
+      "odontologia",
+      "odontologico",
+      "plano odontologico",
+      "plano dental",
+      "dental",
+      "amil",
+      "amil dental",
+      "hapvida",
+      "unimed",
+      "sulamerica",
+      "sul america",
+      "bradesco saude",
+      "psicologo",
+      "terapia",
+    ],
+    icon: Stethoscope,
+    color: "bg-rose-500/10 text-rose-400",
+  },
+  {
+    keys: [
+      "gasolina",
+      "combustivel",
+      "posto",
+      "etanol",
+      "alcool",
+      "diesel",
+      "gnv",
+      "lava jato",
+      "oleo motor",
+    ],
+    icon: Fuel,
+    color: "bg-orange-500/10 text-orange-400",
+  },
+  {
+    keys: [
+      "onibus",
+      "metro",
+      "trem",
+      "passagem",
+      "bilhete unico",
+      "transporte publico",
+      "rodoviaria",
+      "pedagio",
+      "estacionamento",
+      "zona azul",
+    ],
+    icon: Bus,
+    color: "bg-sky-500/10 text-sky-400",
+  },
+  {
+    keys: [
+      "aluguel",
+      "condominio",
+      "iptu",
+      "casa",
+      "apartamento",
+      "imovel",
+      "financiamento imovel",
+      "prestacao casa",
+    ],
+    icon: Home,
+    color: "bg-violet-500/10 text-violet-400",
+  },
+  {
+    keys: [
+      "agua",
+      "saneamento",
+      "embasa",
+      "sabesp",
+      "caesb",
+      "copasa",
+      "cedae",
+      "sanepar",
+      "compesa",
+      "corsan",
+      "casan",
+      "deso",
+      "cagece",
+      "caern",
+      "agepisa",
+      "brk",
+      "aguas do rio",
+      "aguas de manaus",
+    ],
+    icon: Droplets,
+    color: "bg-sky-500/10 text-sky-400",
+  },
+  {
+    keys: [
+      "luz",
+      "energia",
+      "eletricidade",
+      "conta de luz",
+      "coelba",
+      "neoenergia",
+      "neoenergia bahia",
+      "neoenergia pernambuco",
+      "celpe",
+      "neoenergia cosern",
+      "cosern",
+      "neoenergia brasilia",
+      "ceb",
+      "neoenergia elektro",
+      "elektro",
+      "enel",
+      "enel sp",
+      "enel sao paulo",
+      "enel rj",
+      "enel rio",
+      "enel ce",
+      "enel ceara",
+      "cemig",
+      "copel",
+      "cpfl",
+      "cpfl paulista",
+      "cpfl piratininga",
+      "cpfl santa cruz",
+      "rge",
+      "edp",
+      "edp sp",
+      "edp es",
+      "edp espiritosanto",
+      "light",
+      "energisa",
+      "energisa acre",
+      "energisa minas",
+      "energisa ms",
+      "energisa mt",
+      "energisa paraiba",
+      "energisa pb",
+      "energisa rondonia",
+      "energisa ro",
+      "energisa sergipe",
+      "energisa se",
+      "equatorial",
+      "equatorial alagoas",
+      "equatorial amapa",
+      "equatorial goias",
+      "equatorial maranhao",
+      "equatorial para",
+      "equatorial piaui",
+      "ceal",
+      "cea",
+      "celg",
+      "cemar",
+      "celpa",
+      "cepisa",
+      "ceee",
+      "ceee equatorial",
+      "celesc",
+      "amazonas energia",
+      "roraima energia",
+      "celetro",
+      "dmed",
+      "cocel",
+      "sulgipe",
+      "certel",
+      "coprel",
+      "cooperaliança",
+      "cooperalianca",
+      "dcel",
+      "dcelt",
+      "ceriluz",
+      "cerbranorte",
+      "cermissoes",
+      "cermissões",
+      "ceripa",
+      "muxenergia",
+      "forcel",
+      "hidropan",
+      "nova palma",
+      "elfsm",
+      "eletrocar",
+      "demais distribuidoras energia",
+    ],
+    icon: Zap,
+    color: "bg-yellow-500/10 text-yellow-400",
+  },
+  {
+    keys: [
+      "internet",
+      "fibra",
+      "banda larga",
+      "wifi",
+      "wi-fi",
+      "provedor",
+      "roteador",
+      "net",
+      "tv cabo",
+    ],
+    icon: Wifi,
+    color: "bg-cyan-500/10 text-cyan-400",
+  },
+  {
+    keys: [
+      "telefone",
+      "celular",
+      "recarga",
+      "chip",
+      "plano movel",
+      "pos pago",
+      "pre pago",
+    ],
+    icon: Smartphone,
+    color: "bg-blue-500/10 text-blue-400",
+  },
+  {
+    keys: ["streaming", "assinatura", "tv", "series", "filmes online"],
+    icon: Tv,
+    color: "bg-purple-500/10 text-purple-400",
+  },
+  {
+    keys: [
+      "pix",
+      "transferencia",
+      "ted",
+      "doc",
+      "saque",
+      "deposito",
+      "tarifa bancaria",
+    ],
+    icon: Landmark,
+    color: "bg-cyan-500/10 text-cyan-400",
+  },
+  {
+    keys: [
+      "boleto",
+      "fatura",
+      "mensalidade",
+      "parcela",
+      "carnê",
+      "carne",
+      "conta",
+    ],
+    icon: ReceiptText,
+    color: "bg-slate-500/10 text-slate-300",
+  },
+  {
+    keys: ["cartao", "cartao credito", "anuidade", "limite"],
+    icon: WalletCards,
+    color: "bg-indigo-500/10 text-indigo-400",
+  },
+  {
+    keys: [
+      "roupa",
+      "calcado",
+      "camisa",
+      "calca",
+      "short",
+      "vestido",
+      "tenis",
+      "sapato",
+      "moda",
+    ],
+    icon: Shirt,
+    color: "bg-pink-500/10 text-pink-400",
+  },
+  {
+    keys: [
+      "mercado",
+      "supermercado",
+      "feira",
+      "hortifruti",
+      "sacolao",
+      "atacado",
+      "atacarejo",
+      "compras mes",
+    ],
+    icon: ShoppingBag,
+    color: "bg-sky-500/10 text-sky-400",
+  },
+  {
+    keys: [
+      "pet",
+      "veterinario",
+      "racao",
+      "banho e tosa",
+      "tosa",
+      "gato",
+      "cachorro",
+    ],
+    icon: PawPrint,
+    color: "bg-amber-500/10 text-amber-400",
+  },
+  {
+    keys: ["crianca", "filho", "filha", "bebe", "fralda", "creche", "escola"],
+    icon: Baby,
+    color: "bg-blue-500/10 text-blue-400",
+  },
+  {
+    keys: ["presente", "aniversario", "casamento", "lembranca"],
+    icon: Gift,
+    color: "bg-fuchsia-500/10 text-fuchsia-400",
+  },
+  {
+    keys: [
+      "seguro",
+      "plano de saude",
+      "plano saude",
+      "protecao",
+      "previdencia",
+    ],
+    icon: ShieldCheck,
+    color: "bg-blue-500/10 text-blue-400",
+  },
+  {
+    keys: [
+      "curso",
+      "livro",
+      "faculdade",
+      "universidade",
+      "ead",
+      "material escolar",
+      "apostila",
+      "ingles",
+      "idioma",
+    ],
+    icon: BookOpen,
+    color: "bg-indigo-500/10 text-indigo-400",
+  },
+  {
+    keys: ["cinema", "filme", "teatro"],
+    icon: Clapperboard,
+    color: "bg-purple-500/10 text-purple-400",
+  },
+  {
+    keys: ["show", "musica", "evento", "ingresso", "festival"],
+    icon: Music,
+    color: "bg-red-500/10 text-red-400",
+  },
+  {
+    keys: ["cafe", "cafeteria", "padaria", "lanche", "pastel", "salgado"],
+    icon: Coffee,
+    color: "bg-stone-500/10 text-stone-300",
+  },
+  {
+    keys: ["carne", "acougue", "churrasco"],
+    icon: Beef,
+    color: "bg-red-500/10 text-red-400",
+  },
+  {
+    keys: [
+      "restaurante",
+      "almoco",
+      "jantar",
+      "comida",
+      "delivery",
+      "pizza",
+      "hamburguer",
+      "hamburgueria",
+      "sushi",
+    ],
+    icon: Utensils,
+    color: "bg-orange-500/10 text-orange-400",
+  },
+  {
+    keys: [
+      "cabeleireiro",
+      "barbearia",
+      "salao",
+      "manicure",
+      "pedicure",
+      "unha",
+      "corte cabelo",
+      "barba",
+      "estetica",
+    ],
+    icon: Scissors,
+    color: "bg-pink-500/10 text-pink-400",
+  },
+  {
+    keys: [
+      "salario",
+      "recebimento",
+      "renda",
+      "pro labore",
+      "bonus",
+      "comissao",
+      "decimo terceiro",
+      "13",
+    ],
+    icon: Coins,
+    color: "bg-emerald-500/10 text-emerald-400",
+  },
+  {
+    keys: [
+      "manutencao",
+      "conserto",
+      "reparo",
+      "obra",
+      "pedreiro",
+      "eletricista",
+      "encanador",
+      "pintura",
+    ],
+    icon: Wrench,
+    color: "bg-zinc-500/10 text-zinc-300",
+  },
+  {
+    keys: [
+      "empresa",
+      "cnpj",
+      "mei",
+      "contador",
+      "contabilidade",
+      "imposto",
+      "das",
+      "simples nacional",
+    ],
+    icon: Building2,
+    color: "bg-slate-500/10 text-slate-300",
+  },
+  {
+    keys: [
+      "freela",
+      "freelancer",
+      "cliente",
+      "projeto",
+      "servico",
+      "consultoria",
+    ],
+    icon: BriefcaseBusiness,
+    color: "bg-indigo-500/10 text-indigo-400",
+  },
+];
 
 interface BrandIconProps {
   description: string;
@@ -167,36 +754,116 @@ interface BrandIconProps {
   className?: string;
 }
 
-export function BrandIcon({ description, category = "Outros", type = "expense", className }: BrandIconProps) {
-  const lowerDesc = description.toLowerCase();
-  
-  const brandKey = Object.keys(brands).find(key => lowerDesc.includes(key));
+function normalizeText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
 
-  if (brandKey) {
-    const slug = brands[brandKey];
+function includesKeyword(text: string, keyword: string) {
+  const normalizedKeyword = normalizeText(keyword);
+  const escapedKeyword = normalizedKeyword.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&",
+  );
+  return new RegExp(`(^|\\s)${escapedKeyword}(s)?(\\s|$)`).test(text);
+}
+
+function iconColor(color: string, type: "income" | "expense") {
+  if (type === "income") return "bg-emerald-500/10 text-emerald-500";
+  if (color.includes("emerald") || color.includes("green"))
+    return color.replace(/emerald|green/g, "cyan");
+  return color;
+}
+
+export function BrandIcon({
+  description,
+  category = "Outros",
+  type = "expense",
+  className,
+}: BrandIconProps) {
+  const lowerDesc = normalizeText(description);
+  const keywordMatch = keywordIcons.find((item) =>
+    item.keys.some((key) => includesKeyword(lowerDesc, key)),
+  );
+
+  if (keywordMatch) {
+    const Icon = keywordMatch.icon;
     return (
-      <div className={cn("rounded-full overflow-hidden flex items-center justify-center bg-white/10 shrink-0 p-[2px]", className)}>
-        <img 
-          src={`https://cdn.simpleicons.org/${slug}/white`} 
-          alt={brandKey}
-          className="w-3/5 h-3/5 object-contain"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-          }}
-        />
+      <div
+        className={cn(
+          "rounded-full flex items-center justify-center shrink-0",
+          iconColor(keywordMatch.color, type),
+          className,
+        )}
+      >
+        <Icon size={20} className="w-3/5 h-3/5" />
       </div>
     );
   }
 
-  const catKey = category.toLowerCase();
-  const Icon = categoryIcons[catKey] || (type === "income" ? ArrowUpCircle : HelpCircle);
+  const brandKey = Object.keys(brands).find((key) =>
+    includesKeyword(lowerDesc, key),
+  );
+
+  if (brandKey) {
+    return <BrandLogo slug={brands[brandKey]} label={brandKey} type={type} className={className} />;
+  }
+
+  const catKey = normalizeText(category);
+  const Icon =
+    categoryIcons[catKey] || (type === "income" ? ArrowUpCircle : HelpCircle);
 
   return (
-    <div className={cn("rounded-full flex items-center justify-center shrink-0", 
-      type === "income" ? "bg-emerald-500/10 text-emerald-500" : "bg-indigo-500/10 text-indigo-400",
-      className
-    )}>
+    <div
+      className={cn(
+        "rounded-full flex items-center justify-center shrink-0",
+        type === "income"
+          ? "bg-emerald-500/10 text-emerald-500"
+          : "bg-indigo-500/10 text-indigo-400",
+        className,
+      )}
+    >
       <Icon size={20} className="w-3/5 h-3/5" />
+    </div>
+  );
+}
+
+function BrandLogo({
+  slug,
+  label,
+  type,
+  className,
+}: {
+  slug: string;
+  label: string;
+  type: "income" | "expense";
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const logoColor = type === "income" ? "/10b981" : "";
+
+  return (
+    <div
+      className={cn(
+        "rounded-full overflow-hidden flex items-center justify-center bg-white/10 text-slate-400 shrink-0 p-[2px]",
+        type === "income" && "bg-emerald-500/10",
+        className,
+      )}
+    >
+      {failed ? (
+        <HelpCircle size={20} className="w-3/5 h-3/5" />
+      ) : (
+        <img
+          src={`https://cdn.simpleicons.org/${slug}${logoColor}`}
+          alt={label}
+          className="w-[72%] h-[72%] object-contain"
+          onError={() => setFailed(true)}
+        />
+      )}
     </div>
   );
 }
