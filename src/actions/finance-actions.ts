@@ -74,7 +74,7 @@ function getBaseTransaction(data: z.infer<typeof TransactionSchema>, user: any) 
   return {
     ...data,
     userId: user.uid,
-    userName: user.name || user.email || "Usuario",
+    userName: user.name || user.email || "Usuário",
     createdAt: new Date(),
     pixCode: data.pixCode || null,
     barCode: data.barCode || null,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useFinance } from "@/hooks/use-finance";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,12 @@ import {
   Save,
   Filter,
   Layers,
+  Upload,
+  ArrowDownWideNarrow,
+  ArrowUpWideNarrow,
+  Repeat2,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import {
   formatCurrency,
   formatDate,
@@ -69,7 +74,9 @@ export default function TransactionsPage() {
     addTransaction,
     editTransaction,
     deleteTransaction,
+    deleteRecurrence,
     updateTransactionStatus,
+    importTransactions,
     setDateRange,
   } = useFinance();
   const { hideValues, toggleHideValues } = usePreferences();
@@ -83,6 +90,9 @@ export default function TransactionsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isImporting, setIsImporting] = useState(false);
+  const [sortMode, setSortMode] = useState<"priority" | "desc" | "asc">("priority");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isGlobalStats, setIsGlobalStats] = useState(true);
   
@@ -91,8 +101,8 @@ export default function TransactionsPage() {
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
 
   const [uiDateRange, setUiDateRange] = useState({
-    from: firstDay,
-    to: lastDay,
+    from: "2000-01-01",
+    to: "2099-12-31",
   });
 
   useEffect(() => {
@@ -129,6 +139,7 @@ export default function TransactionsPage() {
       barCode: "",
       observation: "",
       isRecurrent: false,
+      recurrenceMonths: 12,
     });
     setIsModalOpen(true);
   };
@@ -152,6 +163,7 @@ export default function TransactionsPage() {
       barCode: selectedTx.barCode || "",
       observation: selectedTx.observation || "",
       isRecurrent: selectedTx.isRecurrent || false,
+      recurrenceMonths: selectedTx.recurrenceMonths || 12,
     });
     setIsEditing(true);
   };
@@ -167,6 +179,7 @@ export default function TransactionsPage() {
     barCode: "",
     observation: "",
     isRecurrent: false,
+    recurrenceMonths: 12,
   });
 
   const handleSaveWrapper = async (e: React.FormEvent) => {
@@ -187,6 +200,10 @@ export default function TransactionsPage() {
 
     if (handleAuthError(result)) return;
 
+    if (!isEditing && result?.success && "count" in result && Number(result.count) > 1) {
+      alert(`${Number(result.count)} lançamentos recorrentes foram criados.`);
+    }
+
     setIsModalOpen(false);
     setIsEditing(false);
     setSelectedTx(null);
@@ -199,6 +216,20 @@ export default function TransactionsPage() {
     setIsModalOpen(false);
   };
 
+  const handleDeleteRecurrenceWrapper = async (id: string) => {
+    if (!confirm("Excluir apenas as parcelas pendentes desta recorrencia? As parcelas ja pagas serão preservadas.")) return;
+
+    const result = await deleteRecurrence(id);
+    if (handleAuthError(result)) return;
+
+    if (result?.success && "count" in result) {
+      alert(`${Number(result.count)} parcelas pendentes da recorrencia foram excluidas.`);
+    }
+
+    setSelectedTx(null);
+    setIsModalOpen(false);
+  };
+
   const handleStatusWrapper = async (
     id: string,
     newStatus: "paid" | "pending"
@@ -207,6 +238,129 @@ export default function TransactionsPage() {
     if (handleAuthError(result)) return;
     if (selectedTx) {
       setSelectedTx({ ...selectedTx, status: newStatus });
+    }
+  };
+
+  const normalizeImportKey = (key: string) =>
+    key
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "");
+
+  const readImportValue = (row: Record<string, any>, keys: string[], fallbackIndex?: number) => {
+    const normalized = Object.entries(row).reduce((acc, [key, value]) => {
+      acc[normalizeImportKey(key)] = value;
+      return acc;
+    }, {} as Record<string, any>);
+
+    for (const key of keys) {
+      const value = normalized[normalizeImportKey(key)];
+      if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+    }
+
+    if (fallbackIndex !== undefined) {
+      const fallback = Object.values(row)[fallbackIndex];
+      if (fallback !== undefined && fallback !== null && String(fallback).trim() !== "") return fallback;
+    }
+
+    return "";
+  };
+
+  const parseImportDate = (value: any) => {
+    if (typeof value === "number") {
+      const parsed = XLSX.SSF.parse_date_code(value);
+      if (parsed) {
+        return `${parsed.y}-${String(parsed.m).padStart(2, "0")}-${String(parsed.d).padStart(2, "0")}`;
+      }
+    }
+
+    const raw = String(value || "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+
+    const brDate = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+    if (brDate) {
+      const year = brDate[3].length === 2 ? `20${brDate[3]}` : brDate[3];
+      return `${year}-${brDate[2].padStart(2, "0")}-${brDate[1].padStart(2, "0")}`;
+    }
+
+    return new Date().toISOString().split("T")[0];
+  };
+
+  const parseImportAmount = (value: any) => {
+    if (typeof value === "number") return value;
+    const cleaned = String(value || "0")
+      .replace(/[^\d,.-]/g, "")
+      .replace(/\.(?=\d{3}(\D|$))/g, "")
+      .replace(",", ".");
+    return Number(cleaned) || 0;
+  };
+
+  const normalizeImportText = (value: any) =>
+    String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+  const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      if (workbook.SheetNames.length === 0) {
+        alert("Esse arquivo nao tem nenhuma aba para importar.");
+        return;
+      }
+
+      const rows = workbook.SheetNames.flatMap((sheetName) => {
+        const sheet = workbook.Sheets[sheetName];
+        return XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+      });
+
+      const imported = rows
+        .map((row) => {
+          const description = String(readImportValue(row, ["descricao", "descrição", "description", "nome"], 1)).trim();
+          const amount = parseImportAmount(readImportValue(row, ["valor", "amount"], 4));
+          const typeRaw = normalizeImportText(readImportValue(row, ["tipo", "type"], 3));
+          const statusRaw = normalizeImportText(readImportValue(row, ["status"], 5));
+
+          if (!description || amount <= 0) return null;
+
+          return {
+            description,
+            amount,
+            category: String(readImportValue(row, ["categoria", "category"], 2) || "Outros").trim(),
+            type: typeRaw.includes("entrada") || typeRaw.includes("income") || typeRaw.includes("receita") ? "income" : "expense",
+            status: statusRaw.includes("pend") ? "pending" : "paid",
+            dueDate: parseImportDate(readImportValue(row, ["data", "dueDate", "vencimento"], 0)),
+            pixCode: String(readImportValue(row, ["pix", "pixCode"]) || ""),
+            barCode: String(readImportValue(row, ["boleto", "codigo de barras", "barCode"]) || ""),
+            observation: String(readImportValue(row, ["observacao", "observação", "observation"], 6) || ""),
+            isRecurrent: false,
+            recurrenceMonths: 12,
+          };
+        })
+        .filter(Boolean);
+
+      if (imported.length === 0) {
+        alert("Nao encontrei transacoes validas nesse arquivo.");
+        return;
+      }
+
+      const result = await importTransactions(imported);
+      if (handleAuthError(result)) return;
+      if (result?.success) {
+        const importedCount = "count" in result ? result.count : imported.length;
+        alert(`${importedCount} transações importadas.`);
+      }
+    } catch (error) {
+      alert("Não foi possível ler esse arquivo. Confira se ele tem colunas como Data, Descrição, Categoria, Tipo, Valor e Status.");
+    } finally {
+      setIsImporting(false);
+      event.target.value = "";
     }
   };
 
@@ -224,6 +378,7 @@ export default function TransactionsPage() {
         tx.dueDate
       )}`,
       isRecurrent: false,
+      recurrenceMonths: 12,
     });
     setSelectedTx(null);
     setIsEditing(false);
@@ -232,6 +387,14 @@ export default function TransactionsPage() {
 
   const displayValue = (val: number) => {
     return hideValues ? "••••••" : formatCurrency(val);
+  };
+
+  const previewMonthlyDate = (dateStr: string, months: number) => {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const target = new Date(Date.UTC(year, month - 1 + months, 1));
+    const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+    target.setUTCDate(Math.min(day, lastDay));
+    return target.toISOString().split("T")[0];
   };
 
   const income = transactions
@@ -273,6 +436,36 @@ export default function TransactionsPage() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const getDateTime = (date?: string) => {
+    if (!date) return 0;
+    return new Date(`${date}T00:00:00`).getTime();
+  };
+
+  const getPriorityRank = (transaction: any) => {
+    const todayKey = new Date().toISOString().split("T")[0];
+
+    if (transaction.status === "pending") {
+      if (transaction.dueDate < todayKey) return 0;
+      return 1;
+    }
+
+    return 2;
+  };
+
+  const getRowStateClass = (transaction: any) => {
+    const todayKey = new Date().toISOString().split("T")[0];
+
+    if (transaction.status !== "pending") {
+      return "hover:bg-white/[0.03]";
+    }
+
+    if (transaction.dueDate < todayKey) {
+      return "bg-red-500/[0.06] hover:bg-red-500/[0.1] border-l-2 border-red-500/70";
+    }
+
+    return "bg-amber-500/[0.06] hover:bg-amber-500/[0.1] border-l-2 border-amber-500/70";
+  };
+
   const filteredTransactions = transactions.filter((t) => {
     const matchesTerm = t.description
       .toLowerCase()
@@ -290,7 +483,31 @@ export default function TransactionsPage() {
       t.dueDate >= uiDateRange.from && t.dueDate <= uiDateRange.to;
 
     return matchesTerm && matchesCategory && matchesStatus && matchesDate;
+  }).sort((a, b) => {
+    const dateA = getDateTime(a.dueDate);
+    const dateB = getDateTime(b.dueDate);
+
+    if (sortMode === "asc") return dateA - dateB;
+    if (sortMode === "desc") return dateB - dateA;
+
+    const rankA = getPriorityRank(a);
+    const rankB = getPriorityRank(b);
+
+    if (rankA !== rankB) return rankA - rankB;
+
+    if (rankA === 0) return dateA - dateB;
+    if (rankA === 1) return dateA - dateB;
+
+    return dateB - dateA;
   });
+
+  const handleDateSortToggle = () => {
+    setSortMode((mode) => {
+      if (mode === "priority") return "desc";
+      if (mode === "desc") return "asc";
+      return "priority";
+    });
+  };
 
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
   const paginatedTransactions = filteredTransactions.slice(
@@ -496,6 +713,29 @@ export default function TransactionsPage() {
               </div>
             </div>
 
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleImportExcel}
+              className="hidden"
+            />
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+              className="w-full lg:w-auto h-10 px-4 border-white/10 bg-[#0B0E14] text-slate-300 hover:bg-white/10 shrink-0"
+            >
+              {isImporting ? (
+                <Loader2 size={16} className="mr-2 animate-spin" />
+              ) : (
+                <Upload size={16} className="mr-2" />
+              )}
+              Importar
+            </Button>
+
             <Button
               onClick={openNewTransactionModal}
               className="w-full lg:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-10 px-6 rounded-lg shadow-lg shadow-indigo-900/20 transition-all active:scale-95 shrink-0 border border-indigo-500/20"
@@ -522,7 +762,31 @@ export default function TransactionsPage() {
                     <th className="px-6 py-4 hidden sm:table-cell">
                       Categoria
                     </th>
-                    <th className="px-6 py-4 hidden sm:table-cell">Data</th>
+                    <th className="px-6 py-4 hidden sm:table-cell">
+                      <div className="group/sort relative inline-flex">
+                        <button
+                          type="button"
+                          onClick={handleDateSortToggle}
+                          className="inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 text-left transition-colors hover:text-white"
+                        >
+                          {sortMode === "priority" ? "Prioridade" : "Data"}
+                          {sortMode === "priority" ? (
+                            <AlertTriangle size={13} className="text-amber-400" />
+                          ) : sortMode === "desc" ? (
+                            <ArrowDownWideNarrow size={13} className="text-indigo-400" />
+                          ) : (
+                            <ArrowUpWideNarrow size={13} className="text-indigo-400" />
+                          )}
+                        </button>
+                        <div className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-max max-w-[240px] -translate-x-1/2 rounded-lg border border-white/10 bg-[#0B0E14] px-3 py-2 text-[11px] font-semibold normal-case tracking-normal text-slate-200 opacity-0 shadow-xl shadow-black/40 transition-opacity duration-150 group-hover/sort:opacity-100">
+                          {sortMode === "priority"
+                            ? "Prioridade: vencidas, proximas e depois concluidas"
+                            : sortMode === "desc"
+                            ? "Datas futuras primeiro"
+                            : "Datas antigas primeiro"}
+                        </div>
+                      </div>
+                    </th>
                     <th className="px-6 py-4 text-right">Valor</th>
                   </tr>
                 </thead>
@@ -541,7 +805,7 @@ export default function TransactionsPage() {
                       <tr
                         key={t.id}
                         onClick={() => openDetailsModal(t)}
-                        className="hover:bg-white/[0.03] cursor-pointer transition-colors group"
+                        className={`${getRowStateClass(t)} cursor-pointer transition-colors group`}
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -743,6 +1007,37 @@ export default function TransactionsPage() {
                     </div>
                   )}
 
+                  {selectedTx.isRecurrent && (
+                    <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/10 p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500 text-white">
+                            <Repeat2 size={18} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">
+                              Transação recorrente
+                            </p>
+                            <p className="text-xs text-indigo-200">
+                              {selectedTx.recurrenceIndex && selectedTx.recurrenceTotal
+                                ? `${selectedTx.recurrenceIndex} de ${selectedTx.recurrenceTotal}`
+                                : "Serie mensal ativa"}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          className="h-9 bg-red-500/10 px-3 text-red-300 hover:bg-red-500/20 border border-red-500/20"
+                          onClick={() => handleDeleteRecurrenceWrapper(selectedTx.id)}
+                        >
+                          <Trash2 size={14} className="mr-2" />
+                          Excluir recorrencia
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   {(selectedTx.pixCode || selectedTx.barCode) && (
                     <div className="space-y-3 pt-2">
                       {selectedTx.pixCode && (
@@ -867,7 +1162,13 @@ export default function TransactionsPage() {
                     <button
                       type="button"
                       onClick={() =>
-                        setFormData({ ...formData, type: "income" })
+                        setFormData({
+                          ...formData,
+                          type: "income",
+                          status: "paid",
+                          isRecurrent: false,
+                          recurrenceMonths: 12,
+                        })
                       }
                       className={`py-2.5 text-sm font-bold rounded-lg transition-all ${
                         formData.type === "income"
@@ -986,26 +1287,91 @@ export default function TransactionsPage() {
 
                   {formData.type === "expense" && (
                     <div className="space-y-4 pt-4 border-t border-white/10">
-                      <div className="flex items-center gap-3 bg-white/5 p-3 rounded-lg border border-white/5">
-                        <input
-                          type="checkbox"
-                          id="recurrent"
-                          checked={formData.isRecurrent}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              isRecurrent: e.target.checked,
-                            })
-                          }
-                          className="w-4 h-4 rounded bg-slate-800 border-slate-600 text-indigo-600 focus:ring-offset-0 focus:ring-0"
-                        />
-                        <label
-                          htmlFor="recurrent"
-                          className="text-sm text-slate-300 font-medium"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            isRecurrent: !formData.isRecurrent,
+                          })
+                        }
+                        className={`flex w-full items-center justify-between gap-4 rounded-xl border p-4 text-left transition-all ${
+                          formData.isRecurrent
+                            ? "border-indigo-500/50 bg-indigo-500/15 shadow-lg shadow-indigo-950/20"
+                            : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
+                        }`}
+                      >
+                        <span className="flex items-center gap-3">
+                          <span
+                            className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                              formData.isRecurrent
+                                ? "bg-indigo-500 text-white"
+                                : "bg-black/20 text-slate-500"
+                            }`}
+                          >
+                            <Repeat2 size={18} />
+                          </span>
+                          <span>
+                            <span className="block text-sm font-bold text-white">
+                              Repetir mensalmente
+                            </span>
+                            <span className="block text-xs text-slate-400">
+                              Cria 12 lancamentos, um para cada mes.
+                            </span>
+                          </span>
+                        </span>
+
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-bold ${
+                            formData.isRecurrent
+                              ? "bg-indigo-500 text-white"
+                              : "bg-white/5 text-slate-500"
+                          }`}
                         >
-                          Repetir esta conta mensalmente?
-                        </label>
-                      </div>
+                          {formData.isRecurrent ? "Ativado" : "Desativado"}
+                        </span>
+                      </button>
+                      {formData.isRecurrent && (
+                        <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/10 p-4">
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                            <div>
+                              <label className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">
+                                Quantidade de meses
+                              </label>
+                              <select
+                                value={formData.recurrenceMonths}
+                                onChange={(e) =>
+                                  setFormData({
+                                    ...formData,
+                                    recurrenceMonths: Number(e.target.value),
+                                  })
+                                }
+                                className="mt-1 h-10 w-full rounded-md border border-indigo-500/30 bg-[#0B0E14] px-3 text-sm text-white outline-none focus:ring-1 focus:ring-indigo-500 sm:w-44"
+                              >
+                                <option value={3}>3 meses</option>
+                                <option value={6}>6 meses</option>
+                                <option value={12}>12 meses</option>
+                                <option value={24}>24 meses</option>
+                              </select>
+                            </div>
+                            <div className="text-xs text-indigo-200">
+                              Serão criados {formData.recurrenceMonths} lançamentos.
+                            </div>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {Array.from({ length: Math.min(4, formData.recurrenceMonths) }).map((_, index) => (
+                              <span key={index} className="rounded-full bg-black/20 px-2.5 py-1 text-[11px] font-bold text-indigo-100">
+                                {formatDate(previewMonthlyDate(formData.dueDate, index))}
+                              </span>
+                            ))}
+                            {formData.recurrenceMonths > 4 && (
+                              <span className="rounded-full bg-black/20 px-2.5 py-1 text-[11px] font-bold text-indigo-100">
+                                +{formData.recurrenceMonths - 4}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       <Input
                         placeholder="Código Pix (Copia e Cola)"
                         value={formData.pixCode}
