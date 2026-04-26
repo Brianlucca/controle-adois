@@ -5,7 +5,7 @@ import { auth } from "@/lib/firebase-client";
 import { 
   getWorkspaceDetails, joinWorkspace, createSharedWorkspace, getUserWorkspaces,     
   switchActiveWorkspace, leaveWorkspace, updateMemberPermissions, deleteWorkspace,
-  updateWorkspaceName, updateWorkspaceSettings 
+  updateWorkspaceName, updateWorkspaceSettings, setPrimaryWorkspace
 } from "@/actions/workspace-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,9 +70,20 @@ export default function WorkspacePage() {
   };
 
   const handleSwitch = async (id: string) => {
+    if (!auth.currentUser) return;
     setLoading(true);
-    await switchActiveWorkspace(id);
+    localStorage.setItem("lastActiveWorkspaceId", id);
+    await switchActiveWorkspace(id, auth.currentUser.uid);
     window.location.reload();
+  };
+
+  const handleSetPrimary = async (id: string, makePersonal = false) => {
+    if (!auth.currentUser) return;
+    setLoading(true);
+    localStorage.setItem("lastActiveWorkspaceId", id);
+    const res = await setPrimaryWorkspace(auth.currentUser.uid, id, makePersonal);
+    if (res.success) window.location.reload();
+    else { alert(res.error); setLoading(false); }
   };
 
   const handleSaveSettings = async () => {
@@ -169,12 +180,20 @@ export default function WorkspacePage() {
                                       </p>
                                   </div>
                               </div>
-                              {!isActive && (
-                                  <Button variant="outline" size="sm" onClick={() => handleSwitch(ws.id)} disabled={loading} className="w-full bg-white/5 border-white/5 text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/10 h-10">
-                                      {loading ? <Loader2 className="animate-spin"/> : <ArrowRightLeft size={16} className="mr-2"/>}
-                                      Ativar
-                                  </Button>
-                              )}
+                              <div className="space-y-2">
+                                  {!isActive && (
+                                      <Button variant="outline" size="sm" onClick={() => handleSwitch(ws.id)} disabled={loading} className="w-full bg-white/5 border-white/5 text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/10 h-10">
+                                          {loading ? <Loader2 className="animate-spin"/> : <ArrowRightLeft size={16} className="mr-2"/>}
+                                          Ativar agora
+                                      </Button>
+                                  )}
+                                  {ws.isOwner && ws.type !== 'personal' && (
+                                      <Button variant="outline" size="sm" onClick={() => handleSetPrimary(ws.id, true)} disabled={loading} className="w-full bg-blue-500/10 border-blue-500/20 text-blue-300 hover:text-white hover:bg-blue-500/20 h-10">
+                                          <User size={16} className="mr-2"/>
+                                          Tornar meu espaço pessoal
+                                      </Button>
+                                  )}
+                              </div>
                           </CardContent>
                       </Card>
                   )
@@ -236,17 +255,21 @@ export default function WorkspacePage() {
                 </Card>
               )}
 
-              {!isPersonal && (
-                  <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-3 gap-6">
                       <Card className="md:col-span-1 bg-[#1A1D24] border-white/5">
                           <CardHeader><CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest">Código de Acesso</CardTitle></CardHeader>
                           <CardContent>
                               <div className="bg-[#0B0E14] p-6 rounded-2xl text-center mb-4 border border-white/10">
-                                  <p className="text-3xl font-mono font-bold text-indigo-400 tracking-[0.2em]">{activeData.inviteCode}</p>
+                                  <p className="text-3xl font-mono font-bold text-indigo-400 tracking-[0.2em]">{activeData.inviteCode || "----"}</p>
                               </div>
-                              <Button variant="outline" className="w-full border-white/10 text-slate-800 hover:text-white hover:bg-white/5 h-12" onClick={handleCopy}>
+                              <Button variant="outline" className="w-full border-white/10 text-slate-800 hover:text-white hover:bg-white/5 h-12" onClick={handleCopy} disabled={!activeData.inviteCode}>
                                   {copied ? <CheckCircle2 size={18} className="mr-2 text-emerald-400"/> : <Copy size={18} className="mr-2"/>} {copied ? "Copiado!" : "Copiar Código"}
                               </Button>
+                              {isPersonal && (
+                                <p className="mt-3 text-xs text-slate-500 text-center">
+                                  Espaço pessoal também pode ser compartilhado.
+                                </p>
+                              )}
                           </CardContent>
                       </Card>
 
@@ -271,8 +294,7 @@ export default function WorkspacePage() {
                               ))}
                           </CardContent>
                       </Card>
-                  </div>
-              )}
+              </div>
 
               <div className="mt-8 border border-red-500/20 rounded-2xl overflow-hidden bg-red-500/5">
                   <div className="p-5 bg-red-500/10 border-b border-red-500/10 flex items-center gap-3 text-red-400">
