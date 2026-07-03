@@ -16,6 +16,7 @@ const TransactionSchema = z.object({
   pixCode: z.string().optional().nullable(),
   barCode: z.string().optional().nullable(),
   observation: z.string().optional().nullable(),
+  linkedInvestmentId: z.string().optional().nullable(),
   isRecurrent: z.boolean().optional().default(false),
   recurrenceMonths: z.coerce.number().int().min(1).max(60).optional().default(12),
 });
@@ -79,6 +80,7 @@ function getBaseTransaction(data: z.infer<typeof TransactionSchema>, user: any) 
     pixCode: data.pixCode || null,
     barCode: data.barCode || null,
     observation: data.observation || null,
+    linkedInvestmentId: data.linkedInvestmentId || null,
     isRecurrent: data.isRecurrent || false,
     recurrenceMonths: data.isRecurrent ? data.recurrenceMonths : null,
   };
@@ -334,6 +336,7 @@ export async function editTransaction(id: string, rawData: any) {
         pixCode: data.pixCode || null,
         barCode: data.barCode || null,
         observation: data.observation || null,
+        linkedInvestmentId: data.linkedInvestmentId || currentData?.linkedInvestmentId || null,
         isRecurrent: true,
         recurrenceMonths: recurrenceCount,
         recurrenceGroupId,
@@ -370,6 +373,7 @@ export async function editTransaction(id: string, rawData: any) {
       pixCode: data.pixCode || null,
       barCode: data.barCode || null,
       observation: data.observation || null,
+      linkedInvestmentId: data.linkedInvestmentId || currentData?.linkedInvestmentId || null,
       isRecurrent: data.isRecurrent || false,
       recurrenceMonths: data.isRecurrent ? data.recurrenceMonths : null,
       paidAt: data.status === "paid" ? new Date() : null,
