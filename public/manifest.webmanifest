@@ -1,0 +1,19 @@
+{
+  "name": "Controle A Dois",
+  "short_name": "Controle",
+  "description": "Gestao financeira compartilhada",
+  "start_url": "/dashboard/transactions",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B0E14",
+  "theme_color": "#0B0E14",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

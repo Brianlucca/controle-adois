@@ -693,17 +693,61 @@ export default function TransactionsPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 relative overflow-hidden group">
+    <div className="animate-in fade-in duration-500 pb-28 lg:pb-10">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+            Transações
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-white lg:text-3xl">
+            Movimento financeiro
+          </h1>
+        </div>
+
+        <div className="hidden gap-2 lg:flex">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            className="h-10 rounded-lg border-white/10 bg-[#151922] px-4 text-slate-200 hover:bg-white/10"
+          >
+            {isImporting ? (
+              <Loader2 size={16} className="mr-2 animate-spin" />
+            ) : (
+              <Upload size={16} className="mr-2" />
+            )}
+            Importar
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => openRedeemInvestmentModal()}
+            disabled={investmentOptions.length === 0}
+            className="h-10 rounded-lg border-emerald-500/25 bg-emerald-500/10 px-4 text-emerald-200 hover:bg-emerald-500/20"
+          >
+            <TrendingUp size={16} className="mr-2" /> Resgatar
+          </Button>
+
+          <Button
+            onClick={openNewTransactionModal}
+            className="h-10 rounded-lg bg-white px-5 font-bold text-slate-950 hover:bg-slate-200"
+          >
+            <Plus size={18} className="mr-2" /> Nova
+          </Button>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="relative overflow-hidden rounded-lg border border-white/10 bg-[#121722] p-5 shadow-xl shadow-black/15">
           <button
             onClick={toggleHideValues}
-            className="absolute top-4 right-4 z-20 text-slate-500 hover:text-white transition-colors bg-black/20 p-2 rounded-lg backdrop-blur-sm"
+            className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-black/20 text-slate-300 transition-colors hover:text-white"
           >
             {hideValues ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
 
-          <div className="absolute right-0 top-0 p-6 opacity-5 group-hover:scale-110 transition-transform pointer-events-none">
+          <div className="absolute right-0 top-0 p-6 opacity-5 pointer-events-none">
             <Wallet size={80} />
           </div>
 
@@ -724,7 +768,7 @@ export default function TransactionsPage() {
             {displayValue(totalAssets)}
           </h3>
 
-          <div className="flex flex-col gap-1 mt-4 pt-3 border-t border-white/5">
+          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-500">Em Conta:</span>
               <span className="font-bold text-slate-300">
@@ -742,12 +786,12 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-        <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 relative overflow-hidden hover:border-emerald-500/30 transition-colors">
+        <div className="relative overflow-hidden rounded-lg border border-emerald-500/15 bg-emerald-500/[0.07] p-4 transition-colors hover:border-emerald-500/30">
           <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500">
+            <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-300">
               <ArrowUpCircle size={24} />
             </div>
-            <span className="text-xs font-bold bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded">
+            <span className="rounded bg-emerald-500/10 px-2 py-1 text-xs font-bold text-emerald-300">
               Receitas
             </span>
           </div>
@@ -757,12 +801,12 @@ export default function TransactionsPage() {
           <p className="text-sm text-slate-500 mt-1">Entradas até hoje</p>
         </div>
 
-        <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 relative overflow-hidden hover:border-red-500/30 transition-colors">
+        <div className="relative overflow-hidden rounded-lg border border-red-500/15 bg-red-500/[0.07] p-4 transition-colors hover:border-red-500/30">
           <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-red-500/10 rounded-xl text-red-500">
+            <div className="rounded-lg bg-red-500/10 p-2 text-red-300">
               <ArrowDownCircle size={24} />
             </div>
-            <span className="text-xs font-bold bg-red-500/10 text-red-400 px-2 py-1 rounded">
+            <span className="rounded bg-red-500/10 px-2 py-1 text-xs font-bold text-red-300">
               Despesas
             </span>
           </div>
@@ -774,12 +818,12 @@ export default function TransactionsPage() {
           </p>
         </div>
 
-        <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 relative overflow-hidden hover:border-amber-500/30 transition-colors">
+        <div className="relative overflow-hidden rounded-lg border border-amber-500/15 bg-amber-500/[0.07] p-4 transition-colors hover:border-amber-500/30">
           <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-amber-500/10 rounded-xl text-amber-500">
+            <div className="rounded-lg bg-amber-500/10 p-2 text-amber-300">
               <AlertTriangle size={24} />
             </div>
-            <span className="text-xs font-bold bg-amber-500/10 text-amber-400 px-2 py-1 rounded">
+            <span className="rounded bg-amber-500/10 px-2 py-1 text-xs font-bold text-amber-300">
               Pendente
             </span>
           </div>
@@ -790,16 +834,16 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      <div className="bg-[#13161C] p-4 rounded-2xl border border-white/5">
-        <div className="flex flex-col xl:flex-row gap-4 justify-between">
+      <div className="mt-5 rounded-lg border border-white/10 bg-[#121722] p-3">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="relative w-full xl:max-w-xs">
             <Search
-              className="absolute left-3 top-3 text-slate-500"
+              className="absolute left-3 top-3.5 text-slate-500"
               size={16}
             />
             <Input
               placeholder="Buscar lançamentos..."
-              className="pl-10 bg-transparent border-none text-white focus:ring-0 placeholder:text-slate-600 h-10 w-full"
+              className="h-11 w-full rounded-lg border-white/10 bg-[#0B0E14] pl-10 text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:ring-0"
               value={filterTerm}
               onChange={(e) => setFilterTerm(e.target.value)}
             />
@@ -810,7 +854,7 @@ export default function TransactionsPage() {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="h-10 rounded-md border border-white/10 bg-[#0B0E14] text-white text-sm px-3 outline-none focus:ring-1 focus:ring-indigo-500 w-full lg:w-40"
+                className="h-11 w-full rounded-lg border border-white/10 bg-[#0B0E14] px-3 text-sm text-white outline-none focus:border-indigo-500/50 lg:w-44"
               >
                 {CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -822,7 +866,7 @@ export default function TransactionsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-10 rounded-md border border-white/10 bg-[#0B0E14] text-white text-sm px-3 outline-none focus:ring-1 focus:ring-indigo-500 w-full lg:w-32"
+                className="h-11 w-full rounded-lg border border-white/10 bg-[#0B0E14] px-3 text-sm text-white outline-none focus:border-indigo-500/50 lg:w-36"
               >
                 <option value="all">Status</option>
                 <option value="pending">Pendente</option>
@@ -835,9 +879,9 @@ export default function TransactionsPage() {
               <Button
                 variant="outline"
                 onClick={() => setIsGlobalStats(!isGlobalStats)}
-                className={`h-10 px-4 border-white/10 ${
+                className={`h-11 rounded-lg px-4 border-white/10 ${
                   isGlobalStats
-                    ? "bg-[#0B0E14] text-slate-400 hover:text-slate-800"
+                    ? "bg-[#0B0E14] text-slate-300 hover:bg-white/10 hover:text-white"
                     : "bg-indigo-500/20 text-indigo-300 border-indigo-500/50 hover:bg-indigo-500/30"
                 }`}
                 title={
@@ -879,7 +923,7 @@ export default function TransactionsPage() {
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
-              className="w-full lg:w-auto h-10 px-4 border-white/10 bg-[#0B0E14] text-slate-300 hover:bg-white/10 shrink-0"
+              className="hidden h-11 rounded-lg border-white/10 bg-[#0B0E14] px-4 text-slate-300 hover:bg-white/10 lg:inline-flex"
             >
               {isImporting ? (
                 <Loader2 size={16} className="mr-2 animate-spin" />
@@ -894,14 +938,14 @@ export default function TransactionsPage() {
               variant="outline"
               onClick={() => openRedeemInvestmentModal()}
               disabled={investmentOptions.length === 0}
-              className="w-full lg:w-auto h-10 px-4 border-emerald-500/20 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-100 shrink-0"
+              className="hidden h-11 rounded-lg border-emerald-500/20 bg-emerald-500/10 px-4 text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-100 lg:inline-flex"
             >
               <TrendingUp size={16} className="mr-2" /> Resgatar
             </Button>
 
             <Button
               onClick={openNewTransactionModal}
-              className="w-full lg:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-10 px-6 rounded-lg shadow-lg shadow-indigo-900/20 transition-all active:scale-95 shrink-0 border border-indigo-500/20"
+              className="hidden h-11 rounded-lg border border-white/10 bg-white px-6 font-bold text-slate-950 hover:bg-slate-200 lg:inline-flex"
             >
               <Plus size={18} className="mr-2" /> Nova
             </Button>
@@ -909,7 +953,104 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      <div className="bg-[#13161C] rounded-2xl border border-white/5 overflow-hidden shadow-xl flex flex-col">
+      <div className="mt-5 flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-bold text-white">Lançamentos</h2>
+          <p className="text-xs text-slate-500">
+            {filteredTransactions.length} registros encontrados
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleDateSortToggle}
+          className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#121722] px-3 text-xs font-bold text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+        >
+          {sortMode === "priority" ? (
+            <AlertTriangle size={14} className="text-amber-300" />
+          ) : sortMode === "desc" ? (
+            <ArrowDownWideNarrow size={14} className="text-indigo-300" />
+          ) : (
+            <ArrowUpWideNarrow size={14} className="text-indigo-300" />
+          )}
+          {sortMode === "priority" ? "Prioridade" : "Data"}
+        </button>
+      </div>
+
+      <div className="mt-3 space-y-2 lg:hidden">
+        {loading ? (
+          <div className="flex min-h-[220px] items-center justify-center rounded-lg border border-white/10 bg-[#121722]">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+          </div>
+        ) : paginatedTransactions.length === 0 ? (
+          <div className="rounded-lg border border-white/10 bg-[#121722] p-10 text-center text-sm text-slate-500">
+            Nenhuma transação encontrada neste período.
+          </div>
+        ) : (
+          paginatedTransactions.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => openDetailsModal(t)}
+              className={`flex w-full items-center gap-3 rounded-lg border border-white/10 bg-[#121722] p-3 text-left transition-colors ${getRowStateClass(
+                t
+              )}`}
+            >
+              <BrandIcon
+                description={t.description}
+                category={t.category}
+                type={t.type}
+                className="h-11 w-11 shrink-0 rounded-lg bg-black/20"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-white">
+                  {t.description}
+                </p>
+                <div className="mt-1 flex min-w-0 items-center gap-2 text-xs text-slate-500">
+                  <span className="truncate">{t.category}</span>
+                  <span className="h-1 w-1 rounded-full bg-slate-700" />
+                  <span>{formatDate(t.dueDate)}</span>
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                <p
+                  className={`font-mono text-sm font-bold ${
+                    t.type === "income" ? "text-emerald-300" : "text-slate-100"
+                  }`}
+                >
+                  {t.type === "expense" ? "- " : "+ "}
+                  {displayValue(t.amount)}
+                </p>
+                <div className="mt-1 flex justify-end">{getStatusBadge(t)}</div>
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+
+      {!loading && filteredTransactions.length > ITEMS_PER_PAGE && (
+        <div className="mt-3 flex gap-2 lg:hidden">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 flex-1 rounded-lg border-white/10 bg-[#121722] text-slate-300 hover:bg-white/5 disabled:opacity-30"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            <ArrowLeft size={14} className="mr-1" /> Anterior
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10 flex-1 rounded-lg border-white/10 bg-[#121722] text-slate-300 hover:bg-white/5 disabled:opacity-30"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Próxima <ArrowRight size={14} className="ml-1" />
+          </Button>
+        </div>
+      )}
+
+      <div className="mt-3 hidden overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-xl shadow-black/10 lg:flex lg:flex-col">
         {loading ? (
           <div className="p-12 flex justify-center">
             <Loader2 className="animate-spin text-indigo-500 h-8 w-8" />
@@ -1046,6 +1187,41 @@ export default function TransactionsPage() {
             )}
           </>
         )}
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#0B0E14]/95 p-3 backdrop-blur lg:hidden">
+        <div className="grid grid-cols-[1fr_1fr_1.2fr] gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            className="h-11 rounded-lg border-white/10 bg-white/5 px-2 text-xs text-slate-200"
+          >
+            {isImporting ? (
+              <Loader2 size={16} className="mr-1 animate-spin" />
+            ) : (
+              <Upload size={16} className="mr-1" />
+            )}
+            Importar
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => openRedeemInvestmentModal()}
+            disabled={investmentOptions.length === 0}
+            className="h-11 rounded-lg border-emerald-500/25 bg-emerald-500/10 px-2 text-xs text-emerald-200"
+          >
+            <TrendingUp size={16} className="mr-1" />
+            Resgatar
+          </Button>
+          <Button
+            onClick={openNewTransactionModal}
+            className="h-11 rounded-lg bg-white px-2 text-sm font-bold text-slate-950 hover:bg-slate-200"
+          >
+            <Plus size={18} className="mr-1" /> Nova
+          </Button>
+        </div>
       </div>
 
       {(isModalOpen || selectedTx || isRedeemModalOpen) && (
