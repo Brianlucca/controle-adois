@@ -37,6 +37,22 @@ export default function DashboardPage() {
   const { transactions, loading, dateRange, setDateRange } = useFinance();
   const { hideValues, toggleHideValues } = usePreferences();
   const [budgetLimit, setBudgetLimit] = useState(3000);
+  const getLocalDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const todayKey = getLocalDateKey(new Date());
+  const isDueUntilToday = (dueDate?: string) =>
+    Boolean(dueDate && dueDate <= todayKey);
+  const isCurrentCashTransaction = (transaction: any) => {
+    if (transaction.status !== "paid") return false;
+    if (transaction.type === "income") return isDueUntilToday(transaction.dueDate);
+
+    const paidDate = String(transaction.paidAt || "").slice(0, 10);
+    return paidDate ? paidDate <= todayKey : true;
+  };
 
   useEffect(() => {
     if (auth.currentUser) {
@@ -52,11 +68,19 @@ export default function DashboardPage() {
   };
 
   const income = transactions
-    .filter((t) => t.type === "income" && t.status === "paid")
+    .filter(
+      (t) =>
+        t.type === "income" &&
+        isCurrentCashTransaction(t)
+    )
     .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
   const expense = transactions
-    .filter((t) => t.type === "expense" && t.status === "paid")
+    .filter(
+      (t) =>
+        t.type === "expense" &&
+        isCurrentCashTransaction(t)
+    )
     .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
   const balance = income - expense;
@@ -245,7 +269,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <p className="text-sm text-slate-400 font-medium">
-                Receitas Confirmadas
+                Receitas Até Hoje
               </p>
               <h3 className="text-2xl font-bold text-white mt-1">
                 {displayValue(income)}
@@ -259,7 +283,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <p className="text-sm text-slate-400 font-medium">
-                Despesas Pagas
+                Despesas Até Hoje
               </p>
               <h3 className="text-2xl font-bold text-white mt-1">
                 {displayValue(expense)}

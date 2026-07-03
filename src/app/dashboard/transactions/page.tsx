@@ -102,8 +102,22 @@ export default function TransactionsPage() {
   const [isGlobalStats, setIsGlobalStats] = useState(true);
   
   const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+  const getLocalDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const todayKey = getLocalDateKey(today);
+  const isDueUntilToday = (dueDate?: string) =>
+    Boolean(dueDate && dueDate <= todayKey);
+  const isCurrentCashTransaction = (transaction: any) => {
+    if (transaction.status !== "paid") return false;
+    if (transaction.type === "income") return isDueUntilToday(transaction.dueDate);
+
+    const paidDate = String(transaction.paidAt || "").slice(0, 10);
+    return paidDate ? paidDate <= todayKey : true;
+  };
 
   const [uiDateRange, setUiDateRange] = useState({
     from: "2000-01-01",
@@ -139,7 +153,7 @@ export default function TransactionsPage() {
       category: "Outros",
       type: "expense",
       status: "paid",
-      dueDate: new Date().toISOString().split("T")[0],
+      dueDate: getLocalDateKey(new Date()),
       pixCode: "",
       barCode: "",
       observation: "",
@@ -179,7 +193,7 @@ export default function TransactionsPage() {
     category: "Outros",
     type: "expense" as "income" | "expense",
     status: "paid" as "paid" | "pending",
-    dueDate: new Date().toISOString().split("T")[0],
+    dueDate: getLocalDateKey(new Date()),
     pixCode: "",
     barCode: "",
     observation: "",
@@ -289,7 +303,7 @@ export default function TransactionsPage() {
       return `${year}-${brDate[2].padStart(2, "0")}-${brDate[1].padStart(2, "0")}`;
     }
 
-    return new Date().toISOString().split("T")[0];
+    return getLocalDateKey(new Date());
   };
 
   const parseImportAmount = (value: any) => {
@@ -370,11 +384,17 @@ export default function TransactionsPage() {
   };
 
   const openRedeemInvestmentModal = (tx?: any) => {
+    const investment = tx
+      ? investmentOptions.find((item) => item.id === tx.id)
+      : investmentOptions[0];
+
     setSelectedTx(null);
     setIsEditing(false);
     setIsModalOpen(false);
-    setSelectedInvestmentId(tx?.id || "");
-    setRedeemAmount(tx?.amount ? String(tx.amount) : "");
+    setSelectedInvestmentId(investment?.id || "");
+    setRedeemAmount(
+      investment?.remainingAmount ? String(investment.remainingAmount) : ""
+    );
     setIsRedeemModalOpen(true);
   };
 
@@ -395,7 +415,7 @@ export default function TransactionsPage() {
 
     if (!investment || !amount || amount <= 0) return;
 
-    const investedAmount = Number(investment.amount) || 0;
+    const investedAmount = Number(investment.remainingAmount) || 0;
     let principalAmount = amount;
     let gainAmount = 0;
 
@@ -403,7 +423,7 @@ export default function TransactionsPage() {
       const confirmed = window.confirm(
         `O valor de resgate (${formatCurrency(
           amount
-        )}) é maior que o valor investido (${formatCurrency(
+        )}) é maior que o saldo disponível desse investimento (${formatCurrency(
           investedAmount
         )}). Houve ganho nesse investimento?`
       );
@@ -416,7 +436,6 @@ export default function TransactionsPage() {
 
     setIsRedeeming(true);
 
-    const todayKey = new Date().toISOString().split("T")[0];
     const principalResult = await addTransaction({
       description: `Resgate: ${investment.description}`,
       amount: principalAmount,
@@ -429,6 +448,7 @@ export default function TransactionsPage() {
       observation: `Resgate referente ao investimento de ${formatDate(
         investment.dueDate
       )}.`,
+      linkedInvestmentId: investment.id,
       isRecurrent: false,
       recurrenceMonths: 12,
     });
@@ -487,10 +507,18 @@ export default function TransactionsPage() {
   };
 
   const income = transactions
-    .filter((t) => t.type === "income" && t.status === "paid")
+    .filter(
+      (t) =>
+        t.type === "income" &&
+        isCurrentCashTransaction(t)
+    )
     .reduce((acc, t) => acc + Number(t.amount), 0);
   const expense = transactions
-    .filter((t) => t.type === "expense" && t.status === "paid")
+    .filter(
+      (t) =>
+        t.type === "expense" &&
+        isCurrentCashTransaction(t)
+    )
     .reduce((acc, t) => acc + Number(t.amount), 0);
   const pendingExpense = transactions
     .filter((t) => t.type === "expense" && t.status === "pending")
@@ -498,33 +526,60 @@ export default function TransactionsPage() {
 
   const balance = income - expense;
 
-  const grossInvestments = transactions
-    .filter(
-      (t) =>
-        t.type === "expense" &&
-        t.status === "paid" &&
-        t.category === "Investimento"
-    )
+  const currentInvestmentTransactions = transactions.filter(
+    (t) =>
+      t.status === "paid" &&
+      t.category === "Investimento" &&
+      isCurrentCashTransaction(t)
+  );
+
+  const grossInvestments = currentInvestmentTransactions
+    .filter((t) => t.type === "expense")
     .reduce((acc, t) => acc + Number(t.amount), 0);
 
-  const redeemedInvestments = transactions
-    .filter(
-      (t) =>
-        t.type === "income" &&
-        t.status === "paid" &&
-        t.category === "Investimento"
-    )
+  const redeemedInvestments = currentInvestmentTransactions
+    .filter((t) => t.type === "income")
     .reduce((acc, t) => acc + Number(t.amount), 0);
 
   const netInvestments = grossInvestments - redeemedInvestments;
   const totalAssets = balance + netInvestments;
-  const investmentOptions = transactions
-    .filter(
-      (t) =>
-        t.type === "expense" &&
-        t.status === "paid" &&
-        t.category === "Investimento"
-    )
+  const investmentRedemptions = currentInvestmentTransactions.filter(
+    (t) => t.type === "income"
+  );
+  const investmentOptions = currentInvestmentTransactions
+    .filter((t) => t.type === "expense")
+    .map((investment) => {
+      const investedAmount = Number(investment.amount) || 0;
+      const redeemedAmount = investmentRedemptions
+        .filter((redemption) => {
+          const observation = String(redemption.observation || "");
+          const legacyId = observation.match(/ID do investimento: ([^.]+)/)?.[1];
+          const linkedInvestmentId =
+            (redemption as any).linkedInvestmentId || legacyId;
+
+          if (linkedInvestmentId) return linkedInvestmentId === investment.id;
+
+          const matchesLegacyRescue =
+            redemption.description === `Resgate: ${investment.description}` &&
+            observation.includes(
+              `Resgate referente ao investimento de ${formatDate(
+                investment.dueDate
+              )}`
+            );
+
+          return matchesLegacyRescue;
+        })
+        .reduce((acc, redemption) => acc + Number(redemption.amount), 0);
+      const remainingAmount = Math.max(investedAmount - redeemedAmount, 0);
+
+      return {
+        ...investment,
+        investedAmount,
+        redeemedAmount,
+        remainingAmount,
+      };
+    })
+    .filter((investment) => investment.remainingAmount > 0)
     .sort(
       (a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()
     );
@@ -544,8 +599,6 @@ export default function TransactionsPage() {
   };
 
   const getPriorityRank = (transaction: any) => {
-    const todayKey = new Date().toISOString().split("T")[0];
-
     if (transaction.status === "pending") {
       if (transaction.dueDate < todayKey) return 0;
       return 1;
@@ -555,8 +608,6 @@ export default function TransactionsPage() {
   };
 
   const getRowStateClass = (transaction: any) => {
-    const todayKey = new Date().toISOString().split("T")[0];
-
     if (transaction.status !== "pending") {
       return "hover:bg-white/[0.03]";
     }
@@ -703,7 +754,7 @@ export default function TransactionsPage() {
           <h3 className="text-2xl font-bold text-white">
             {displayValue(income)}
           </h3>
-          <p className="text-sm text-slate-500 mt-1">Entradas confirmadas</p>
+          <p className="text-sm text-slate-500 mt-1">Entradas até hoje</p>
         </div>
 
         <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 relative overflow-hidden hover:border-red-500/30 transition-colors">
@@ -719,7 +770,7 @@ export default function TransactionsPage() {
             {displayValue(expense)}
           </h3>
           <p className="text-sm text-slate-500 mt-1">
-            Saídas (Inclui investimentos)
+            Saídas até hoje
           </p>
         </div>
 
@@ -1040,11 +1091,12 @@ export default function TransactionsPage() {
                         <TrendingUp size={22} />
                       </div>
                       <p className="text-sm font-bold text-white">
-                        Nenhum investimento pago encontrado.
+                        Nenhum investimento com saldo encontrado.
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
                         Cadastre uma saída paga na categoria Investimento para
-                        fazer um resgate.
+                        fazer um resgate, ou confira se os aportes já foram
+                        resgatados.
                       </p>
                     </div>
                   ) : (
@@ -1065,13 +1117,22 @@ export default function TransactionsPage() {
                         />
                         {selectedInvestment &&
                           Number(redeemAmount) >
-                            Number(selectedInvestment.amount) && (
+                            Number(selectedInvestment.remainingAmount) && (
                             <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">
-                              O valor acima do principal será confirmado como
-                              rendimento e lançado automaticamente em
+                              O valor acima do saldo disponível será confirmado
+                              como rendimento e lançado automaticamente em
                               Rendimento de Investimento.
                             </p>
                           )}
+                        {selectedInvestment && (
+                          <p className="mt-3 text-xs text-emerald-100">
+                            Resgatando do investimento de{" "}
+                            {formatDate(selectedInvestment.dueDate)}. Restante:{" "}
+                            <span className="font-bold">
+                              {displayValue(selectedInvestment.remainingAmount)}
+                            </span>
+                          </p>
+                        )}
                       </div>
 
                       <div className="space-y-3">
@@ -1093,9 +1154,12 @@ export default function TransactionsPage() {
                               <button
                                 key={investment.id}
                                 type="button"
-                                onClick={() =>
-                                  setSelectedInvestmentId(investment.id)
-                                }
+                                onClick={() => {
+                                  setSelectedInvestmentId(investment.id);
+                                  setRedeemAmount(
+                                    String(investment.remainingAmount)
+                                  );
+                                }}
                                 className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${
                                   isSelected
                                     ? "border-emerald-500/40 bg-emerald-500/10"
@@ -1113,12 +1177,23 @@ export default function TransactionsPage() {
                                     {investment.description}
                                   </p>
                                   <p className="text-xs text-slate-500">
-                                    {formatDate(investment.dueDate)}
+                                    {formatDate(investment.dueDate)} · Original{" "}
+                                    {displayValue(investment.investedAmount)}
+                                    {investment.redeemedAmount > 0
+                                      ? ` · Já resgatado ${displayValue(
+                                          investment.redeemedAmount
+                                        )}`
+                                      : ""}
                                   </p>
                                 </div>
-                                <span className="shrink-0 text-sm font-bold font-mono text-emerald-300">
-                                  {displayValue(Number(investment.amount))}
-                                </span>
+                                <div className="shrink-0 text-right">
+                                  <span className="block text-sm font-bold font-mono text-emerald-300">
+                                    {displayValue(investment.remainingAmount)}
+                                  </span>
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                    restante
+                                  </span>
+                                </div>
                               </button>
                             );
                           })}
@@ -1335,7 +1410,10 @@ export default function TransactionsPage() {
                   )}
 
                   {selectedTx.category === "Investimento" &&
-                    selectedTx.type === "expense" && (
+                    selectedTx.type === "expense" &&
+                    investmentOptions.some(
+                      (investment) => investment.id === selectedTx.id
+                    ) && (
                       <Button
                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-900/20 border-emerald-500/50"
                         onClick={() => openRedeemInvestmentModal(selectedTx)}

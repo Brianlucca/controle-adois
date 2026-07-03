@@ -12,6 +12,7 @@ export interface Transaction {
   pixCode?: string;
   barCode?: string;
   observation?: string;
+  linkedInvestmentId?: string;
   isRecurrent?: boolean;
   createdAt: string;
 }
