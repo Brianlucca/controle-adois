@@ -20,6 +20,7 @@ import {
   ArrowRight,
   Calendar,
   History,
+  Calculator,
 } from "lucide-react";
 import {
   AreaChart,
@@ -59,6 +60,22 @@ export default function DashboardPage() {
     .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
   const balance = income - expense;
+  const isInvestment = (category?: string) => category === "Investimento";
+  const liquidIncome = transactions
+    .filter((t) => t.type === "income" && !isInvestment(t.category))
+    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  const liquidExpense = transactions
+    .filter((t) => t.type === "expense" && !isInvestment(t.category))
+    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  const pendingExpense = transactions
+    .filter(
+      (t) =>
+        t.type === "expense" &&
+        t.status === "pending" &&
+        !isInvestment(t.category)
+    )
+    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  const liquidBalance = liquidIncome - liquidExpense;
 
   const budgetPercent =
     budgetLimit > 0 ? Math.min((expense / budgetLimit) * 100, 100) : 0;
@@ -168,7 +185,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1A1D24] to-[#13161C] border border-white/5 relative overflow-hidden group hover:border-indigo-500/30 transition-all">
               <div className="absolute right-0 top-0 p-6 opacity-5">
                 <Wallet size={64} />
@@ -191,6 +208,33 @@ export default function DashboardPage() {
               </div>
               <p className="text-[10px] text-slate-500 mt-1.5 text-right">
                 {Math.round(budgetPercent)}% da meta de gastos consumida
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 hover:border-cyan-500/30 transition-all relative overflow-hidden">
+              <div className="absolute right-0 top-0 p-6 opacity-5">
+                <Calculator size={64} />
+              </div>
+              <div className="flex justify-between items-start mb-4">
+                <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-400">
+                  <Calculator size={24} />
+                </div>
+                <span className="text-[10px] bg-white/10 px-2 py-1 rounded text-slate-300 font-bold uppercase tracking-wider">
+                  Sem investimentos
+                </span>
+              </div>
+              <p className="text-sm text-slate-400 font-medium">
+                Saldo Líquido
+              </p>
+              <h3
+                className={`text-2xl font-bold mt-1 ${
+                  liquidBalance >= 0 ? "text-white" : "text-red-400"
+                }`}
+              >
+                {displayValue(liquidBalance)}
+              </h3>
+              <p className="text-xs text-slate-500 mt-2">
+                {displayValue(pendingExpense)} em contas pendentes
               </p>
             </div>
 
