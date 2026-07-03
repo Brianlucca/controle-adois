@@ -102,8 +102,22 @@ export default function TransactionsPage() {
   const [isGlobalStats, setIsGlobalStats] = useState(true);
   
   const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+  const getLocalDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const todayKey = getLocalDateKey(today);
+  const isDueUntilToday = (dueDate?: string) =>
+    Boolean(dueDate && dueDate <= todayKey);
+  const isCurrentCashTransaction = (transaction: any) => {
+    if (transaction.status !== "paid") return false;
+    if (transaction.type === "income") return isDueUntilToday(transaction.dueDate);
+
+    const paidDate = String(transaction.paidAt || "").slice(0, 10);
+    return paidDate ? paidDate <= todayKey : true;
+  };
 
   const [uiDateRange, setUiDateRange] = useState({
     from: "2000-01-01",
@@ -139,7 +153,7 @@ export default function TransactionsPage() {
       category: "Outros",
       type: "expense",
       status: "paid",
-      dueDate: new Date().toISOString().split("T")[0],
+      dueDate: getLocalDateKey(new Date()),
       pixCode: "",
       barCode: "",
       observation: "",
@@ -179,7 +193,7 @@ export default function TransactionsPage() {
     category: "Outros",
     type: "expense" as "income" | "expense",
     status: "paid" as "paid" | "pending",
-    dueDate: new Date().toISOString().split("T")[0],
+    dueDate: getLocalDateKey(new Date()),
     pixCode: "",
     barCode: "",
     observation: "",
@@ -289,7 +303,7 @@ export default function TransactionsPage() {
       return `${year}-${brDate[2].padStart(2, "0")}-${brDate[1].padStart(2, "0")}`;
     }
 
-    return new Date().toISOString().split("T")[0];
+    return getLocalDateKey(new Date());
   };
 
   const parseImportAmount = (value: any) => {
@@ -422,7 +436,6 @@ export default function TransactionsPage() {
 
     setIsRedeeming(true);
 
-    const todayKey = new Date().toISOString().split("T")[0];
     const principalResult = await addTransaction({
       description: `Resgate: ${investment.description}`,
       amount: principalAmount,
@@ -494,10 +507,18 @@ export default function TransactionsPage() {
   };
 
   const income = transactions
-    .filter((t) => t.type === "income" && t.status === "paid")
+    .filter(
+      (t) =>
+        t.type === "income" &&
+        isCurrentCashTransaction(t)
+    )
     .reduce((acc, t) => acc + Number(t.amount), 0);
   const expense = transactions
-    .filter((t) => t.type === "expense" && t.status === "paid")
+    .filter(
+      (t) =>
+        t.type === "expense" &&
+        isCurrentCashTransaction(t)
+    )
     .reduce((acc, t) => acc + Number(t.amount), 0);
   const pendingExpense = transactions
     .filter((t) => t.type === "expense" && t.status === "pending")
@@ -505,39 +526,28 @@ export default function TransactionsPage() {
 
   const balance = income - expense;
 
-  const grossInvestments = transactions
-    .filter(
-      (t) =>
-        t.type === "expense" &&
-        t.status === "paid" &&
-        t.category === "Investimento"
-    )
+  const currentInvestmentTransactions = transactions.filter(
+    (t) =>
+      t.status === "paid" &&
+      t.category === "Investimento" &&
+      isCurrentCashTransaction(t)
+  );
+
+  const grossInvestments = currentInvestmentTransactions
+    .filter((t) => t.type === "expense")
     .reduce((acc, t) => acc + Number(t.amount), 0);
 
-  const redeemedInvestments = transactions
-    .filter(
-      (t) =>
-        t.type === "income" &&
-        t.status === "paid" &&
-        t.category === "Investimento"
-    )
+  const redeemedInvestments = currentInvestmentTransactions
+    .filter((t) => t.type === "income")
     .reduce((acc, t) => acc + Number(t.amount), 0);
 
   const netInvestments = grossInvestments - redeemedInvestments;
   const totalAssets = balance + netInvestments;
-  const investmentRedemptions = transactions.filter(
-    (t) =>
-      t.type === "income" &&
-      t.status === "paid" &&
-      t.category === "Investimento"
+  const investmentRedemptions = currentInvestmentTransactions.filter(
+    (t) => t.type === "income"
   );
-  const investmentOptions = transactions
-    .filter(
-      (t) =>
-        t.type === "expense" &&
-        t.status === "paid" &&
-        t.category === "Investimento"
-    )
+  const investmentOptions = currentInvestmentTransactions
+    .filter((t) => t.type === "expense")
     .map((investment) => {
       const investedAmount = Number(investment.amount) || 0;
       const redeemedAmount = investmentRedemptions
@@ -589,8 +599,6 @@ export default function TransactionsPage() {
   };
 
   const getPriorityRank = (transaction: any) => {
-    const todayKey = new Date().toISOString().split("T")[0];
-
     if (transaction.status === "pending") {
       if (transaction.dueDate < todayKey) return 0;
       return 1;
@@ -600,8 +608,6 @@ export default function TransactionsPage() {
   };
 
   const getRowStateClass = (transaction: any) => {
-    const todayKey = new Date().toISOString().split("T")[0];
-
     if (transaction.status !== "pending") {
       return "hover:bg-white/[0.03]";
     }
@@ -748,7 +754,7 @@ export default function TransactionsPage() {
           <h3 className="text-2xl font-bold text-white">
             {displayValue(income)}
           </h3>
-          <p className="text-sm text-slate-500 mt-1">Entradas confirmadas</p>
+          <p className="text-sm text-slate-500 mt-1">Entradas até hoje</p>
         </div>
 
         <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 relative overflow-hidden hover:border-red-500/30 transition-colors">
@@ -764,7 +770,7 @@ export default function TransactionsPage() {
             {displayValue(expense)}
           </h3>
           <p className="text-sm text-slate-500 mt-1">
-            Saídas (Inclui investimentos)
+            Saídas até hoje
           </p>
         </div>
 
