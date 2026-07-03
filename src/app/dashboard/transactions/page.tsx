@@ -434,7 +434,8 @@ export default function TransactionsPage() {
       barCode: "",
       observation: `Resgate referente ao investimento de ${formatDate(
         investment.dueDate
-      )}. ID do investimento: ${investment.id}.`,
+      )}.`,
+      linkedInvestmentId: investment.id,
       isRecurrent: false,
       recurrenceMonths: 12,
     });
@@ -542,9 +543,12 @@ export default function TransactionsPage() {
       const redeemedAmount = investmentRedemptions
         .filter((redemption) => {
           const observation = String(redemption.observation || "");
-          const hasInvestmentId = observation.includes(
-            `ID do investimento: ${investment.id}`
-          );
+          const legacyId = observation.match(/ID do investimento: ([^.]+)/)?.[1];
+          const linkedInvestmentId =
+            (redemption as any).linkedInvestmentId || legacyId;
+
+          if (linkedInvestmentId) return linkedInvestmentId === investment.id;
+
           const matchesLegacyRescue =
             redemption.description === `Resgate: ${investment.description}` &&
             observation.includes(
@@ -553,7 +557,7 @@ export default function TransactionsPage() {
               )}`
             );
 
-          return hasInvestmentId || matchesLegacyRescue;
+          return matchesLegacyRescue;
         })
         .reduce((acc, redemption) => acc + Number(redemption.amount), 0);
       const remainingAmount = Math.max(investedAmount - redeemedAmount, 0);
