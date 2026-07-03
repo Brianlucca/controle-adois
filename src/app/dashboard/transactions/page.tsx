@@ -1073,13 +1073,15 @@ export default function TransactionsPage() {
       </div>
 
       {(isModalOpen || selectedTx || isRedeemModalOpen) && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/85 p-0 backdrop-blur-md sm:items-center sm:p-4">
           <div
-            className={`max-h-[92vh] w-full overflow-hidden rounded-t-lg border border-white/10 bg-[#13161C] shadow-2xl ring-1 ring-white/10 animate-in slide-in-from-bottom-4 sm:rounded-lg sm:zoom-in-95 ${
+            className={`max-h-[94dvh] w-full overflow-hidden rounded-t-lg border border-white/10 bg-[#10141D] shadow-2xl ring-1 ring-white/10 animate-in slide-in-from-bottom-4 sm:max-h-[92vh] sm:rounded-lg sm:zoom-in-95 ${
               isRedeemModalOpen ? "max-w-2xl" : "max-w-xl"
             }`}
           >
-            <div className="flex items-center justify-between gap-4 border-b border-white/10 bg-[#171B24] p-4">
+            <div className="relative border-b border-white/10 bg-[#151A24] px-4 pb-4 pt-5 sm:px-5">
+              <div className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-full bg-white/15 sm:hidden" />
+              <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   {isRedeemModalOpen
@@ -1090,7 +1092,7 @@ export default function TransactionsPage() {
                     ? "Lançamento"
                     : "Novo registro"}
                 </p>
-                <h3 className="truncate text-lg font-bold tracking-tight text-white">
+                <h3 className="mt-1 truncate text-xl font-bold tracking-tight text-white">
                   {isRedeemModalOpen
                     ? "Resgatar investimento"
                     : isEditing
@@ -1111,13 +1113,14 @@ export default function TransactionsPage() {
                     setIsEditing(false);
                   }
                 }}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <X size={18} />
               </button>
+              </div>
             </div>
 
-            <div className="max-h-[calc(92vh-73px)] overflow-y-auto p-4 custom-scrollbar sm:p-5">
+            <div className="max-h-[calc(94dvh-92px)] overflow-y-auto p-4 custom-scrollbar sm:max-h-[calc(92vh-93px)] sm:p-5">
               {isRedeemModalOpen ? (
                 <form onSubmit={handleRedeemInvestment} className="space-y-5">
                   {investmentOptions.length === 0 ? (
@@ -1260,14 +1263,20 @@ export default function TransactionsPage() {
                   )}
                 </form>
               ) : selectedTx && !isEditing ? (
-                <div className="space-y-4">
-                  <div className="rounded-lg border border-white/10 bg-[#0B0E14] p-4">
+                <div className="space-y-4 pb-2">
+                  <div
+                    className={`overflow-hidden rounded-lg border p-4 ${
+                      selectedTx.type === "income"
+                        ? "border-emerald-500/20 bg-emerald-500/[0.08]"
+                        : "border-red-500/20 bg-red-500/[0.07]"
+                    }`}
+                  >
                     <div className="flex items-start gap-3">
                       <BrandIcon
                         description={selectedTx.description}
                         category={selectedTx.category}
                         type={selectedTx.type}
-                        className="h-12 w-12 shrink-0 rounded-lg bg-white/10"
+                        className="h-12 w-12 shrink-0 rounded-lg bg-black/20 ring-1 ring-white/10"
                       />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-base font-bold text-white">
@@ -1279,10 +1288,10 @@ export default function TransactionsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="mt-4 flex items-end justify-between gap-3 border-t border-white/10 pt-4">
+                    <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-end sm:justify-between">
                       <div>{getStatusBadge(selectedTx)}</div>
                       <p
-                        className={`text-right font-mono text-2xl font-bold ${
+                        className={`font-mono text-3xl font-bold tracking-tight sm:text-right ${
                           selectedTx.type === "income"
                             ? "text-emerald-300"
                             : "text-white"
@@ -1294,33 +1303,33 @@ export default function TransactionsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="bg-white/5 p-3 rounded-lg border border-white/5">
-                      <p className="text-slate-500 text-[10px] uppercase font-bold mb-1">
+                  <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-3">
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                         Categoria
                       </p>
-                      <p className="font-bold text-white">
+                      <p className="truncate font-bold text-white">
                         {selectedTx.category}
                       </p>
                     </div>
-                    <div className="bg-white/5 p-3 rounded-lg border border-white/5">
-                      <p className="text-slate-500 text-[10px] uppercase font-bold mb-1">
+                    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-3">
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                         Data
                       </p>
-                      <p className="font-bold text-white">
+                      <p className="truncate font-bold text-white">
                         {formatDate(selectedTx.dueDate)}
                       </p>
                     </div>
-                    <div className="bg-white/5 p-3 rounded-lg border border-white/5">
-                      <p className="text-slate-500 text-[10px] uppercase font-bold mb-1">
+                    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-3">
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                         Responsável
                       </p>
-                      <p className="font-bold text-white">
+                      <p className="truncate font-bold text-white">
                         {selectedTx.userName?.split(" ")[0] || "Eu"}
                       </p>
                     </div>
-                    <div className="bg-white/5 p-3 rounded-lg border border-white/5">
-                      <p className="text-slate-500 text-[10px] uppercase font-bold mb-1">
+                    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-3">
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                         Status
                       </p>
                       <p
@@ -1342,14 +1351,14 @@ export default function TransactionsPage() {
                   </div>
 
                   {selectedTx.observation && (
-                    <div className="bg-white/5 p-4 rounded-lg border border-white/5">
-                      <div className="flex items-center gap-2 mb-2 text-slate-500">
+                    <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
+                      <div className="mb-2 flex items-center gap-2 text-slate-500">
                         <FileText size={14} />
-                        <span className="text-[10px] uppercase font-bold tracking-wider">
+                        <span className="text-[10px] font-bold uppercase tracking-wider">
                           Observações
                         </span>
                       </div>
-                      <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">
                         {selectedTx.observation}
                       </p>
                     </div>
@@ -1357,7 +1366,7 @@ export default function TransactionsPage() {
 
                   {selectedTx.isRecurrent && (
                     <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/10 p-4">
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500 text-white">
                             <Repeat2 size={18} />
@@ -1376,7 +1385,7 @@ export default function TransactionsPage() {
                         <Button
                           type="button"
                           variant="destructive"
-                          className="h-9 bg-red-500/10 px-3 text-red-300 hover:bg-red-500/20 border border-red-500/20"
+                          className="h-10 border border-red-500/20 bg-red-500/10 px-3 text-red-300 hover:bg-red-500/20"
                           onClick={() => handleDeleteRecurrenceWrapper(selectedTx.id)}
                         >
                           <Trash2 size={14} className="mr-2" />
@@ -1387,55 +1396,55 @@ export default function TransactionsPage() {
                   )}
 
                   {(selectedTx.pixCode || selectedTx.barCode) && (
-                    <div className="space-y-3 pt-2">
+                    <div className="space-y-2">
                       {selectedTx.pixCode && (
-                        <div className="flex items-center justify-between p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
-                          <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider mr-2">
+                        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-indigo-500/20 bg-indigo-500/10 p-3">
+                          <span className="rounded-md bg-indigo-500/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-200">
                             Pix
                           </span>
-                          <p className="text-xs font-mono truncate flex-1 text-slate-300">
+                          <p className="truncate font-mono text-xs text-slate-300">
                             {selectedTx.pixCode}
                           </p>
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 px-2 hover:bg-indigo-500/20 text-indigo-300 transition-all"
+                            className="h-9 px-2 text-indigo-200 transition-all hover:bg-indigo-500/20 hover:text-white"
                             onClick={() =>
                               handleCopy(selectedTx.pixCode, "pix")
                             }
                           >
                             {copiedField === "pix" ? (
-                              <span className="text-emerald-400 flex items-center gap-1 font-bold text-xs">
+                              <span className="flex items-center gap-1 text-xs font-bold text-emerald-300">
                                 <Check size={14} /> Copiado
                               </span>
                             ) : (
-                              <Copy size={14} />
+                              <Copy size={15} />
                             )}
                           </Button>
                         </div>
                       )}
                       {selectedTx.barCode && (
-                        <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-2">
+                        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-3">
+                          <span className="rounded-md bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-300">
                             Boleto
                           </span>
-                          <p className="text-xs font-mono truncate flex-1 text-slate-300">
+                          <p className="truncate font-mono text-xs text-slate-300">
                             {selectedTx.barCode}
                           </p>
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 px-2 hover:bg-white/10 text-slate-300 transition-all"
+                            className="h-9 px-2 text-slate-300 transition-all hover:bg-white/10 hover:text-white"
                             onClick={() =>
                               handleCopy(selectedTx.barCode, "barCode")
                             }
                           >
                             {copiedField === "barCode" ? (
-                              <span className="text-emerald-400 flex items-center gap-1 font-bold text-xs">
+                              <span className="flex items-center gap-1 text-xs font-bold text-emerald-300">
                                 <Check size={14} /> Copiado
                               </span>
                             ) : (
-                              <Copy size={14} />
+                              <Copy size={15} />
                             )}
                           </Button>
                         </div>
@@ -1449,7 +1458,7 @@ export default function TransactionsPage() {
                       (investment) => investment.id === selectedTx.id
                     ) && (
                       <Button
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-900/20 border-emerald-500/50"
+                        className="h-11 w-full rounded-lg border border-emerald-500/40 bg-emerald-600 font-bold text-white shadow-lg shadow-emerald-900/20 hover:bg-emerald-700"
                         onClick={() => openRedeemInvestmentModal(selectedTx)}
                       >
                         <PieChart size={18} className="mr-2" /> Resgatar Valor
@@ -1460,7 +1469,7 @@ export default function TransactionsPage() {
                     selectedTx.status === "pending" && (
                       <Button
                         variant="outline"
-                        className="w-full border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+                        className="h-11 w-full rounded-lg border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10 hover:text-white"
                         onClick={() => {
                           const link = createGoogleCalendarLink(
                             selectedTx.description,
@@ -1477,14 +1486,14 @@ export default function TransactionsPage() {
                     )}
 
                   <div
-                    className={`sticky bottom-0 -mx-4 -mb-4 grid gap-2 border-t border-white/10 bg-[#13161C]/95 p-4 backdrop-blur sm:-mx-5 sm:-mb-5 ${
+                    className={`sticky bottom-0 -mx-4 -mb-4 grid gap-2 border-t border-white/10 bg-[#10141D]/95 p-4 backdrop-blur sm:-mx-5 sm:-mb-5 ${
                       selectedTx.type === "expense"
                         ? "grid-cols-3"
                         : "grid-cols-2"
                     }`}
                   >
                     <Button
-                      className="h-11 bg-slate-800 text-xs font-bold text-white hover:bg-slate-700 sm:text-sm"
+                      className="h-12 rounded-lg border border-white/10 bg-slate-800 text-xs font-bold text-white hover:bg-slate-700 sm:text-sm"
                       onClick={handleStartEdit}
                     >
                       <Pencil size={16} className="mr-1.5" /> Editar
@@ -1492,7 +1501,7 @@ export default function TransactionsPage() {
 
                     {selectedTx.type === "expense" && (
                       <Button
-                        className="h-11 bg-white text-xs font-bold text-slate-900 shadow-md hover:bg-slate-200 sm:text-sm"
+                        className="h-12 rounded-lg bg-white text-xs font-bold text-slate-950 shadow-md hover:bg-slate-200 sm:text-sm"
                         onClick={() =>
                           handleStatusWrapper(
                             selectedTx.id,
@@ -1506,7 +1515,7 @@ export default function TransactionsPage() {
 
                     <Button
                       variant="destructive"
-                      className="h-11 border border-red-500/20 bg-red-500/10 px-0 text-red-400 hover:bg-red-500/20"
+                      className="h-12 rounded-lg border border-red-500/20 bg-red-500/10 px-0 text-red-400 hover:bg-red-500/20"
                       onClick={() => handleDeleteWrapper(selectedTx.id)}
                     >
                       <Trash2 size={18} />
@@ -1514,8 +1523,8 @@ export default function TransactionsPage() {
                   </div>
                 </div>
               ) : (
-                <form onSubmit={handleSaveWrapper} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-[#0B0E14] p-1">
+                <form onSubmit={handleSaveWrapper} className="space-y-4 pb-2">
+                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-[#0B0E14] p-1.5">
                     <button
                       type="button"
                       onClick={() =>
@@ -1527,7 +1536,7 @@ export default function TransactionsPage() {
                           recurrenceMonths: 12,
                         })
                       }
-                      className={`inline-flex h-11 items-center justify-center gap-2 rounded-md text-sm font-bold transition-all ${
+                      className={`inline-flex h-12 items-center justify-center gap-2 rounded-md text-sm font-bold transition-all ${
                         formData.type === "income"
                           ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/20"
                           : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
@@ -1541,7 +1550,7 @@ export default function TransactionsPage() {
                       onClick={() =>
                         setFormData({ ...formData, type: "expense" })
                       }
-                      className={`inline-flex h-11 items-center justify-center gap-2 rounded-md text-sm font-bold transition-all ${
+                      className={`inline-flex h-12 items-center justify-center gap-2 rounded-md text-sm font-bold transition-all ${
                         formData.type === "expense"
                           ? "bg-red-600 text-white shadow-lg shadow-red-900/20"
                           : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
@@ -1552,6 +1561,13 @@ export default function TransactionsPage() {
                     </button>
                   </div>
 
+                  <div
+                    className={`rounded-lg border p-4 ${
+                      formData.type === "income"
+                        ? "border-emerald-500/20 bg-emerald-500/[0.06]"
+                        : "border-red-500/20 bg-red-500/[0.05]"
+                    }`}
+                  >
                   <div className="grid gap-3 sm:grid-cols-[1.2fr_0.8fr]">
                     <label className="space-y-1.5">
                       <span className="block pl-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -1567,7 +1583,7 @@ export default function TransactionsPage() {
                           })
                         }
                         required
-                        className="input-dark h-12 border-white/10 bg-black/20 text-base focus:border-indigo-500/50"
+                        className="input-dark h-12 rounded-lg border-white/10 bg-black/25 text-base focus:border-indigo-500/50"
                       />
                     </label>
 
@@ -1583,12 +1599,12 @@ export default function TransactionsPage() {
                           setFormData({ ...formData, amount: e.target.value })
                         }
                         required
-                        className="input-dark h-12 border-white/10 bg-black/20 font-mono text-lg font-bold focus:border-indigo-500/50"
+                        className="input-dark h-12 rounded-lg border-white/10 bg-black/25 font-mono text-lg font-bold focus:border-indigo-500/50"
                       />
                     </label>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
                     <label className="space-y-1.5">
                       <span className="block pl-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                         Data
@@ -1600,7 +1616,7 @@ export default function TransactionsPage() {
                           setFormData({ ...formData, dueDate: e.target.value })
                         }
                         required
-                        className="input-dark h-11 border-white/10 bg-black/20 focus:border-indigo-500/50"
+                        className="input-dark h-12 rounded-lg border-white/10 bg-black/25 focus:border-indigo-500/50"
                       />
                     </label>
 
@@ -1609,7 +1625,7 @@ export default function TransactionsPage() {
                         Categoria
                       </span>
                       <select
-                        className="h-11 w-full rounded-md border border-white/10 bg-black/20 px-3 text-sm text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        className="h-12 w-full rounded-lg border border-white/10 bg-black/25 px-3 text-sm text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                         value={formData.category}
                         onChange={(e) =>
                           setFormData({ ...formData, category: e.target.value })
@@ -1629,7 +1645,7 @@ export default function TransactionsPage() {
                           Status
                         </span>
                         <select
-                          className="h-11 w-full rounded-md border border-white/10 bg-black/20 px-3 text-sm text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                          className="h-12 w-full rounded-lg border border-white/10 bg-black/25 px-3 text-sm text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                           value={formData.status}
                           onChange={(e: any) =>
                             setFormData({ ...formData, status: e.target.value })
@@ -1648,7 +1664,7 @@ export default function TransactionsPage() {
                         <span className="block pl-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                           Status
                         </span>
-                        <div className="flex h-11 items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-3 text-sm font-bold text-emerald-300">
+                        <div className="flex h-12 items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 text-sm font-bold text-emerald-300">
                           <CheckCircle2 size={16} />
                           Recebido
                         </div>
@@ -1656,8 +1672,10 @@ export default function TransactionsPage() {
                     )}
                   </div>
 
+                  </div>
+
                   {formData.type === "expense" && (
-                    <div className="space-y-4 rounded-lg border border-white/10 bg-[#0B0E14]/60 p-4">
+                    <div className="space-y-4 rounded-lg border border-white/10 bg-[#0B0E14]/70 p-4">
                       <button
                         type="button"
                         onClick={() =>
@@ -1718,7 +1736,7 @@ export default function TransactionsPage() {
                                     recurrenceMonths: Number(e.target.value),
                                   })
                                 }
-                                className="mt-1 h-10 w-full rounded-md border border-indigo-500/30 bg-[#0B0E14] px-3 text-sm text-white outline-none focus:ring-1 focus:ring-indigo-500 sm:w-44"
+                                className="mt-1 h-11 w-full rounded-lg border border-indigo-500/30 bg-[#0B0E14] px-3 text-sm text-white outline-none focus:ring-1 focus:ring-indigo-500 sm:w-44"
                               >
                                 <option value={3}>3 meses</option>
                                 <option value={6}>6 meses</option>
@@ -1752,7 +1770,7 @@ export default function TransactionsPage() {
                           onChange={(e) =>
                             setFormData({ ...formData, pixCode: e.target.value })
                           }
-                          className="input-dark h-11 border-white/10 bg-black/20 font-mono text-xs"
+                          className="input-dark h-12 rounded-lg border-white/10 bg-black/25 font-mono text-xs"
                         />
                         <Input
                           placeholder="Código de Barras (Boleto)"
@@ -1760,7 +1778,7 @@ export default function TransactionsPage() {
                           onChange={(e) =>
                             setFormData({ ...formData, barCode: e.target.value })
                           }
-                          className="input-dark h-11 border-white/10 bg-black/20 font-mono text-xs"
+                          className="input-dark h-12 rounded-lg border-white/10 bg-black/25 font-mono text-xs"
                         />
                       </div>
                       <Textarea
@@ -1772,16 +1790,16 @@ export default function TransactionsPage() {
                             observation: e.target.value,
                           })
                         }
-                        className="input-dark min-h-[88px] border-white/10 bg-black/20"
+                        className="input-dark min-h-[96px] rounded-lg border-white/10 bg-black/25"
                       />
                     </div>
                   )}
 
-                  <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col-reverse gap-2 border-t border-white/10 bg-[#13161C]/95 p-4 backdrop-blur sm:-mx-5 sm:-mb-5 sm:flex-row sm:justify-end">
+                  <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col-reverse gap-2 border-t border-white/10 bg-[#10141D]/95 p-4 backdrop-blur sm:-mx-5 sm:-mb-5 sm:flex-row sm:justify-end">
                     {isEditing && (
                       <Button
                         type="button"
-                        className="h-11 bg-slate-800 px-5 font-bold text-white hover:bg-slate-700 sm:min-w-32"
+                        className="h-12 rounded-lg border border-white/10 bg-slate-800 px-5 font-bold text-white hover:bg-slate-700 sm:min-w-32"
                         onClick={() => setIsEditing(false)}
                       >
                         Cancelar
@@ -1789,7 +1807,7 @@ export default function TransactionsPage() {
                     )}
                     <Button
                       type="submit"
-                      className={`h-11 px-5 text-sm font-bold text-white shadow-lg sm:min-w-44 ${
+                      className={`h-12 rounded-lg px-5 text-sm font-bold text-white shadow-lg sm:min-w-44 ${
                         formData.type === "income"
                           ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/20"
                           : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-900/20"
