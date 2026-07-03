@@ -30,11 +30,22 @@ export default function CalendarPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isMobileCalendar, setIsMobileCalendar] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     setDateRange({ from: "2023-01-01", to: "2030-12-31" });
   }, [setDateRange]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 640px)");
+    const updateViewportMode = () => setIsMobileCalendar(mediaQuery.matches);
+
+    updateViewportMode();
+    mediaQuery.addEventListener("change", updateViewportMode);
+
+    return () => mediaQuery.removeEventListener("change", updateViewportMode);
+  }, []);
 
   const handleDatesSet = (arg: any) => {
     const title = arg.view.title.replace(/^\w/, (c: string) => c.toUpperCase());
@@ -100,10 +111,10 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-[1920px] mx-auto animate-in fade-in duration-500 pb-12 h-full">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-[#13161C] p-4 rounded-2xl border border-white/5 shadow-xl">
+    <div className="mx-auto h-full max-w-[1920px] space-y-5 pb-24 animate-in fade-in duration-500 lg:pb-12">
+      <div className="flex flex-col items-start justify-between gap-4 rounded-lg border border-white/10 bg-[#121722] p-4 shadow-xl shadow-black/10 md:flex-row md:items-center">
         <div className="flex items-center gap-4">
-          <div className="bg-indigo-600 p-2.5 rounded-xl hidden md:block">
+          <div className="hidden rounded-lg bg-indigo-600 p-2.5 md:block">
             <CalendarIcon size={24} className="text-white" />
           </div>
           <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight capitalize">
@@ -111,7 +122,7 @@ export default function CalendarPage() {
           </h1>
         </div>
 
-        <div className="flex items-center bg-black/20 p-1 rounded-lg border border-white/5">
+        <div className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-black/20 p-1 md:w-auto">
           <button
             onClick={() => calendarRef.current?.getApi().prev()}
             className="p-2 hover:bg-white/10 rounded-md text-slate-300 hover:text-white transition-colors"
@@ -133,7 +144,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      <div className="bg-[#1A1D24] p-1 rounded-2xl border border-white/5 shadow-2xl h-[75vh] relative z-0">
+      <div className="relative z-0 rounded-lg border border-white/10 bg-[#121722] p-1 shadow-xl shadow-black/10 md:h-[75vh]">
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, interactionPlugin]}
@@ -141,8 +152,9 @@ export default function CalendarPage() {
           locale={ptBrLocale}
           headerToolbar={false}
           events={events}
-          height="100%"
-          dayMaxEvents={3}
+          height={isMobileCalendar ? "auto" : "100%"}
+          dayMaxEvents={isMobileCalendar ? 2 : 3}
+          fixedWeekCount={false}
           datesSet={handleDatesSet}
           eventClick={handleEventClick}
           moreLinkClick={handleMoreLinkClick}
@@ -151,7 +163,7 @@ export default function CalendarPage() {
             const isPaid = status === "paid" && type === "expense";
 
             return (
-              <div className="flex items-center justify-between w-full overflow-hidden px-2 py-1">
+              <div className="flex w-full items-center justify-between overflow-hidden px-1.5 py-1 sm:px-2">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <div
                     className={`w-1.5 h-1.5 rounded-full shrink-0 ${
@@ -163,21 +175,24 @@ export default function CalendarPage() {
                     }`}
                   ></div>
                   <span
-                    className={`text-[10px] font-medium truncate ${
+                    className={`truncate text-[9px] font-medium sm:text-[10px] ${
                       isPaid ? "text-slate-400 line-through" : "text-white"
                     }`}
                   >
-                    {arg.event.title}
+                    {isMobileCalendar
+                      ? formatCurrency(amount).split(",")[0]
+                      : arg.event.title}
                   </span>
                 </div>
-                <span
-                  className={`text-[9px] font-bold ml-1 ${
-                    type === "income" ? "text-emerald-400" : "text-slate-300"
-                  }`}
-                >
-                  {type === "expense" && !isPaid ? "" : ""}
-                  {formatCurrency(amount).split(",")[0]}
-                </span>
+                {!isMobileCalendar && (
+                  <span
+                    className={`ml-1 text-[9px] font-bold ${
+                      type === "income" ? "text-emerald-400" : "text-slate-300"
+                    }`}
+                  >
+                    {formatCurrency(amount).split(",")[0]}
+                  </span>
+                )}
               </div>
             );
           }}
@@ -192,7 +207,7 @@ export default function CalendarPage() {
             onClick={() => setIsDayModalOpen(false)}
           >
             <div
-              className="bg-[#1A1D24] w-full max-w-lg rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+              className="w-full max-w-lg overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-2xl animate-in zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between border-b border-white/10 bg-[#13161C] px-5 py-4">
@@ -222,7 +237,7 @@ export default function CalendarPage() {
                       setIsDayModalOpen(false);
                       setIsModalOpen(true);
                     }}
-                    className={`mb-2 flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors ${
+                    className={`mb-2 flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors ${
                       tx.type === "income"
                         ? "border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/15"
                         : tx.status === "paid"
@@ -267,7 +282,7 @@ export default function CalendarPage() {
             onClick={() => setIsModalOpen(false)}
           >
             <div
-              className="bg-[#1A1D24] w-full max-w-sm rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+              className="w-full max-w-sm overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-2xl animate-in zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
               <div
@@ -291,7 +306,7 @@ export default function CalendarPage() {
                     description={selectedEvent.description}
                     category={selectedEvent.category}
                     type={selectedEvent.type}
-                    className="w-14 h-14 rounded-2xl shadow-lg mb-[-28px] border-4 border-[#1A1D24]"
+                    className="mb-[-28px] h-14 w-14 rounded-lg border-4 border-[#121722] shadow-lg"
                   />
                 </div>
               </div>
@@ -309,7 +324,7 @@ export default function CalendarPage() {
                   {formatCurrency(selectedEvent.amount)}
                 </div>
 
-                <div className="bg-[#13161C] rounded-xl p-4 border border-white/5 space-y-3">
+                <div className="space-y-3 rounded-lg border border-white/10 bg-[#0B0E14] p-4">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-slate-500">Vencimento</span>
                     <span className="text-slate-300 font-medium">

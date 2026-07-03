@@ -171,8 +171,8 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-700 pb-12">
-      <div className="flex flex-col md:flex-row justify-between items-end gap-4 bg-[#13161C] p-4 rounded-2xl border border-white/5 shadow-md">
+    <div className="space-y-5 animate-in fade-in duration-700 pb-24 lg:pb-12">
+      <div className="flex flex-col items-start justify-between gap-4 rounded-lg border border-white/10 bg-[#121722] p-4 shadow-xl shadow-black/10 md:flex-row md:items-end">
         <div>
           <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
             Painel de Controle
@@ -195,7 +195,7 @@ export default function DashboardPage() {
             onChange={setDateRange}
           />
           <Link href="/dashboard/transactions">
-            <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-900/20">
+            <Button className="h-11 w-full rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-900/20 hover:bg-indigo-700">
               <Plus size={18} className="mr-2" /> Nova Transação
             </Button>
           </Link>
@@ -209,8 +209,8 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1A1D24] to-[#13161C] border border-white/5 relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-[#121722] p-5 shadow-xl shadow-black/10 transition-all hover:border-indigo-500/30">
               <div className="absolute right-0 top-0 p-6 opacity-5">
                 <Wallet size={64} />
               </div>
@@ -235,7 +235,7 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 hover:border-cyan-500/30 transition-all relative overflow-hidden">
+            <div className="relative overflow-hidden rounded-lg border border-cyan-500/15 bg-cyan-500/[0.06] p-5 transition-all hover:border-cyan-500/30">
               <div className="absolute right-0 top-0 p-6 opacity-5">
                 <Calculator size={64} />
               </div>
@@ -262,7 +262,7 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 hover:border-emerald-500/30 transition-all">
+            <div className="rounded-lg border border-emerald-500/15 bg-emerald-500/[0.07] p-5 transition-all hover:border-emerald-500/30">
               <div className="flex justify-between items-start mb-4">
                 <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
                   <ArrowUpRight size={24} />
@@ -276,7 +276,7 @@ export default function DashboardPage() {
               </h3>
             </div>
 
-            <div className="p-6 rounded-2xl bg-[#1A1D24] border border-white/5 hover:border-red-500/30 transition-all">
+            <div className="rounded-lg border border-red-500/15 bg-red-500/[0.07] p-5 transition-all hover:border-red-500/30">
               <div className="flex justify-between items-start mb-4">
                 <div className="p-2 bg-red-500/10 rounded-lg text-red-500">
                   <ArrowDownRight size={24} />
@@ -291,14 +291,14 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 flex flex-col rounded-2xl bg-[#1A1D24] border border-white/5 shadow-lg min-h-[400px]">
-              <div className="p-6 border-b border-white/5 flex justify-between items-center">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+            <div className="flex min-h-[360px] flex-col rounded-lg border border-white/10 bg-[#121722] shadow-xl shadow-black/10 lg:col-span-2">
+              <div className="flex items-center justify-between border-b border-white/5 p-4 sm:p-5">
                 <h3 className="font-bold text-white flex items-center gap-2">
                   <History size={18} className="text-indigo-400" /> Fluxo Diário
                 </h3>
               </div>
-              <div className="flex-1 w-full h-full p-4">
+              <div className="h-[320px] w-full flex-1 p-3 sm:p-4">
                 {chartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
@@ -392,8 +392,8 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-2xl bg-[#1A1D24] border border-white/5 shadow-lg overflow-hidden">
-                <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+              <div className="overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-xl shadow-black/10">
+                <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.02] p-4">
                   <h3 className="font-bold text-white text-sm">
                     Últimas Movimentações
                   </h3>
@@ -409,7 +409,7 @@ export default function DashboardPage() {
                     recentTransactions.map((t) => (
                       <div
                         key={t.id}
-                        className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors"
+                        className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-white/5"
                       >
                         <BrandIcon
                           description={t.description}
@@ -445,8 +445,8 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-[#1A1D24] border border-white/5 shadow-lg overflow-hidden">
-                <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+              <div className="overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-xl shadow-black/10">
+                <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.02] p-4">
                   <h3 className="font-bold text-white text-sm flex items-center gap-2">
                     <Calendar size={14} className="text-amber-500" /> Próximos
                     Boletos
@@ -457,7 +457,7 @@ export default function DashboardPage() {
                     upcomingBills.map((t) => (
                       <div
                         key={t.id}
-                        className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors group"
+                        className="group flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-white/5"
                       >
                         <div className="flex flex-col items-center justify-center w-9 h-9 bg-amber-500/10 rounded-lg text-amber-500 border border-amber-500/20">
                           <span className="text-xs font-bold">
