@@ -58,6 +58,7 @@ const CATEGORIES = [
   "Educação",
   "Salário",
   "Investimento",
+  "Rendimento de Investimento",
   "Cartão de Crédito",
   "Empréstimo",
   "Assinatura",
@@ -84,6 +85,10 @@ export default function TransactionsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTx, setSelectedTx] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isRedeemModalOpen, setIsRedeemModalOpen] = useState(false);
+  const [selectedInvestmentId, setSelectedInvestmentId] = useState("");
+  const [redeemAmount, setRedeemAmount] = useState("");
+  const [isRedeeming, setIsRedeeming] = useState(false);
 
   const [filterTerm, setFilterTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todas");
@@ -364,25 +369,109 @@ export default function TransactionsPage() {
     }
   };
 
-  const handleRedeemInvestment = (tx: any) => {
-    setFormData({
-      description: `Resgate: ${tx.description}`,
-      amount: tx.amount.toString(),
+  const openRedeemInvestmentModal = (tx?: any) => {
+    setSelectedTx(null);
+    setIsEditing(false);
+    setIsModalOpen(false);
+    setSelectedInvestmentId(tx?.id || "");
+    setRedeemAmount(tx?.amount ? String(tx.amount) : "");
+    setIsRedeemModalOpen(true);
+  };
+
+  const closeRedeemInvestmentModal = () => {
+    setIsRedeemModalOpen(false);
+    setSelectedInvestmentId("");
+    setRedeemAmount("");
+    setIsRedeeming(false);
+  };
+
+  const handleRedeemInvestment = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const investment =
+      investmentOptions.find((item) => item.id === selectedInvestmentId) ||
+      investmentOptions[0];
+    const amount = Number(redeemAmount);
+
+    if (!investment || !amount || amount <= 0) return;
+
+    const investedAmount = Number(investment.amount) || 0;
+    let principalAmount = amount;
+    let gainAmount = 0;
+
+    if (amount > investedAmount) {
+      const confirmed = window.confirm(
+        `O valor de resgate (${formatCurrency(
+          amount
+        )}) é maior que o valor investido (${formatCurrency(
+          investedAmount
+        )}). Houve ganho nesse investimento?`
+      );
+
+      if (!confirmed) return;
+
+      principalAmount = investedAmount;
+      gainAmount = amount - investedAmount;
+    }
+
+    setIsRedeeming(true);
+
+    const todayKey = new Date().toISOString().split("T")[0];
+    const principalResult = await addTransaction({
+      description: `Resgate: ${investment.description}`,
+      amount: principalAmount,
       category: "Investimento",
       type: "income",
       status: "paid",
-      dueDate: new Date().toISOString().split("T")[0],
+      dueDate: todayKey,
       pixCode: "",
       barCode: "",
       observation: `Resgate referente ao investimento de ${formatDate(
-        tx.dueDate
-      )}`,
+        investment.dueDate
+      )}.`,
       isRecurrent: false,
       recurrenceMonths: 12,
     });
-    setSelectedTx(null);
-    setIsEditing(false);
-    setIsModalOpen(true);
+
+    if (handleAuthError(principalResult)) {
+      setIsRedeeming(false);
+      return;
+    }
+
+    if (!principalResult?.success) {
+      setIsRedeeming(false);
+      return;
+    }
+
+    if (gainAmount > 0) {
+      const gainResult = await addTransaction({
+        description: `Rendimento: ${investment.description}`,
+        amount: gainAmount,
+        category: "Rendimento de Investimento",
+        type: "income",
+        status: "paid",
+        dueDate: todayKey,
+        pixCode: "",
+        barCode: "",
+        observation: `Ganho registrado automaticamente no resgate de ${formatCurrency(
+          amount
+        )}.`,
+        isRecurrent: false,
+        recurrenceMonths: 12,
+      });
+
+      if (handleAuthError(gainResult)) {
+        setIsRedeeming(false);
+        return;
+      }
+
+      if (!gainResult?.success) {
+        setIsRedeeming(false);
+        return;
+      }
+    }
+
+    closeRedeemInvestmentModal();
   };
 
   const displayValue = (val: number) => {
@@ -429,6 +518,19 @@ export default function TransactionsPage() {
 
   const netInvestments = grossInvestments - redeemedInvestments;
   const totalAssets = balance + netInvestments;
+  const investmentOptions = transactions
+    .filter(
+      (t) =>
+        t.type === "expense" &&
+        t.status === "paid" &&
+        t.category === "Investimento"
+    )
+    .sort(
+      (a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()
+    );
+  const selectedInvestment =
+    investmentOptions.find((item) => item.id === selectedInvestmentId) ||
+    investmentOptions[0];
 
   const handleCopy = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -737,6 +839,16 @@ export default function TransactionsPage() {
             </Button>
 
             <Button
+              type="button"
+              variant="outline"
+              onClick={() => openRedeemInvestmentModal()}
+              disabled={investmentOptions.length === 0}
+              className="w-full lg:w-auto h-10 px-4 border-emerald-500/20 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-100 shrink-0"
+            >
+              <TrendingUp size={16} className="mr-2" /> Resgatar
+            </Button>
+
+            <Button
               onClick={openNewTransactionModal}
               className="w-full lg:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-10 px-6 rounded-lg shadow-lg shadow-indigo-900/20 transition-all active:scale-95 shrink-0 border border-indigo-500/20"
             >
@@ -885,12 +997,18 @@ export default function TransactionsPage() {
         )}
       </div>
 
-      {(isModalOpen || selectedTx) && (
+      {(isModalOpen || selectedTx || isRedeemModalOpen) && (
         <div className="fixed inset-0 bg-[#000000]/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-[#13161C] border border-white/10 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 ring-1 ring-white/10">
+          <div
+            className={`bg-[#13161C] border border-white/10 rounded-2xl shadow-2xl w-full overflow-hidden animate-in zoom-in-95 ring-1 ring-white/10 ${
+              isRedeemModalOpen ? "max-w-2xl" : "max-w-lg"
+            }`}
+          >
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/[0.02]">
               <h3 className="font-bold text-lg text-white tracking-tight">
-                {isEditing
+                {isRedeemModalOpen
+                  ? "Resgatar Investimento"
+                  : isEditing
                   ? "Editar Transação"
                   : selectedTx
                   ? "Detalhes"
@@ -899,9 +1017,13 @@ export default function TransactionsPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setIsModalOpen(false);
-                  setSelectedTx(null);
-                  setIsEditing(false);
+                  if (isRedeemModalOpen) {
+                    closeRedeemInvestmentModal();
+                  } else {
+                    setIsModalOpen(false);
+                    setSelectedTx(null);
+                    setIsEditing(false);
+                  }
                 }}
                 className="text-slate-400 hover:text-white transition-colors bg-white/5 p-1 rounded-full"
               >
@@ -910,7 +1032,124 @@ export default function TransactionsPage() {
             </div>
 
             <div className="p-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
-              {selectedTx && !isEditing ? (
+              {isRedeemModalOpen ? (
+                <form onSubmit={handleRedeemInvestment} className="space-y-5">
+                  {investmentOptions.length === 0 ? (
+                    <div className="py-10 text-center">
+                      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
+                        <TrendingUp size={22} />
+                      </div>
+                      <p className="text-sm font-bold text-white">
+                        Nenhum investimento pago encontrado.
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Cadastre uma saída paga na categoria Investimento para
+                        fazer um resgate.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                        <label className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">
+                          Valor do resgate
+                        </label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0,00"
+                          value={redeemAmount}
+                          onChange={(e) => setRedeemAmount(e.target.value)}
+                          className="mt-2 h-12 border-emerald-500/20 bg-black/20 text-lg font-bold text-white focus:border-emerald-500/50"
+                          autoFocus
+                        />
+                        {selectedInvestment &&
+                          Number(redeemAmount) >
+                            Number(selectedInvestment.amount) && (
+                            <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">
+                              O valor acima do principal será confirmado como
+                              rendimento e lançado automaticamente em
+                              Rendimento de Investimento.
+                            </p>
+                          )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                            Escolha o investimento
+                          </p>
+                          <span className="text-xs font-bold text-indigo-300">
+                            {displayValue(netInvestments)} investidos
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {investmentOptions.map((investment) => {
+                            const isSelected =
+                              selectedInvestment?.id === investment.id;
+
+                            return (
+                              <button
+                                key={investment.id}
+                                type="button"
+                                onClick={() =>
+                                  setSelectedInvestmentId(investment.id)
+                                }
+                                className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                                  isSelected
+                                    ? "border-emerald-500/40 bg-emerald-500/10"
+                                    : "border-white/5 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.06]"
+                                }`}
+                              >
+                                <BrandIcon
+                                  description={investment.description}
+                                  category={investment.category}
+                                  type={investment.type}
+                                  className="h-10 w-10 rounded-lg bg-[#0B0E14] border border-white/5"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-bold text-white">
+                                    {investment.description}
+                                  </p>
+                                  <p className="text-xs text-slate-500">
+                                    {formatDate(investment.dueDate)}
+                                  </p>
+                                </div>
+                                <span className="shrink-0 text-sm font-bold font-mono text-emerald-300">
+                                  {displayValue(Number(investment.amount))}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-2">
+                        <Button
+                          type="button"
+                          className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold border border-slate-700"
+                          onClick={closeRedeemInvestmentModal}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={isRedeeming || !redeemAmount}
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-900/20"
+                        >
+                          {isRedeeming ? (
+                            <Loader2 size={18} className="mr-2 animate-spin" />
+                          ) : (
+                            <TrendingUp size={18} className="mr-2" />
+                          )}
+                          Confirmar Resgate
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </form>
+              ) : selectedTx && !isEditing ? (
                 <div className="space-y-6">
                   <div className="flex flex-col items-center justify-center py-8 bg-[#0B0E14] rounded-xl border border-white/5 relative overflow-hidden">
                     <div
@@ -1099,7 +1338,7 @@ export default function TransactionsPage() {
                     selectedTx.type === "expense" && (
                       <Button
                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-900/20 border-emerald-500/50"
-                        onClick={() => handleRedeemInvestment(selectedTx)}
+                        onClick={() => openRedeemInvestmentModal(selectedTx)}
                       >
                         <PieChart size={18} className="mr-2" /> Resgatar Valor
                       </Button>
