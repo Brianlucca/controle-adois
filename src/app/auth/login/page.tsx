@@ -259,7 +259,7 @@ export default function LoginPage() {
                             type="button" 
                             variant="outline"
                             onClick={() => setShowForgotModal(false)}
-                            className="flex-1 h-11"
+                            className="h-11 flex-1 border-slate-200 bg-white text-slate-900 hover:bg-slate-100 hover:text-slate-900"
                         >
                             Cancelar
                         </Button>

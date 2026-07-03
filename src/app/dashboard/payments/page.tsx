@@ -20,6 +20,7 @@ export default function PaymentsPage() {
   const { transactions, updateTransactionStatus, loading, setDateRange } =
     useFinance();
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
 
   useEffect(() => {
     setDateRange({ from: "2020-01-01", to: "2030-12-31" });
@@ -45,7 +46,7 @@ export default function PaymentsPage() {
       await navigator.clipboard.writeText(text);
       setCopiedId(id);
       setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
+    } catch {
       const textArea = document.createElement("textarea");
       textArea.value = text;
       document.body.appendChild(textArea);
@@ -55,6 +56,16 @@ export default function PaymentsPage() {
       setCopiedId(id);
       setTimeout(() => setCopiedId(null), 2000);
     }
+  };
+
+  const handlePay = async (id: string) => {
+    if (payingId) return;
+
+    setPayingId(id);
+    window.setTimeout(async () => {
+      await updateTransactionStatus(id, "paid");
+      setPayingId(null);
+    }, 950);
   };
 
   const getUrgency = (dateStr: string) => {
@@ -80,7 +91,7 @@ export default function PaymentsPage() {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center">
         <div className="flex flex-col items-center gap-3 animate-pulse">
           <Receipt size={40} className="text-slate-600" />
           <p className="text-slate-500">Carregando todas as contas...</p>
@@ -89,24 +100,24 @@ export default function PaymentsPage() {
     );
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-500 pb-20">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-[#13161C] p-6 rounded-2xl border border-white/5 shadow-xl">
+    <div className="mx-auto max-w-6xl space-y-5 pb-24 animate-in fade-in duration-500">
+      <div className="flex flex-col items-start justify-between gap-4 rounded-lg border border-white/10 bg-[#121722] p-4 shadow-xl shadow-black/10 md:flex-row md:items-center">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <div className="bg-indigo-600 p-2 rounded-lg">
+          <h2 className="flex items-center gap-2 text-xl font-bold text-white">
+            <div className="rounded-lg bg-indigo-600 p-2">
               <Receipt size={20} className="text-white" />
             </div>
             Pagamentos Pendentes
           </h2>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="mt-1 text-sm text-slate-400">
             Mostrando todos os boletos e pix pendentes, independente da data.
           </p>
         </div>
-        <div className="text-right bg-white/5 p-4 rounded-xl border border-white/10 min-w-[200px]">
-          <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-1">
+        <div className="w-full rounded-lg border border-white/10 bg-white/[0.04] p-4 text-left md:w-auto md:min-w-[200px] md:text-right">
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">
             Total a Pagar
           </p>
-          <p className="text-2xl font-bold text-white tracking-tight">
+          <p className="text-2xl font-bold tracking-tight text-white">
             {formatCurrency(totalToPay)}
           </p>
         </div>
@@ -114,12 +125,12 @@ export default function PaymentsPage() {
 
       <div className="space-y-4">
         {bills.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 bg-[#1A1D24]/50 rounded-2xl border border-white/5 border-dashed">
-            <div className="p-4 bg-slate-800/50 rounded-full mb-4 text-slate-500">
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-white/10 bg-[#121722] py-20">
+            <div className="mb-4 rounded-lg bg-slate-800/50 p-4 text-slate-500">
               <CheckCircle2 size={40} className="text-emerald-500" />
             </div>
             <h3 className="text-lg font-bold text-white">Tudo em dia!</h3>
-            <p className="text-slate-500 max-w-md text-center mt-2 text-sm px-6">
+            <p className="mt-2 max-w-md px-6 text-center text-sm text-slate-500">
               Você não tem nenhuma conta pendente com código de barras ou Pix
               cadastrado.
             </p>
@@ -128,137 +139,168 @@ export default function PaymentsPage() {
           bills.map((bill) => {
             const status = getUrgency(bill.dueDate);
             const dateObj = new Date(bill.dueDate + "T12:00:00");
+            const isPaying = payingId === bill.id;
 
             return (
               <Card
                 key={bill.id}
-                className="bg-[#1A1D24] border-white/5 hover:border-white/10 transition-all overflow-hidden group"
+                className={`invoice-card group relative overflow-hidden border-white/10 bg-[#121722] shadow-xl shadow-black/10 transition-all hover:border-white/20 ${
+                  isPaying ? "invoice-card-paying" : ""
+                }`}
               >
-                <CardContent className="p-0 flex flex-col md:flex-row">
-                  <div className="p-5 flex flex-row md:flex-col items-center justify-between md:justify-center gap-2 bg-white/[0.02] border-b md:border-b-0 md:border-r border-white/5 md:w-32 shrink-0">
-                    <div className="flex flex-col items-center">
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                        Vence em
-                      </span>
-                      <span className="text-2xl font-bold text-white">
-                        {dateObj.getDate()}
-                      </span>
-                      <span className="text-xs font-bold text-slate-400 uppercase">
-                        {dateObj
-                          .toLocaleDateString("pt-BR", { month: "short" })
-                          .replace(".", "")}
-                        /{dateObj.getFullYear()}
-                      </span>
-                    </div>
-                    <div
-                      className={`px-2 py-1 rounded text-[10px] font-bold border flex items-center gap-1 ${status.color}`}
-                    >
-                      {status.icon} {status.label}
+                <div className="pointer-events-none absolute inset-x-4 top-0 hidden h-px bg-gradient-to-r from-transparent via-white/20 to-transparent sm:block" />
+                {isPaying && (
+                  <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
+                    <div className="invoice-paid-stamp">
+                      <CheckCircle2 size={18} />
+                      Pago
                     </div>
                   </div>
+                )}
 
-                  <div className="flex-1 p-5 flex flex-col justify-center gap-4 min-w-0">
-                    <div className="flex justify-between items-start gap-4">
+                <CardContent className="p-0">
+                  <div className="grid lg:grid-cols-[148px_minmax(0,1fr)_224px]">
+                    <div className="invoice-slip-section relative flex items-center justify-between gap-3 border-b border-dashed border-white/10 bg-[#0B0E14]/70 p-4 lg:flex-col lg:items-center lg:justify-center lg:border-b-0 lg:border-r lg:border-dashed">
+                      {isPaying && <div className="invoice-cut-seam" />}
+                      <div className="absolute -right-3 top-6 hidden h-6 w-6 rounded-full border border-white/10 bg-[#0B0E14] lg:block" />
+                      <div className="absolute -right-3 bottom-6 hidden h-6 w-6 rounded-full border border-white/10 bg-[#0B0E14] lg:block" />
+
+                      <div className="text-left lg:text-center">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                          Vence
+                        </p>
+                        <p className="mt-1 text-3xl font-black leading-none text-white">
+                          {dateObj.getDate()}
+                        </p>
+                        <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                          {dateObj
+                            .toLocaleDateString("pt-BR", { month: "short" })
+                            .replace(".", "")}
+                          /{dateObj.getFullYear()}
+                        </p>
+                      </div>
+
+                      <div
+                        className={`flex h-8 items-center gap-1 rounded-md border px-2.5 text-[10px] font-bold ${status.color}`}
+                      >
+                        {status.icon} {status.label}
+                      </div>
+                    </div>
+
+                    <div className="invoice-body-section min-w-0 p-4 sm:p-5">
                       <div className="min-w-0">
-                        <h3 className="font-bold text-white text-lg truncate">
+                        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                          <span className="rounded-md border border-indigo-500/20 bg-indigo-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-indigo-300">
+                            Documento
+                          </span>
+                          <span className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                            Pendente
+                          </span>
+                        </div>
+                        <h3 className="truncate text-lg font-bold text-white">
                           {bill.description}
                         </h3>
-                        <p className="text-sm text-slate-400 font-medium">
+                        <p className="text-sm font-medium text-slate-400">
                           {bill.category}
                         </p>
                       </div>
-                      <div className="text-right block md:hidden shrink-0">
-                        <p className="text-lg font-bold text-white">
-                          {formatCurrency(Number(bill.amount))}
-                        </p>
+
+                      <div className="mt-4 space-y-2.5">
+                        {bill.pixCode && bill.pixCode.trim().length > 5 && (
+                          <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2 sm:grid-cols-[auto_minmax(0,1fr)_108px]">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-indigo-500/20 bg-indigo-500/10">
+                              <QrCode size={17} className="text-indigo-300" />
+                            </div>
+                            <div className="min-w-0 rounded-lg border border-white/10 bg-[#0B0E14] px-3 py-2">
+                              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                                Pix
+                              </p>
+                              <p className="block w-full truncate font-mono text-sm leading-5 text-slate-200">
+                                {bill.pixCode}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              className="col-span-2 h-12 rounded-lg border border-indigo-500/40 bg-indigo-600 px-3 text-white shadow-md shadow-indigo-900/20 hover:bg-indigo-700 sm:col-span-1"
+                              onClick={() =>
+                                handleCopy(bill.pixCode!, bill.id + "pix")
+                              }
+                              disabled={isPaying}
+                            >
+                              {copiedId === bill.id + "pix" ? (
+                                <CheckCircle2 size={16} />
+                              ) : (
+                                <Copy size={16} />
+                              )}
+                              <span className="ml-2 text-xs">
+                                {copiedId === bill.id + "pix"
+                                  ? "Copiado"
+                                  : "Copiar"}
+                              </span>
+                            </Button>
+                          </div>
+                        )}
+
+                        {bill.barCode && bill.barCode.trim().length > 5 && (
+                          <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2 sm:grid-cols-[auto_minmax(0,1fr)_108px]">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04]">
+                              <Barcode size={17} className="text-slate-300" />
+                            </div>
+                            <div className="min-w-0 rounded-lg border border-white/10 bg-[#0B0E14] px-3 py-2">
+                              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                                Linha digitável
+                              </p>
+                              <p className="block w-full truncate font-mono text-sm leading-5 tracking-wide text-slate-200">
+                                {bill.barCode}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="col-span-2 h-12 rounded-lg border-white/10 bg-white/[0.06] px-3 text-slate-100 hover:bg-white/10 sm:col-span-1"
+                              onClick={() =>
+                                handleCopy(bill.barCode!, bill.id + "bar")
+                              }
+                              disabled={isPaying}
+                            >
+                              {copiedId === bill.id + "bar" ? (
+                                <CheckCircle2
+                                  size={16}
+                                  className="text-emerald-400"
+                                />
+                              ) : (
+                                <Copy size={16} />
+                              )}
+                              <span className="ml-2 text-xs">
+                                {copiedId === bill.id + "bar"
+                                  ? "Copiado"
+                                  : "Copiar"}
+                              </span>
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-2 w-full">
-                      {bill.pixCode && bill.pixCode.trim().length > 5 && (
-                        <div className="flex items-center gap-2 w-full">
-                          <div className="h-9 w-9 bg-indigo-500/10 rounded-lg flex items-center justify-center shrink-0 border border-indigo-500/20">
-                            <QrCode size={18} className="text-indigo-400" />
-                          </div>
-                          <div className="flex-1 bg-black/20 rounded-lg border border-white/5 h-9 flex items-center px-3 min-w-0 overflow-hidden">
-                            <p className="text-xs text-slate-400 font-mono truncate w-full block">
-                              {bill.pixCode}
-                            </p>
-                          </div>
-                          <Button
-                            size="sm"
-                            className="h-9 bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500/50 shadow-md shadow-indigo-900/20 shrink-0"
-                            onClick={() =>
-                              handleCopy(bill.pixCode!, bill.id + "pix")
-                            }
-                          >
-                            {copiedId === bill.id + "pix" ? (
-                              <CheckCircle2 size={16} />
-                            ) : (
-                              <Copy size={16} />
-                            )}
-                            <span className="ml-2 hidden sm:inline">
-                              {copiedId === bill.id + "pix"
-                                ? "Copiado"
-                                : "Copiar"}
-                            </span>
-                          </Button>
-                        </div>
-                      )}
+                    <div className="invoice-body-section flex flex-col justify-between gap-4 border-t border-dashed border-white/10 bg-[#0B0E14]/45 p-4 lg:border-l lg:border-t-0 lg:p-5">
+                      <div>
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                          Valor
+                        </p>
+                        <p className="mt-2 font-mono text-2xl font-black text-white">
+                          {formatCurrency(Number(bill.amount))}
+                        </p>
+                      </div>
 
-                      {bill.barCode && bill.barCode.trim().length > 5 && (
-                        <div className="flex items-center gap-2 w-full">
-                          <div className="h-9 w-9 bg-slate-700/20 rounded-lg flex items-center justify-center shrink-0 border border-white/10">
-                            <Barcode size={18} className="text-slate-400" />
-                          </div>
-                          <div className="flex-1 bg-black/20 rounded-lg border border-white/5 h-9 flex items-center px-3 min-w-0 overflow-hidden">
-                            <p className="text-xs text-slate-400 font-mono truncate w-full block">
-                              {bill.barCode}
-                            </p>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-9 bg-white/10 hover:bg-white/20 text-slate-200 border border-white/10 shrink-0"
-                            onClick={() =>
-                              handleCopy(bill.barCode!, bill.id + "bar")
-                            }
-                          >
-                            {copiedId === bill.id + "bar" ? (
-                              <CheckCircle2
-                                size={16}
-                                className="text-emerald-400"
-                              />
-                            ) : (
-                              <Copy size={16} />
-                            )}
-                            <span className="ml-2 hidden sm:inline">
-                              {copiedId === bill.id + "bar"
-                                ? "Copiado"
-                                : "Copiar"}
-                            </span>
-                          </Button>
-                        </div>
-                      )}
+                      <Button
+                        className="h-12 w-full rounded-lg bg-emerald-600 px-4 font-bold text-white shadow-lg shadow-emerald-900/20 hover:bg-emerald-500"
+                        onClick={() => handlePay(bill.id)}
+                        disabled={Boolean(payingId)}
+                      >
+                        <CheckCircle2 size={16} className="mr-2" />
+                        {isPaying ? "Pagando" : "Pagar"}
+                      </Button>
                     </div>
-                  </div>
-
-                  <div className="p-5 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-end gap-3 border-t md:border-t-0 md:border-l border-white/5 md:w-48 bg-white/[0.01] shrink-0">
-                    <div className="text-left md:text-right hidden md:block">
-                      <p className="text-[10px] text-slate-500 uppercase font-bold">
-                        Valor
-                      </p>
-                      <p className="text-xl font-bold text-white">
-                        {formatCurrency(Number(bill.amount))}
-                      </p>
-                    </div>
-
-                    <Button
-                      className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-10 shadow-lg shadow-emerald-900/20"
-                      onClick={() => updateTransactionStatus(bill.id, "paid")}
-                    >
-                      <CheckCircle2 size={18} className="mr-2" /> Pagar
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
