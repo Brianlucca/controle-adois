@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
-import { ArrowUpCircle, ArrowDownCircle, Wallet } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Wallet } from "lucide-react";
 import { Transaction } from "@/lib/types";
 
 interface SummaryCardsProps {
@@ -19,55 +19,55 @@ export function SummaryCards({ transactions }: SummaryCardsProps) {
   const balance = income - expense;
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <Card>
+    <div className="grid gap-3 md:grid-cols-3">
+      <Card className="relative overflow-hidden border-white/10 bg-[#121722]">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-slate-500">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500">
             Saldo Total
           </CardTitle>
-          <Wallet className="h-4 w-4 text-indigo-600" />
+          <Wallet className="h-5 w-5 text-indigo-300" />
         </CardHeader>
         <CardContent>
           <div
-            className={`text-2xl font-bold ${
-              balance < 0 ? "text-red-600" : "text-slate-900"
+            className={`font-mono text-2xl font-bold ${
+              balance < 0 ? "text-red-400" : "text-white"
             }`}
           >
             {formatCurrency(balance)}
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="mt-1 text-xs text-slate-500">
             Balanço geral do workspace
           </p>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="relative overflow-hidden border-emerald-500/15 bg-emerald-500/[0.07]">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-slate-500">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500">
             Entradas
           </CardTitle>
-          <ArrowUpCircle className="h-4 w-4 text-green-600" />
+          <ArrowUpCircle className="h-5 w-5 text-emerald-300" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-green-600">
+          <div className="font-mono text-2xl font-bold text-emerald-300">
             {formatCurrency(income)}
           </div>
-          <p className="text-xs text-slate-500 mt-1">Total recebido</p>
+          <p className="mt-1 text-xs text-slate-500">Total recebido</p>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="relative overflow-hidden border-red-500/15 bg-red-500/[0.07]">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-slate-500">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500">
             Saídas
           </CardTitle>
-          <ArrowDownCircle className="h-4 w-4 text-red-600" />
+          <ArrowDownCircle className="h-5 w-5 text-red-300" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-red-600">
+          <div className="font-mono text-2xl font-bold text-red-300">
             {formatCurrency(expense)}
           </div>
-          <p className="text-xs text-slate-500 mt-1">Total gasto</p>
+          <p className="mt-1 text-xs text-slate-500">Total gasto</p>
         </CardContent>
       </Card>
     </div>

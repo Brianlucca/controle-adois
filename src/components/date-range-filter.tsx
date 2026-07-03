@@ -77,7 +77,7 @@ export function DateRangeFilter({ from, to, onChange }: DateRangeFilterProps) {
       <button
         type="button"
         onClick={() => setIsOpen((value) => !value)}
-        className="flex h-10 w-full min-w-[220px] items-center justify-between gap-3 rounded-lg border border-white/10 bg-[#0B0E14] px-3 text-left text-sm text-slate-300 transition-colors hover:border-indigo-500/40 hover:bg-white/[0.03] sm:w-[260px]"
+        className="flex h-11 w-full min-w-[220px] items-center justify-between gap-3 rounded-lg border border-white/10 bg-[#0B0E14] px-3 text-left text-sm text-slate-300 transition-colors hover:border-indigo-500/40 hover:bg-white/[0.03] sm:w-[260px]"
       >
         <span className="flex min-w-0 items-center gap-2">
           <Calendar size={16} className="shrink-0 text-slate-500" />
@@ -94,13 +94,13 @@ export function DateRangeFilter({ from, to, onChange }: DateRangeFilterProps) {
       {isOpen && (
         <div className="absolute right-0 top-12 z-50 w-[min(92vw,360px)] rounded-xl border border-white/10 bg-[#11151C] p-4 shadow-2xl shadow-black/40 ring-1 ring-white/5">
           <div className="grid grid-cols-3 gap-2">
-            <Button type="button" variant="ghost" onClick={() => applyPreset("month")} className="h-9 bg-white/[0.03] text-xs text-slate-300 hover:bg-white/10">
+            <Button type="button" variant="ghost" onClick={() => applyPreset("month")} className="h-10 bg-white/[0.03] text-xs text-slate-300 hover:bg-white/10">
               Mes
             </Button>
-            <Button type="button" variant="ghost" onClick={() => applyPreset("year")} className="h-9 bg-white/[0.03] text-xs text-slate-300 hover:bg-white/10">
+            <Button type="button" variant="ghost" onClick={() => applyPreset("year")} className="h-10 bg-white/[0.03] text-xs text-slate-300 hover:bg-white/10">
               Ano
             </Button>
-            <Button type="button" variant="ghost" onClick={() => applyPreset("all")} className="h-9 bg-white/[0.03] text-xs text-slate-300 hover:bg-white/10">
+            <Button type="button" variant="ghost" onClick={() => applyPreset("all")} className="h-10 bg-white/[0.03] text-xs text-slate-300 hover:bg-white/10">
               Tudo
             </Button>
           </div>
@@ -114,7 +114,7 @@ export function DateRangeFilter({ from, to, onChange }: DateRangeFilterProps) {
                 type="date"
                 value={localFrom}
                 onChange={(e) => setLocalFrom(e.target.value)}
-                className="h-10 border-white/10 bg-black/20 text-sm text-white focus-visible:ring-indigo-500"
+                className="h-11 border-white/10 bg-black/20 text-sm text-white focus-visible:ring-indigo-500"
               />
             </label>
             <label className="space-y-1.5">
@@ -125,16 +125,16 @@ export function DateRangeFilter({ from, to, onChange }: DateRangeFilterProps) {
                 type="date"
                 value={localTo}
                 onChange={(e) => setLocalTo(e.target.value)}
-                className="h-10 border-white/10 bg-black/20 text-sm text-white focus-visible:ring-indigo-500"
+                className="h-11 border-white/10 bg-black/20 text-sm text-white focus-visible:ring-indigo-500"
               />
             </label>
           </div>
 
           <div className="mt-4 flex justify-end gap-2 border-t border-white/5 pt-4">
-            <Button type="button" variant="ghost" onClick={() => setIsOpen(false)} className="h-9 text-slate-400 hover:bg-white/10 hover:text-white">
+            <Button type="button" variant="ghost" onClick={() => setIsOpen(false)} className="h-10 text-slate-400 hover:bg-white/10 hover:text-white">
               Cancelar
             </Button>
-            <Button type="button" onClick={handleApply} className="h-9 bg-indigo-600 px-4 text-white hover:bg-indigo-700">
+            <Button type="button" onClick={handleApply} className="h-10 bg-indigo-600 px-4 text-white hover:bg-indigo-700">
               Aplicar
             </Button>
           </div>

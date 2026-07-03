@@ -103,7 +103,7 @@ export function DashboardSidebar() {
     <>
       <button
         onClick={() => setIsMobileOpen(true)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2.5 bg-[#1A1D24] text-white rounded-xl shadow-xl border border-white/10 active:scale-95 transition-transform"
+        className="fixed left-4 top-4 z-50 rounded-lg border border-white/10 bg-[#121722] p-2.5 text-white shadow-xl shadow-black/20 transition-transform active:scale-95 md:hidden"
       >
         <Menu size={20} />
       </button>
@@ -117,22 +117,22 @@ export function DashboardSidebar() {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-[70] bg-[#0F1218]/95 backdrop-blur-xl flex flex-col border-r border-white/5 transition-all duration-300 ease-in-out md:relative",
+          "fixed inset-y-0 left-0 z-[70] flex flex-col border-r border-white/10 bg-[#0B0E14]/95 shadow-2xl shadow-black/30 backdrop-blur-xl transition-all duration-300 ease-in-out md:relative",
           isCollapsed ? "w-[80px]" : "w-72",
           isMobileOpen
             ? "translate-x-0 w-72"
             : "-translate-x-full md:translate-x-0"
         )}
       >
-        <div className="flex flex-col h-full py-4">
+        <div className="flex h-full flex-col py-4">
           <div
             className={cn(
-              "flex items-center px-4 mb-6 transition-all duration-300",
+              "mb-5 flex items-center px-3 transition-all duration-300",
               isCollapsed ? "justify-center" : "justify-between"
             )}
           >
             <div className="flex items-center gap-3 overflow-hidden">
-              <div className="bg-indigo-600 p-2 rounded-xl shrink-0 shadow-lg shadow-indigo-500/20">
+              <div className="shrink-0 rounded-lg border border-indigo-500/30 bg-indigo-600 p-2 shadow-lg shadow-indigo-500/20">
                 <Building2 size={20} className="text-white" />
               </div>
 
@@ -157,13 +157,13 @@ export function DashboardSidebar() {
             )}
           </div>
 
-          <div className="px-3 mb-6 relative">
+          <div className="relative mb-5 px-3">
             <button
               onClick={() => !isCollapsed && setIsSwitcherOpen(!isSwitcherOpen)}
               disabled={isSwitching}
               className={cn(
-                "w-full flex items-center rounded-xl bg-white/5 border border-white/5 hover:border-white/10 hover:bg-white/10 transition-all group disabled:opacity-50",
-                isCollapsed ? "justify-center p-2" : "justify-between p-2.5"
+                "group flex w-full items-center rounded-lg border border-white/10 bg-[#121722] transition-all hover:border-indigo-500/30 hover:bg-white/[0.06] disabled:opacity-50",
+                isCollapsed ? "justify-center p-2" : "justify-between p-3"
               )}
             >
               <div
@@ -172,7 +172,7 @@ export function DashboardSidebar() {
                   !isCollapsed && "gap-3"
                 )}
               >
-                <div className="h-8 w-8 bg-gradient-to-br from-slate-700 to-slate-800 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0 border border-white/10 shadow-sm">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#0B0E14] text-xs font-bold text-white shadow-sm">
                   {isSwitching ? (
                     <Loader2 className="animate-spin h-3 w-3" />
                   ) : activeWsName ? (
@@ -191,7 +191,7 @@ export function DashboardSidebar() {
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">
                     Workspace
                   </p>
-                  <p className="font-medium text-sm truncate text-white max-w-[120px]">
+                  <p className="max-w-[130px] truncate text-sm font-bold text-white">
                     {activeWsName || "Carregando..."}
                   </p>
                 </div>
@@ -209,27 +209,27 @@ export function DashboardSidebar() {
             </button>
 
             {isSwitcherOpen && !isCollapsed && (
-              <div className="absolute top-full left-3 right-3 mt-2 bg-[#1A1D24] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-top">
-                <div className="p-1.5 max-h-60 overflow-y-auto custom-scrollbar">
+              <div className="absolute left-3 right-3 top-full z-50 mt-2 origin-top overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-2xl shadow-black/40 animate-in fade-in zoom-in-95">
+                <div className="custom-scrollbar max-h-60 overflow-y-auto p-1.5">
                   {workspaces.map((ws) => (
                     <button
                       key={ws.id}
                       onClick={() => handleSwitch(ws.id)}
                       className={cn(
-                        "w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-colors mb-0.5",
+                        "mb-0.5 flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors",
                         activeWsId === ws.id
-                          ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20"
-                          : "hover:bg-white/5 text-slate-300"
+                          ? "border border-indigo-500/30 bg-indigo-500/15 text-white"
+                          : "text-slate-300 hover:bg-white/[0.06]"
                       )}
                     >
                       <span className="truncate font-medium">{ws.name}</span>
                       {activeWsId === ws.id && <Check size={14} />}
                     </button>
                   ))}
-                  <div className="h-px bg-white/5 my-1.5 mx-2"></div>
+                  <div className="mx-2 my-1.5 h-px bg-white/10"></div>
                   <button
                     onClick={() => handleSwitch("new")}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white"
                   >
                     <PlusCircle size={14} /> Gerenciar / Criar
                   </button>
@@ -238,7 +238,7 @@ export function DashboardSidebar() {
             )}
           </div>
 
-          <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar overflow-x-hidden px-3">
+          <nav className="custom-scrollbar flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-3">
             <SectionLabel collapsed={isCollapsed} label="Principal" />
             <NavItem
               collapsed={isCollapsed}
@@ -295,11 +295,11 @@ export function DashboardSidebar() {
             </div>
           </nav>
 
-          <div className="mt-auto pt-4 border-t border-white/5 space-y-1 px-3">
+          <div className="mt-auto space-y-1 border-t border-white/10 px-3 pt-4">
             <button
               onClick={() => logout()}
               className={cn(
-                "flex items-center text-slate-400 hover:text-red-400 text-sm font-medium w-full p-2.5 rounded-xl hover:bg-red-500/5 transition-all group",
+                "group flex w-full items-center rounded-lg border border-transparent p-2.5 text-sm font-medium text-slate-400 transition-all hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-300",
                 isCollapsed ? "justify-center" : "gap-3"
               )}
               title="Sair"
@@ -322,7 +322,7 @@ export function DashboardSidebar() {
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
               className={cn(
-                "hidden md:flex items-center text-slate-500 hover:text-white w-full p-2.5 rounded-xl hover:bg-white/5 transition-all mt-1",
+                "mt-1 hidden w-full items-center rounded-lg border border-transparent p-2.5 text-slate-500 transition-all hover:border-white/10 hover:bg-white/[0.06] hover:text-white md:flex",
                 isCollapsed ? "justify-center" : "gap-3"
               )}
               title={isCollapsed ? "Expandir" : "Recolher"}
@@ -359,12 +359,12 @@ function SectionLabel({
   return (
     <div
       className={cn(
-        "px-3 mb-2 mt-2 transition-all duration-300",
+        "mb-2 mt-3 px-2 transition-all duration-300",
         collapsed ? "flex justify-center" : ""
       )}
     >
       {collapsed ? (
-        <div className="h-0.5 w-4 bg-white/10 rounded-full my-2"></div>
+        <div className="my-2 h-0.5 w-4 rounded-full bg-white/10"></div>
       ) : (
         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest opacity-80 whitespace-nowrap">
           {label}
@@ -379,10 +379,10 @@ function NavItem({ href, icon, label, active, collapsed }: any) {
     <Link
       href={href}
       className={cn(
-        "flex items-center p-2.5 rounded-xl transition-all duration-200 group relative",
+        "group relative flex h-11 items-center rounded-lg border p-2.5 transition-all duration-200",
         active
-          ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/30"
-          : "text-slate-400 hover:bg-white/5 hover:text-slate-200",
+          ? "border-indigo-500/40 bg-indigo-500/15 text-white shadow-lg shadow-indigo-950/20"
+          : "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/[0.06] hover:text-slate-200",
         collapsed ? "justify-center" : "gap-3"
       )}
       title={collapsed ? label : ""}
@@ -406,7 +406,7 @@ function NavItem({ href, icon, label, active, collapsed }: any) {
       </span>
 
       {active && !collapsed && (
-        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/50 shadow-sm animate-pulse"></div>
+        <div className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-300 shadow-sm"></div>
       )}
     </Link>
   );

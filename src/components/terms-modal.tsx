@@ -164,7 +164,7 @@ export function TermsModal({ isOpen, onAccept, onDecline }: TermsModalProps) {
             <Button
               variant="outline"
               onClick={onDecline}
-              className="flex-1"
+              className="flex-1 border-slate-200 bg-white text-slate-900 hover:bg-slate-100 hover:text-slate-900"
             >
               Recusar
             </Button>

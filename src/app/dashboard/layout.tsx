@@ -44,13 +44,10 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen w-full bg-[#0B0E14] text-slate-50 overflow-hidden font-sans">
-      <div className="fixed top-0 left-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
-      <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-emerald-600/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
-
       <DashboardSidebar />
 
       <main className="flex-1 flex flex-col h-full overflow-hidden relative z-0">
-        <header className="h-20 flex items-center justify-between px-6 md:px-8 shrink-0 z-20 bg-[#0B0E14]/50 backdrop-blur-sm border-b border-white/5 pl-16 md:pl-8">
+        <header className="z-20 flex h-16 shrink-0 items-center justify-between border-b border-white/5 bg-[#0B0E14]/80 px-4 pl-16 backdrop-blur-sm md:h-20 md:px-8">
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-bold text-white tracking-tight">
               {getPageTitle()}
@@ -72,7 +69,7 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+        <div className="custom-scrollbar flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto space-y-8">{children}</div>
         </div>
       </main>

@@ -42,8 +42,6 @@ import {
   YAxis,
   CartesianGrid,
   Legend,
-  AreaChart,
-  Area,
   ComposedChart,
   Line,
   RadarChart,
@@ -229,8 +227,8 @@ export default function ReportsPage() {
   if (loading) return null;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 pb-16">
-      <div className="flex flex-col xl:flex-row justify-between items-end gap-6 bg-gradient-to-r from-[#13161C] to-[#0f1116] p-8 rounded-3xl border border-white/5 shadow-2xl">
+    <div className="space-y-5 pb-24 animate-in fade-in duration-700 lg:pb-16">
+      <div className="flex flex-col items-start justify-between gap-4 rounded-lg border border-white/10 bg-[#121722] p-4 shadow-xl shadow-black/10 xl:flex-row xl:items-end">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-white tracking-tight">
             Inteligência Financeira
@@ -248,15 +246,15 @@ export default function ReportsPage() {
           />
           <Button
             onClick={handleExportExcel}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-900/20 border border-indigo-500/20 h-10 px-6"
+            className="h-11 rounded-lg border border-indigo-500/20 bg-indigo-600 px-6 font-bold text-white shadow-lg shadow-indigo-900/20 hover:bg-indigo-500"
           >
             <Download className="mr-2" size={16} /> Exportar Relatório
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-[#1A1D24] border-white/5 shadow-lg hover:border-emerald-500/30 transition-all group">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="group border-white/10 bg-[#121722] transition-all hover:border-emerald-500/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center justify-between">
               Saldo Líquido
@@ -282,7 +280,7 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1A1D24] border-white/5 shadow-lg hover:border-indigo-500/30 transition-all group">
+        <Card className="group border-indigo-500/15 bg-indigo-500/[0.06] transition-all hover:border-indigo-500/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center justify-between">
               Investimentos Líquidos
@@ -300,7 +298,7 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1A1D24] border-white/5 shadow-lg hover:border-emerald-500/30 transition-all group">
+        <Card className="group border-emerald-500/15 bg-emerald-500/[0.07] transition-all hover:border-emerald-500/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center justify-between">
               Entradas
@@ -320,7 +318,7 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1A1D24] border-white/5 shadow-lg hover:border-red-500/30 transition-all group">
+        <Card className="group border-red-500/15 bg-red-500/[0.07] transition-all hover:border-red-500/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center justify-between">
               Consumo Real
@@ -343,9 +341,9 @@ export default function ReportsPage() {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 flex flex-col rounded-3xl bg-[#1A1D24] border border-white/5 shadow-2xl overflow-hidden min-h-[450px]">
-          <div className="p-6 border-b border-white/5 bg-white/[0.01] flex justify-between items-center">
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="flex min-h-[380px] flex-col overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-xl shadow-black/10 lg:col-span-2">
+          <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.01] p-4 sm:p-5">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-400">
                 <Activity size={20} />
@@ -360,26 +358,12 @@ export default function ReportsPage() {
               </div>
             </div>
           </div>
-          <div className="flex-1 p-6 w-full h-full">
+          <div className="h-[360px] w-full flex-1 p-3 sm:p-5">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={cumulativeData}
                 margin={{ top: 20, right: 20, bottom: 20, left: 0 }}
               >
-                <defs>
-                  <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="5%"
-                      stopColor={COLORS.primary}
-                      stopOpacity={0.3}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor={COLORS.primary}
-                      stopOpacity={0}
-                    />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="#334155"
@@ -420,14 +404,20 @@ export default function ReportsPage() {
                   iconType="circle"
                 />
 
-                <Area
+                <Line
                   yAxisId="left"
                   type="monotone"
                   name="Acumulado"
                   dataKey="Acumulado"
-                  fill="url(#colorSaldo)"
                   stroke={COLORS.primary}
                   strokeWidth={3}
+                  dot={false}
+                  activeDot={{
+                    r: 5,
+                    stroke: "#c7d2fe",
+                    strokeWidth: 2,
+                    fill: COLORS.primary,
+                  }}
                 />
                 <Bar
                   yAxisId="right"
@@ -453,10 +443,10 @@ export default function ReportsPage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          <div className="flex-1 flex flex-col rounded-3xl bg-[#1A1D24] border border-white/5 shadow-xl overflow-hidden min-h-[300px]">
-            <div className="p-5 border-b border-white/5 bg-white/[0.01] flex items-center justify-between">
+          <div className="flex min-h-[280px] flex-1 flex-col overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-xl shadow-black/10">
+            <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.01] p-4">
               <h3 className="font-bold text-white flex items-center gap-2">
-                <Sparkles size={16} className="text-warning" /> Padrão de
+                <Sparkles size={16} className="text-amber-400" /> Padrão de
                 Consumo
               </h3>
             </div>
@@ -492,10 +482,10 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col rounded-3xl bg-[#1A1D24] border border-white/5 shadow-xl overflow-hidden min-h-[250px]">
-            <div className="p-5 border-b border-white/5 bg-white/[0.01] flex items-center justify-between">
+          <div className="flex min-h-[280px] flex-1 flex-col overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-xl shadow-black/10">
+            <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.01] p-4">
               <h3 className="font-bold text-white flex items-center gap-2">
-                <Layers size={16} className="text-info" /> Distribuição
+                <Layers size={16} className="text-cyan-400" /> Distribuição
               </h3>
             </div>
             <div className="flex-1 w-full h-full">
@@ -537,9 +527,9 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        <div className="flex flex-col rounded-3xl bg-[#1A1D24] border border-white/5 shadow-xl overflow-hidden">
-          <div className="p-6 border-b border-white/5 bg-white/[0.01] flex justify-between items-center">
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="flex flex-col overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-xl shadow-black/10">
+          <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.01] p-4 sm:p-5">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-amber-500/10 rounded-xl text-amber-400">
                 <Calendar size={20} />
@@ -558,7 +548,7 @@ export default function ReportsPage() {
 
           <div className="flex-1 p-0 bg-[#13161C] overflow-hidden flex flex-col">
             {pendingBills.length > 0 ? (
-              <div className="overflow-y-auto custom-scrollbar p-6 space-y-3 max-h-[300px]">
+              <div className="custom-scrollbar max-h-[300px] space-y-3 overflow-y-auto p-3 sm:p-5">
                 {pendingBills.map((t) => {
                   const dateParts = {
                     day: t.dueDate.split("-")[2],
@@ -569,7 +559,7 @@ export default function ReportsPage() {
                   return (
                     <div
                       key={t.id}
-                      className="flex items-center gap-4 bg-[#1A1D24] p-3 rounded-xl border border-white/5 hover:border-amber-500/30 transition-all group hover:bg-[#1f2229]"
+                      className="group flex items-center gap-3 rounded-lg border border-white/10 bg-[#121722] p-3 transition-all hover:border-amber-500/30 hover:bg-[#1f2229]"
                     >
                       <div className="flex flex-col items-center justify-center w-12 h-12 bg-white/5 rounded-lg border border-white/5 group-hover:border-amber-500/30 group-hover:text-amber-400 transition-colors shrink-0">
                         <span className="text-base font-bold leading-none">
@@ -627,8 +617,8 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="flex flex-col rounded-3xl bg-[#1A1D24] border border-white/5 shadow-xl overflow-hidden">
-          <div className="p-6 border-b border-white/5 bg-white/[0.01] flex justify-between items-center">
+        <div className="flex flex-col overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-xl shadow-black/10">
+          <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.01] p-4 sm:p-5">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-red-500/10 rounded-xl text-red-400">
                 <ArrowDownRight size={20} />
@@ -645,11 +635,11 @@ export default function ReportsPage() {
           </div>
           <div className="flex-1 p-0 bg-[#13161C] overflow-hidden flex flex-col">
             {topExpenses.length > 0 ? (
-              <div className="overflow-y-auto custom-scrollbar p-6 space-y-3 max-h-[300px]">
+              <div className="custom-scrollbar max-h-[300px] space-y-3 overflow-y-auto p-3 sm:p-5">
                 {topExpenses.map((t, idx) => (
                   <div
                     key={t.id}
-                    className="flex items-center justify-between bg-[#1A1D24] p-3 rounded-xl border border-white/5 hover:bg-[#1f2229] transition-colors group"
+                    className="group flex items-center justify-between rounded-lg border border-white/10 bg-[#121722] p-3 transition-colors hover:bg-[#1f2229]"
                   >
                     <div className="flex items-center gap-4">
                       <div
