@@ -11,7 +11,6 @@ import {
   Plus,
   Loader2,
   CheckCircle2,
-  Search,
   Copy,
   CalendarPlus,
   X,
@@ -23,15 +22,9 @@ import {
   FileText,
   TrendingUp,
   PieChart,
-  ArrowLeft,
-  ArrowRight,
   Pencil,
   Save,
-  Filter,
-  Layers,
   Upload,
-  ArrowDownWideNarrow,
-  ArrowUpWideNarrow,
   Repeat2,
 } from "lucide-react";
 import {
@@ -526,86 +519,21 @@ export default function TransactionsPage() {
         onToggleHideValues={toggleHideValues}
       />
 
-      <div className="mt-5 rounded-lg border border-white/10 bg-[#121722] p-3">
-        <div className="grid gap-2 lg:grid-cols-[minmax(220px,1fr)_180px_150px_auto_auto] lg:items-center">
-          <div className="relative w-full">
-            <Search
-              className="absolute left-3 top-3.5 text-slate-500"
-              size={16}
-            />
-            <Input
-              placeholder="Buscar lançamentos..."
-              className="h-11 w-full rounded-lg border-white/10 bg-[#0B0E14] pl-10 text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:ring-0"
-              value={filterTerm}
-              onChange={(e) => setFilterTerm(e.target.value)}
-            />
-          </div>
-
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="h-11 w-full rounded-lg border border-white/10 bg-[#0B0E14] px-3 text-sm text-white outline-none focus:border-indigo-500/50"
-          >
-            {CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value as TransactionStatusFilter)
-            }
-            className="h-11 w-full rounded-lg border border-white/10 bg-[#0B0E14] px-3 text-sm text-white outline-none focus:border-indigo-500/50"
-          >
-            <option value="all">Status</option>
-            <option value="pending">Pendente</option>
-            <option value="paid">Pago</option>
-            <option value="received">Recebido</option>
-          </select>
-
-          <Button
-            variant="outline"
-            onClick={() => setIsGlobalStats(!isGlobalStats)}
-            className={`h-11 rounded-lg border-white/10 px-4 ${
-              isGlobalStats
-                ? "bg-[#0B0E14] text-slate-300 hover:bg-white/10 hover:text-white"
-                : "bg-indigo-500/20 text-indigo-300 border-indigo-500/50 hover:bg-indigo-500/30"
-            }`}
-            title={
-              isGlobalStats
-                ? "Os cartões mostram o total geral. Clique para filtrar os totais pela data."
-                : "Os cartões mostram apenas o período selecionado."
-            }
-          >
-            {isGlobalStats ? (
-              <>
-                <Layers size={16} className="mr-2" /> Totais Gerais
-              </>
-            ) : (
-              <>
-                <Filter size={16} className="mr-2" /> Filtrar Totais
-              </>
-            )}
-          </Button>
-
-          <DateRangeFilter
-            from={uiDateRange.from}
-            to={uiDateRange.to}
-            onChange={setUiDateRange}
-          />
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            onChange={handleImportExcel}
-            className="hidden"
-          />
-        </div>
-      </div>
+      <TransactionsFilters
+        categories={CATEGORIES}
+        filterTerm={filterTerm}
+        selectedCategory={selectedCategory}
+        statusFilter={statusFilter}
+        isGlobalStats={isGlobalStats}
+        dateRange={uiDateRange}
+        fileInputRef={fileInputRef}
+        onFilterTermChange={setFilterTerm}
+        onCategoryChange={setSelectedCategory}
+        onStatusFilterChange={setStatusFilter}
+        onToggleGlobalStats={() => setIsGlobalStats((current) => !current)}
+        onDateRangeChange={setUiDateRange}
+        onImportFileChange={handleImportExcel}
+      />
 
       <TransactionList
         transactions={paginatedTransactions}
