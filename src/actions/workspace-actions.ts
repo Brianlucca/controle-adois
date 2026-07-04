@@ -58,11 +58,17 @@ async function getFallbackWorkspaceId(userId: string, excludeWorkspaceId?: strin
 export async function getActiveWorkspaceId(userId?: string) {
   const cookieStore = await cookies();
   const cookieWorkspaceId = cookieStore.get("active_workspace")?.value;
-  if (cookieWorkspaceId) return cookieWorkspaceId;
 
   if (!userId) return null;
 
-  const fallbackId = await getFallbackWorkspaceId(userId);
+  if (cookieWorkspaceId) {
+    const cookieDoc = await adminDb.collection("workspaces").doc(cookieWorkspaceId).get();
+    if (cookieDoc.exists && isWorkspaceMember(cookieDoc.data(), userId)) return cookieWorkspaceId;
+
+    cookieStore.delete("active_workspace");
+  }
+
+  const fallbackId = await getFallbackWorkspaceId(userId, cookieWorkspaceId);
   if (fallbackId) await persistActiveWorkspace(userId, fallbackId);
   return fallbackId;
 }
@@ -162,10 +168,15 @@ export async function getUserWorkspaces(userId: string) {
 }
 
 export async function switchActiveWorkspace(workspaceId: string, userId?: string) {
-  await setActiveWorkspaceCookie(workspaceId);
-  if (userId) {
-    await adminDb.collection("users").doc(userId).set({ workspaceId }, { merge: true });
+  if (!userId) return { success: false, error: "UsuÃ¡rio nÃ£o autenticado." };
+
+  const doc = await adminDb.collection("workspaces").doc(workspaceId).get();
+  if (!doc.exists || !isWorkspaceMember(doc.data(), userId)) {
+    return { success: false, error: "VocÃª nÃ£o faz parte deste workspace." };
   }
+
+  await setActiveWorkspaceCookie(workspaceId);
+  await adminDb.collection("users").doc(userId).set({ workspaceId }, { merge: true });
   return { success: true };
 }
 
@@ -228,11 +239,12 @@ export async function leaveWorkspace(userId: string, workspaceId: string) {
   }
 }
 
-export async function updateMemberPermissions(workspaceId: string, memberUid: string, permissions: any) {
+export async function updateMemberPermissions(workspaceId: string, userId: string, memberUid: string, permissions: any) {
   try {
     const wsRef = adminDb.collection("workspaces").doc(workspaceId);
     const doc = await wsRef.get();
     if (!doc.exists) return { success: false };
+    if (doc.data()?.ownerId !== userId) return { success: false };
 
     const members = doc.data()?.members || [];
     const updatedMembers = members.map((member: any) => {
@@ -250,7 +262,7 @@ export async function updateMemberPermissions(workspaceId: string, memberUid: st
 }
 
 export async function updateWorkspaceSettings(userId: string, settings: { budgetLimit: number }) {
-  const workspaceId = await getActiveWorkspaceId();
+  const workspaceId = await getActiveWorkspaceId(userId);
   if (!workspaceId) return { success: false, error: "Nenhum workspace ativo" };
 
   await adminDb.collection("workspaces").doc(workspaceId).update({ budgetLimit: settings.budgetLimit });
@@ -258,7 +270,7 @@ export async function updateWorkspaceSettings(userId: string, settings: { budget
 }
 
 export async function updateWorkspaceName(userId: string, newName: string) {
-  const workspaceId = await getActiveWorkspaceId();
+  const workspaceId = await getActiveWorkspaceId(userId);
   if (!workspaceId) return { success: false, error: "Nenhum workspace ativo" };
 
   await adminDb.collection("workspaces").doc(workspaceId).update({ name: newName });
