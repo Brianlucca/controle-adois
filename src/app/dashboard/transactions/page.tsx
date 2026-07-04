@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useFinance } from "@/hooks/use-finance";
 import { Button } from "@/components/ui/button";
@@ -12,16 +12,12 @@ import {
   Loader2,
   CheckCircle2,
   Search,
-  CalendarIcon,
   Copy,
   CalendarPlus,
   X,
   Trash2,
   ArrowUpCircle,
   ArrowDownCircle,
-  Wallet,
-  Eye,
-  EyeOff,
   AlertTriangle,
   Check,
   FileText,
@@ -38,14 +34,31 @@ import {
   ArrowUpWideNarrow,
   Repeat2,
 } from "lucide-react";
-import * as XLSX from "xlsx";
 import {
   formatCurrency,
   formatDate,
   createGoogleCalendarLink,
 } from "@/lib/utils";
 import { DateRangeFilter } from "@/components/date-range-filter";
+import { TransactionList } from "@/components/finance/transaction-list";
+import { TransactionStatusBadge } from "@/components/finance/transaction-status-badge";
+import { TransactionsSummaryCards } from "@/components/finance/transactions-summary-cards";
 import { usePreferences } from "@/contexts/preferences-context";
+import {
+  addMonthsToDateKey,
+  getLocalDateKey,
+} from "@/lib/finance/date";
+import { parseTransactionsWorkbook } from "@/lib/finance/import-transactions";
+import {
+  calculateFinanceOverview,
+  filterAndSortTransactions,
+} from "@/lib/finance/transaction-calculations";
+import {
+  Transaction,
+  TransactionFormData,
+  TransactionSortMode,
+  TransactionStatusFilter,
+} from "@/lib/types";
 
 const CATEGORIES = [
   "Todas",
@@ -83,7 +96,7 @@ export default function TransactionsPage() {
   const { hideValues, toggleHideValues } = usePreferences();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedTx, setSelectedTx] = useState<any>(null);
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isRedeemModalOpen, setIsRedeemModalOpen] = useState(false);
   const [selectedInvestmentId, setSelectedInvestmentId] = useState("");
@@ -92,32 +105,18 @@ export default function TransactionsPage() {
 
   const [filterTerm, setFilterTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todas");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] =
+    useState<TransactionStatusFilter>("all");
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isImporting, setIsImporting] = useState(false);
-  const [sortMode, setSortMode] = useState<"priority" | "desc" | "asc">("priority");
+  const [sortMode, setSortMode] =
+    useState<TransactionSortMode>("priority");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isGlobalStats, setIsGlobalStats] = useState(true);
   
-  const today = new Date();
-  const getLocalDateKey = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-  const todayKey = getLocalDateKey(today);
-  const isDueUntilToday = (dueDate?: string) =>
-    Boolean(dueDate && dueDate <= todayKey);
-  const isCurrentCashTransaction = (transaction: any) => {
-    if (transaction.status !== "paid") return false;
-    if (transaction.type === "income") return isDueUntilToday(transaction.dueDate);
-
-    const paidDate = String(transaction.paidAt || "").slice(0, 10);
-    return paidDate ? paidDate <= todayKey : true;
-  };
+  const todayKey = getLocalDateKey(new Date());
 
   const [uiDateRange, setUiDateRange] = useState({
     from: "2000-01-01",
@@ -163,7 +162,7 @@ export default function TransactionsPage() {
     setIsModalOpen(true);
   };
 
-  const openDetailsModal = (t: any) => {
+  const openDetailsModal = (t: Transaction) => {
     setSelectedTx(t);
     setIsEditing(false);
     setIsModalOpen(true);
@@ -187,7 +186,7 @@ export default function TransactionsPage() {
     setIsEditing(true);
   };
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<TransactionFormData>({
     description: "",
     amount: "",
     category: "Outros",
@@ -260,67 +259,6 @@ export default function TransactionsPage() {
     }
   };
 
-  const normalizeImportKey = (key: string) =>
-    key
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]/g, "");
-
-  const readImportValue = (row: Record<string, any>, keys: string[], fallbackIndex?: number) => {
-    const normalized = Object.entries(row).reduce((acc, [key, value]) => {
-      acc[normalizeImportKey(key)] = value;
-      return acc;
-    }, {} as Record<string, any>);
-
-    for (const key of keys) {
-      const value = normalized[normalizeImportKey(key)];
-      if (value !== undefined && value !== null && String(value).trim() !== "") return value;
-    }
-
-    if (fallbackIndex !== undefined) {
-      const fallback = Object.values(row)[fallbackIndex];
-      if (fallback !== undefined && fallback !== null && String(fallback).trim() !== "") return fallback;
-    }
-
-    return "";
-  };
-
-  const parseImportDate = (value: any) => {
-    if (typeof value === "number") {
-      const parsed = XLSX.SSF.parse_date_code(value);
-      if (parsed) {
-        return `${parsed.y}-${String(parsed.m).padStart(2, "0")}-${String(parsed.d).padStart(2, "0")}`;
-      }
-    }
-
-    const raw = String(value || "").trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-
-    const brDate = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
-    if (brDate) {
-      const year = brDate[3].length === 2 ? `20${brDate[3]}` : brDate[3];
-      return `${year}-${brDate[2].padStart(2, "0")}-${brDate[1].padStart(2, "0")}`;
-    }
-
-    return getLocalDateKey(new Date());
-  };
-
-  const parseImportAmount = (value: any) => {
-    if (typeof value === "number") return value;
-    const cleaned = String(value || "0")
-      .replace(/[^\d,.-]/g, "")
-      .replace(/\.(?=\d{3}(\D|$))/g, "")
-      .replace(",", ".");
-    return Number(cleaned) || 0;
-  };
-
-  const normalizeImportText = (value: any) =>
-    String(value || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-
   const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -328,41 +266,12 @@ export default function TransactionsPage() {
     setIsImporting(true);
     try {
       const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
-      if (workbook.SheetNames.length === 0) {
+      const { items: imported, hasSheets } = parseTransactionsWorkbook(buffer);
+
+      if (!hasSheets) {
         alert("Esse arquivo nao tem nenhuma aba para importar.");
         return;
       }
-
-      const rows = workbook.SheetNames.flatMap((sheetName) => {
-        const sheet = workbook.Sheets[sheetName];
-        return XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
-      });
-
-      const imported = rows
-        .map((row) => {
-          const description = String(readImportValue(row, ["descricao", "descrição", "description", "nome"], 1)).trim();
-          const amount = parseImportAmount(readImportValue(row, ["valor", "amount"], 4));
-          const typeRaw = normalizeImportText(readImportValue(row, ["tipo", "type"], 3));
-          const statusRaw = normalizeImportText(readImportValue(row, ["status"], 5));
-
-          if (!description || amount <= 0) return null;
-
-          return {
-            description,
-            amount,
-            category: String(readImportValue(row, ["categoria", "category"], 2) || "Outros").trim(),
-            type: typeRaw.includes("entrada") || typeRaw.includes("income") || typeRaw.includes("receita") ? "income" : "expense",
-            status: statusRaw.includes("pend") ? "pending" : "paid",
-            dueDate: parseImportDate(readImportValue(row, ["data", "dueDate", "vencimento"], 0)),
-            pixCode: String(readImportValue(row, ["pix", "pixCode"]) || ""),
-            barCode: String(readImportValue(row, ["boleto", "codigo de barras", "barCode"]) || ""),
-            observation: String(readImportValue(row, ["observacao", "observação", "observation"], 6) || ""),
-            isRecurrent: false,
-            recurrenceMonths: 12,
-          };
-        })
-        .filter(Boolean);
 
       if (imported.length === 0) {
         alert("Nao encontrei transacoes validas nesse arquivo.");
@@ -498,91 +407,19 @@ export default function TransactionsPage() {
     return hideValues ? "••••••" : formatCurrency(val);
   };
 
-  const previewMonthlyDate = (dateStr: string, months: number) => {
-    const [year, month, day] = dateStr.split("-").map(Number);
-    const target = new Date(Date.UTC(year, month - 1 + months, 1));
-    const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
-    target.setUTCDate(Math.min(day, lastDay));
-    return target.toISOString().split("T")[0];
-  };
-
-  const income = transactions
-    .filter(
-      (t) =>
-        t.type === "income" &&
-        isCurrentCashTransaction(t)
-    )
-    .reduce((acc, t) => acc + Number(t.amount), 0);
-  const expense = transactions
-    .filter(
-      (t) =>
-        t.type === "expense" &&
-        isCurrentCashTransaction(t)
-    )
-    .reduce((acc, t) => acc + Number(t.amount), 0);
-  const pendingExpense = transactions
-    .filter((t) => t.type === "expense" && t.status === "pending")
-    .reduce((acc, t) => acc + Number(t.amount), 0);
-
-  const balance = income - expense;
-
-  const currentInvestmentTransactions = transactions.filter(
-    (t) =>
-      t.status === "paid" &&
-      t.category === "Investimento" &&
-      isCurrentCashTransaction(t)
+  const overview = useMemo(
+    () => calculateFinanceOverview(transactions, todayKey),
+    [transactions, todayKey]
   );
-
-  const grossInvestments = currentInvestmentTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((acc, t) => acc + Number(t.amount), 0);
-
-  const redeemedInvestments = currentInvestmentTransactions
-    .filter((t) => t.type === "income")
-    .reduce((acc, t) => acc + Number(t.amount), 0);
-
-  const netInvestments = grossInvestments - redeemedInvestments;
-  const totalAssets = balance + netInvestments;
-  const investmentRedemptions = currentInvestmentTransactions.filter(
-    (t) => t.type === "income"
-  );
-  const investmentOptions = currentInvestmentTransactions
-    .filter((t) => t.type === "expense")
-    .map((investment) => {
-      const investedAmount = Number(investment.amount) || 0;
-      const redeemedAmount = investmentRedemptions
-        .filter((redemption) => {
-          const observation = String(redemption.observation || "");
-          const legacyId = observation.match(/ID do investimento: ([^.]+)/)?.[1];
-          const linkedInvestmentId =
-            (redemption as any).linkedInvestmentId || legacyId;
-
-          if (linkedInvestmentId) return linkedInvestmentId === investment.id;
-
-          const matchesLegacyRescue =
-            redemption.description === `Resgate: ${investment.description}` &&
-            observation.includes(
-              `Resgate referente ao investimento de ${formatDate(
-                investment.dueDate
-              )}`
-            );
-
-          return matchesLegacyRescue;
-        })
-        .reduce((acc, redemption) => acc + Number(redemption.amount), 0);
-      const remainingAmount = Math.max(investedAmount - redeemedAmount, 0);
-
-      return {
-        ...investment,
-        investedAmount,
-        redeemedAmount,
-        remainingAmount,
-      };
-    })
-    .filter((investment) => investment.remainingAmount > 0)
-    .sort(
-      (a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()
-    );
+  const {
+    income,
+    expense,
+    pendingExpense,
+    balance,
+    netInvestments,
+    totalAssets,
+    investmentOptions,
+  } = overview;
   const selectedInvestment =
     investmentOptions.find((item) => item.id === selectedInvestmentId) ||
     investmentOptions[0];
@@ -593,66 +430,26 @@ export default function TransactionsPage() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const getDateTime = (date?: string) => {
-    if (!date) return 0;
-    return new Date(`${date}T00:00:00`).getTime();
-  };
-
-  const getPriorityRank = (transaction: any) => {
-    if (transaction.status === "pending") {
-      if (transaction.dueDate < todayKey) return 0;
-      return 1;
-    }
-
-    return 2;
-  };
-
-  const getRowStateClass = (transaction: any) => {
-    if (transaction.status !== "pending") {
-      return "hover:bg-white/[0.03]";
-    }
-
-    if (transaction.dueDate < todayKey) {
-      return "bg-red-500/[0.06] hover:bg-red-500/[0.1] border-l-2 border-red-500/70";
-    }
-
-    return "bg-amber-500/[0.06] hover:bg-amber-500/[0.1] border-l-2 border-amber-500/70";
-  };
-
-  const filteredTransactions = transactions.filter((t) => {
-    const matchesTerm = t.description
-      .toLowerCase()
-      .includes(filterTerm.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "Todas" || t.category === selectedCategory;
-
-    let matchesStatus = true;
-    if (statusFilter === "pending") matchesStatus = t.status === "pending";
-    if (statusFilter === "paid")
-      matchesStatus = t.status === "paid" && t.type === "expense";
-    if (statusFilter === "received") matchesStatus = t.type === "income";
-
-    const matchesDate =
-      t.dueDate >= uiDateRange.from && t.dueDate <= uiDateRange.to;
-
-    return matchesTerm && matchesCategory && matchesStatus && matchesDate;
-  }).sort((a, b) => {
-    const dateA = getDateTime(a.dueDate);
-    const dateB = getDateTime(b.dueDate);
-
-    if (sortMode === "asc") return dateA - dateB;
-    if (sortMode === "desc") return dateB - dateA;
-
-    const rankA = getPriorityRank(a);
-    const rankB = getPriorityRank(b);
-
-    if (rankA !== rankB) return rankA - rankB;
-
-    if (rankA === 0) return dateA - dateB;
-    if (rankA === 1) return dateA - dateB;
-
-    return dateB - dateA;
-  });
+  const filteredTransactions = useMemo(
+    () =>
+      filterAndSortTransactions(transactions, {
+        filterTerm,
+        selectedCategory,
+        statusFilter,
+        dateRange: uiDateRange,
+        sortMode,
+        todayKey,
+      }),
+    [
+      transactions,
+      filterTerm,
+      selectedCategory,
+      statusFilter,
+      uiDateRange,
+      sortMode,
+      todayKey,
+    ]
+  );
 
   const handleDateSortToggle = () => {
     setSortMode((mode) => {
@@ -663,34 +460,14 @@ export default function TransactionsPage() {
   };
 
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
-  const paginatedTransactions = filteredTransactions.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+  const paginatedTransactions = useMemo(
+    () =>
+      filteredTransactions.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+      ),
+    [currentPage, filteredTransactions]
   );
-
-  const getStatusBadge = (t: any) => {
-    if (t.status === "pending") {
-      return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20">
-          <CalendarIcon size={12} className="mr-1.5" /> PENDENTE
-        </span>
-      );
-    }
-
-    if (t.type === "expense") {
-      return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-red-500/10 text-red-400 ring-1 ring-red-500/20">
-          <CheckCircle2 size={12} className="mr-1.5" /> PAGO
-        </span>
-      );
-    }
-
-    return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
-        <CheckCircle2 size={12} className="mr-1.5" /> RECEBIDO
-      </span>
-    );
-  };
 
   return (
     <div className="animate-in fade-in duration-500 pb-28 lg:pb-10">
@@ -738,101 +515,16 @@ export default function TransactionsPage() {
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
-        <div className="relative overflow-hidden rounded-lg border border-white/10 bg-[#121722] p-5 shadow-xl shadow-black/15">
-          <button
-            onClick={toggleHideValues}
-            className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-black/20 text-slate-300 transition-colors hover:text-white"
-          >
-            {hideValues ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-
-          <div className="absolute right-0 top-0 p-6 opacity-5 pointer-events-none">
-            <Wallet size={80} />
-          </div>
-
-          <div className="flex items-center gap-2 mb-2">
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">
-              Patrimônio
-            </p>
-            <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-300">
-              Saldo + Inv.
-            </span>
-          </div>
-
-          <h3
-            className={`text-3xl font-bold ${
-              totalAssets >= 0 ? "text-white" : "text-red-400"
-            }`}
-          >
-            {displayValue(totalAssets)}
-          </h3>
-
-          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-500">Em Conta:</span>
-              <span className="font-bold text-slate-300">
-                {displayValue(balance)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-500 flex items-center gap-1">
-                <TrendingUp size={10} className="text-indigo-400" /> Investido:
-              </span>
-              <span className="font-bold text-indigo-400">
-                {displayValue(netInvestments)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative overflow-hidden rounded-lg border border-emerald-500/15 bg-emerald-500/[0.07] p-4 transition-colors hover:border-emerald-500/30">
-          <div className="flex justify-between items-start mb-4">
-            <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-300">
-              <ArrowUpCircle size={24} />
-            </div>
-            <span className="rounded bg-emerald-500/10 px-2 py-1 text-xs font-bold text-emerald-300">
-              Receitas
-            </span>
-          </div>
-          <h3 className="text-2xl font-bold text-white">
-            {displayValue(income)}
-          </h3>
-          <p className="text-sm text-slate-500 mt-1">Entradas até hoje</p>
-        </div>
-
-        <div className="relative overflow-hidden rounded-lg border border-red-500/15 bg-red-500/[0.07] p-4 transition-colors hover:border-red-500/30">
-          <div className="flex justify-between items-start mb-4">
-            <div className="rounded-lg bg-red-500/10 p-2 text-red-300">
-              <ArrowDownCircle size={24} />
-            </div>
-            <span className="rounded bg-red-500/10 px-2 py-1 text-xs font-bold text-red-300">
-              Despesas
-            </span>
-          </div>
-          <h3 className="text-2xl font-bold text-white">
-            {displayValue(expense)}
-          </h3>
-          <p className="text-sm text-slate-500 mt-1">
-            Saídas até hoje
-          </p>
-        </div>
-
-        <div className="relative overflow-hidden rounded-lg border border-amber-500/15 bg-amber-500/[0.07] p-4 transition-colors hover:border-amber-500/30">
-          <div className="flex justify-between items-start mb-4">
-            <div className="rounded-lg bg-amber-500/10 p-2 text-amber-300">
-              <AlertTriangle size={24} />
-            </div>
-            <span className="rounded bg-amber-500/10 px-2 py-1 text-xs font-bold text-amber-300">
-              Pendente
-            </span>
-          </div>
-          <h3 className="text-2xl font-bold text-white">
-            {displayValue(pendingExpense)}
-          </h3>
-          <p className="text-sm text-slate-500 mt-1">Contas a pagar</p>
-        </div>
-      </div>
+      <TransactionsSummaryCards
+        income={income}
+        expense={expense}
+        pendingExpense={pendingExpense}
+        balance={balance}
+        netInvestments={netInvestments}
+        totalAssets={totalAssets}
+        hideValues={hideValues}
+        onToggleHideValues={toggleHideValues}
+      />
 
       <div className="mt-5 rounded-lg border border-white/10 bg-[#121722] p-3">
         <div className="grid gap-2 lg:grid-cols-[minmax(220px,1fr)_180px_150px_auto_auto] lg:items-center">
@@ -863,7 +555,9 @@ export default function TransactionsPage() {
 
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) =>
+              setStatusFilter(e.target.value as TransactionStatusFilter)
+            }
             className="h-11 w-full rounded-lg border border-white/10 bg-[#0B0E14] px-3 text-sm text-white outline-none focus:border-indigo-500/50"
           >
             <option value="all">Status</option>
@@ -963,8 +657,9 @@ export default function TransactionsPage() {
                 key={t.id}
                 type="button"
                 onClick={() => openDetailsModal(t)}
-                className={`group grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-3 p-3 text-left transition-colors lg:grid-cols-[minmax(0,1fr)_140px_140px_160px] lg:gap-4 lg:px-5 lg:py-3 ${getRowStateClass(
-                  t
+                className={`group grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-3 p-3 text-left transition-colors lg:grid-cols-[minmax(0,1fr)_140px_140px_160px] lg:gap-4 lg:px-5 lg:py-3 ${getTransactionRowStateClass(
+                  t,
+                  todayKey
                 )}`}
               >
                 <div className="flex min-w-0 items-center gap-3">
@@ -988,12 +683,16 @@ export default function TransactionsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="hidden lg:block">{getStatusBadge(t)}</div>
+                <div className="hidden lg:block">
+                  <TransactionStatusBadge transaction={t} />
+                </div>
                 <div className="hidden font-mono text-xs font-semibold text-slate-400 lg:block">
                   {formatDate(t.dueDate)}
                 </div>
                 <div className="col-span-2 mt-1 flex items-center justify-between gap-3 lg:col-span-1 lg:mt-0 lg:block lg:text-right">
-                  <div className="lg:hidden">{getStatusBadge(t)}</div>
+                  <div className="lg:hidden">
+                    <TransactionStatusBadge transaction={t} />
+                  </div>
                   <p
                     className={`font-mono text-sm font-bold ${
                       t.type === "income" ? "text-emerald-300" : "text-slate-100"
@@ -1289,7 +988,9 @@ export default function TransactionsPage() {
                       </div>
                     </div>
                     <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-end sm:justify-between">
-                      <div>{getStatusBadge(selectedTx)}</div>
+                      <div>
+                        <TransactionStatusBadge transaction={selectedTx} />
+                      </div>
                       <p
                         className={`font-mono text-3xl font-bold tracking-tight sm:text-right ${
                           selectedTx.type === "income"
@@ -1410,7 +1111,7 @@ export default function TransactionsPage() {
                             variant="ghost"
                             className="h-9 px-2 text-indigo-200 transition-all hover:bg-indigo-500/20 hover:text-white"
                             onClick={() =>
-                              handleCopy(selectedTx.pixCode, "pix")
+                              handleCopy(selectedTx.pixCode || "", "pix")
                             }
                           >
                             {copiedField === "pix" ? (
@@ -1436,7 +1137,7 @@ export default function TransactionsPage() {
                             variant="ghost"
                             className="h-9 px-2 text-slate-300 transition-all hover:bg-white/10 hover:text-white"
                             onClick={() =>
-                              handleCopy(selectedTx.barCode, "barCode")
+                              handleCopy(selectedTx.barCode || "", "barCode")
                             }
                           >
                             {copiedField === "barCode" ? (
@@ -1751,7 +1452,7 @@ export default function TransactionsPage() {
                           <div className="mt-3 flex flex-wrap gap-2">
                             {Array.from({ length: Math.min(4, formData.recurrenceMonths) }).map((_, index) => (
                               <span key={index} className="rounded-md bg-black/20 px-2.5 py-1 text-[11px] font-bold text-indigo-100">
-                                {formatDate(previewMonthlyDate(formData.dueDate, index))}
+                                {formatDate(addMonthsToDateKey(formData.dueDate, index))}
                               </span>
                             ))}
                             {formData.recurrenceMonths > 4 && (
