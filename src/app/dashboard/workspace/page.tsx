@@ -124,13 +124,14 @@ export default function WorkspacePage() {
   };
   
   const togglePermission = async (memberUid: string, field: string, currentValue: boolean) => {
-    if (activeData.ownerId !== auth.currentUser?.uid) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser || activeData.ownerId !== currentUser.uid) return;
     const newData = { ...activeData };
     const memberIndex = newData.members.findIndex((m: any) => (m.uid || m) === memberUid);
     if (memberIndex === -1) return;
     newData.members[memberIndex][field] = !currentValue;
     setActiveData(newData);
-    await updateMemberPermissions(activeData.id, memberUid, { [field]: !currentValue });
+    await updateMemberPermissions(activeData.id, currentUser.uid, memberUid, { [field]: !currentValue });
   };
 
   const isOwner = activeData?.ownerId === auth.currentUser?.uid;
