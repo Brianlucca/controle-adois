@@ -30,6 +30,8 @@ const app = getApp();
 
 export const adminDb = getFirestore(app);
 export const adminAuth = getAuth(app);
-export const adminRdb = getDatabase(app);
+export const adminRdb = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+  ? getDatabase(app)
+  : null;
 
 export const db = adminDb;
