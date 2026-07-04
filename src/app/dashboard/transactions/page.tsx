@@ -39,7 +39,7 @@ import {
   formatDate,
   createGoogleCalendarLink,
 } from "@/lib/utils";
-import { DateRangeFilter } from "@/components/date-range-filter";
+import { TransactionsFilters } from "@/components/finance/transactions-filters";
 import { TransactionList } from "@/components/finance/transaction-list";
 import { TransactionStatusBadge } from "@/components/finance/transaction-status-badge";
 import { TransactionsSummaryCards } from "@/components/finance/transactions-summary-cards";
