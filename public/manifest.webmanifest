@@ -1,6 +1,6 @@
 {
   "name": "Controle A Dois",
-  "short_name": "Controle",
+  "short_name": "ControleDois",
   "description": "Gestao financeira compartilhada",
   "start_url": "/dashboard/transactions",
   "scope": "/",
