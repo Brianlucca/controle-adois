@@ -44,17 +44,47 @@ async function getAuthenticatedUser() {
 async function getActiveWorkspaceId(uid: string) {
   try {
     const cookieStore = await cookies();
-    let workspaceId = cookieStore.get("active_workspace")?.value;
+    const cookieWorkspaceId = cookieStore.get("active_workspace")?.value;
 
-    if (!workspaceId) {
-      const userDoc = await adminDb.collection("users").doc(uid).get();
-      workspaceId = userDoc.data()?.workspaceId;
+    if (cookieWorkspaceId) {
+      const workspaceDoc = await adminDb
+        .collection("workspaces")
+        .doc(cookieWorkspaceId)
+        .get();
+
+      if (workspaceDoc.exists && isWorkspaceMember(workspaceDoc.data(), uid)) {
+        return cookieWorkspaceId;
+      }
+
+      cookieStore.delete("active_workspace");
     }
 
-    return workspaceId || null;
+    const userDoc = await adminDb.collection("users").doc(uid).get();
+    const savedWorkspaceId = userDoc.data()?.workspaceId;
+    if (!savedWorkspaceId) return null;
+
+    const savedWorkspaceDoc = await adminDb
+      .collection("workspaces")
+      .doc(savedWorkspaceId)
+      .get();
+
+    return savedWorkspaceDoc.exists &&
+      isWorkspaceMember(savedWorkspaceDoc.data(), uid)
+      ? savedWorkspaceId
+      : null;
   } catch (error) {
     return null;
   }
+}
+
+function memberId(member: any) {
+  return typeof member === "string" ? member : member?.uid;
+}
+
+function isWorkspaceMember(data: any, userId: string) {
+  return (data?.members || []).some(
+    (member: any) => memberId(member) === userId
+  );
 }
 
 async function handleAuthFailure() {
@@ -94,7 +124,7 @@ export async function getTransactions(uid: string, startDate: string, endDate: s
     return [];
   }
 
-  const workspaceId = await getActiveWorkspaceId(uid);
+  const workspaceId = await getActiveWorkspaceId(user.uid);
   if (!workspaceId) return [];
 
   try {
