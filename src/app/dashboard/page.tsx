@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useFinance } from "@/hooks/use-finance";
 import { usePreferences } from "@/contexts/preferences-context";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { getLocalDateKey } from "@/lib/finance/date";
+import { calculateDashboardData } from "@/lib/finance/dashboard";
 import { BrandIcon } from "@/components/brand-icon";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { getWorkspaceDetails } from "@/actions/workspace-actions";
@@ -37,22 +39,7 @@ export default function DashboardPage() {
   const { transactions, loading, dateRange, setDateRange } = useFinance();
   const { hideValues, toggleHideValues } = usePreferences();
   const [budgetLimit, setBudgetLimit] = useState(3000);
-  const getLocalDateKey = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
   const todayKey = getLocalDateKey(new Date());
-  const isDueUntilToday = (dueDate?: string) =>
-    Boolean(dueDate && dueDate <= todayKey);
-  const isCurrentCashTransaction = (transaction: any) => {
-    if (transaction.status !== "paid") return false;
-    if (transaction.type === "income") return isDueUntilToday(transaction.dueDate);
-
-    const paidDate = String(transaction.paidAt || "").slice(0, 10);
-    return paidDate ? paidDate <= todayKey : true;
-  };
 
   useEffect(() => {
     if (auth.currentUser) {
@@ -67,85 +54,22 @@ export default function DashboardPage() {
     return hideValues ? "••••••" : formatCurrency(val);
   };
 
-  const income = transactions
-    .filter(
-      (t) =>
-        t.type === "income" &&
-        isCurrentCashTransaction(t)
-    )
-    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-
-  const expense = transactions
-    .filter(
-      (t) =>
-        t.type === "expense" &&
-        isCurrentCashTransaction(t)
-    )
-    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-
-  const balance = income - expense;
-  const isInvestment = (category?: string) => category === "Investimento";
-  const liquidIncome = transactions
-    .filter((t) => t.type === "income" && !isInvestment(t.category))
-    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-  const liquidExpense = transactions
-    .filter((t) => t.type === "expense" && !isInvestment(t.category))
-    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-  const pendingExpense = transactions
-    .filter(
-      (t) =>
-        t.type === "expense" &&
-        t.status === "pending" &&
-        !isInvestment(t.category)
-    )
-    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-  const liquidBalance = liquidIncome - liquidExpense;
-
-  const budgetPercent =
-    budgetLimit > 0 ? Math.min((expense / budgetLimit) * 100, 100) : 0;
-  let budgetColor = "bg-emerald-500";
-  if (budgetPercent > 70) budgetColor = "bg-amber-500";
-  if (budgetPercent > 90) budgetColor = "bg-red-500";
-
-  const chartMap = transactions.reduce((acc, curr) => {
-    if (!curr.dueDate) return acc;
-    const [year, month, day] = curr.dueDate.split("-");
-    const label = `${day}/${month}`;
-
-    if (!acc[label]) {
-      acc[label] = {
-        name: label,
-        Entrada: 0,
-        Saída: 0,
-        dateSort: new Date(curr.dueDate).getTime(),
-      };
-    }
-    const val = Number(curr.amount) || 0;
-    if (curr.type === "income" && curr.status === "paid")
-      acc[label].Entrada += val;
-    else if (curr.type === "expense" && curr.status === "paid")
-      acc[label].Saída += val;
-    return acc;
-  }, {} as Record<string, any>);
-
-  const chartData = Object.values(chartMap).sort(
-    (a, b) => a.dateSort - b.dateSort
+  const dashboardData = useMemo(
+    () => calculateDashboardData(transactions, budgetLimit, todayKey),
+    [transactions, budgetLimit, todayKey]
   );
-
-  const recentTransactions = [...transactions]
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt || b.dueDate).getTime() -
-        new Date(a.createdAt || a.dueDate).getTime()
-    )
-    .slice(0, 5);
-
-  const upcomingBills = transactions
-    .filter((t) => t.type === "expense" && t.status === "pending")
-    .sort(
-      (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-    )
-    .slice(0, 4);
+  const {
+    income,
+    expense,
+    balance,
+    pendingExpense,
+    liquidBalance,
+    budgetPercent,
+    budgetColor,
+    chartData,
+    recentTransactions,
+    upcomingBills,
+  } = dashboardData;
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -375,7 +299,8 @@ export default function DashboardPage() {
                       />
                       <Area
                         type="monotone"
-                        dataKey="Saída"
+                        name="Saída"
+                        dataKey="Saida"
                         stroke="#ef4444"
                         strokeWidth={3}
                         fillOpacity={1}

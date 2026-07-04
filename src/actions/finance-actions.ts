@@ -1,100 +1,31 @@
-"use server";
+﻿"use server";
 
 import { adminDb } from "@/lib/firebase-admin";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
-import { getAuth } from "firebase-admin/auth";
-import { z } from "zod";
-
-const TransactionSchema = z.object({
-  description: z.string().min(2, "A descrição deve ter pelo menos 2 caracteres").max(200),
-  amount: z.coerce.number().positive("O valor deve ser maior que zero"),
-  category: z.string().min(1, "A categoria é obrigatória"),
-  type: z.enum(["income", "expense"]),
-  status: z.enum(["paid", "pending"]),
-  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data invalida (Use YYYY-MM-DD)"),
-  pixCode: z.string().optional().nullable(),
-  barCode: z.string().optional().nullable(),
-  observation: z.string().optional().nullable(),
-  linkedInvestmentId: z.string().optional().nullable(),
-  isRecurrent: z.boolean().optional().default(false),
-  recurrenceMonths: z.coerce.number().int().min(1).max(60).optional().default(12),
-});
-
-const StatusSchema = z.enum(["paid", "pending"]);
-const ImportTransactionsSchema = z.array(TransactionSchema).min(1).max(5000);
-
-async function getAuthenticatedUser() {
-  try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("__session")?.value;
-
-    if (!sessionCookie) return null;
-
-    try {
-      return await getAuth().verifySessionCookie(sessionCookie, true);
-    } catch {
-      return await getAuth().verifyIdToken(sessionCookie, true);
-    }
-  } catch (error) {
-    return null;
-  }
-}
-
-async function getActiveWorkspaceId(uid: string) {
-  try {
-    const cookieStore = await cookies();
-    let workspaceId = cookieStore.get("active_workspace")?.value;
-
-    if (!workspaceId) {
-      const userDoc = await adminDb.collection("users").doc(uid).get();
-      workspaceId = userDoc.data()?.workspaceId;
-    }
-
-    return workspaceId || null;
-  } catch (error) {
-    return null;
-  }
-}
-
-async function handleAuthFailure() {
-  const cookieStore = await cookies();
-  cookieStore.delete("__session");
-  return { success: false, error: "unauthenticated" };
-}
-
-function addMonths(dateStr: string, months: number) {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const target = new Date(Date.UTC(year, month - 1 + months, 1));
-  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
-  target.setUTCDate(Math.min(day, lastDay));
-  return target.toISOString().split("T")[0];
-}
-
-function getBaseTransaction(data: z.infer<typeof TransactionSchema>, user: any) {
-  return {
-    ...data,
-    userId: user.uid,
-    userName: user.name || user.email || "Usuário",
-    createdAt: new Date(),
-    pixCode: data.pixCode || null,
-    barCode: data.barCode || null,
-    observation: data.observation || null,
-    linkedInvestmentId: data.linkedInvestmentId || null,
-    isRecurrent: data.isRecurrent || false,
-    recurrenceMonths: data.isRecurrent ? data.recurrenceMonths : null,
-  };
-}
+import { addMonthsToDateKey } from "@/lib/finance/date";
+import {
+  buildBaseTransaction,
+  buildEditableTransactionFields,
+} from "@/lib/finance/transaction-records";
+import {
+  ImportTransactionsSchema,
+  StatusSchema,
+  TransactionSchema,
+} from "@/lib/finance/transaction-schema";
+import {
+  getAuthenticatedUser,
+  getValidatedActiveWorkspaceId,
+  handleAuthFailure,
+} from "@/lib/server/action-context";
 
 export async function getTransactions(uid: string, startDate: string, endDate: string) {
   const user = await getAuthenticatedUser();
   if (!user) {
-    const cookieStore = await cookies();
-    cookieStore.delete("__session");
+    await handleAuthFailure();
     return [];
   }
 
-  const workspaceId = await getActiveWorkspaceId(uid);
+  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
   if (!workspaceId) return [];
 
   try {
@@ -126,7 +57,7 @@ export async function addTransaction(rawData: any) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
 
-  const workspaceId = await getActiveWorkspaceId(user.uid);
+  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
   if (!workspaceId) return { success: false, error: "Nenhum workspace selecionado." };
 
   const validation = TransactionSchema.safeParse(rawData);
@@ -143,8 +74,8 @@ export async function addTransaction(rawData: any) {
 
     Array.from({ length: recurrenceCount }).forEach((_, index) => {
       batch.set(collection.doc(), {
-        ...getBaseTransaction(data, user),
-        dueDate: index === 0 ? data.dueDate : addMonths(data.dueDate, index),
+        ...buildBaseTransaction(data, user),
+        dueDate: index === 0 ? data.dueDate : addMonthsToDateKey(data.dueDate, index),
         recurrenceGroupId,
         recurrenceIndex: index + 1,
         recurrenceTotal: recurrenceCount,
@@ -166,7 +97,7 @@ export async function importTransactions(rawItems: any[]) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
 
-  const workspaceId = await getActiveWorkspaceId(user.uid);
+  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
   if (!workspaceId) return { success: false, error: "Workspace não encontrado." };
 
   const validation = ImportTransactionsSchema.safeParse(rawItems);
@@ -181,7 +112,7 @@ export async function importTransactions(rawItems: any[]) {
 
     for (const item of validation.data) {
       batch.set(collection.doc(), {
-        ...getBaseTransaction(item, user),
+        ...buildBaseTransaction(item, user),
         importedAt: new Date(),
       });
       operationCount += 1;
@@ -210,7 +141,7 @@ export async function deleteTransaction(id: string) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
 
-  const workspaceId = await getActiveWorkspaceId(user.uid);
+  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
   if (!workspaceId) return { success: false, error: "Workspace não encontrado." };
 
   try {
@@ -228,7 +159,7 @@ export async function deleteRecurrence(id: string) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
 
-  const workspaceId = await getActiveWorkspaceId(user.uid);
+  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
   if (!workspaceId) return { success: false, error: "Workspace não encontrado." };
 
   try {
@@ -277,11 +208,11 @@ export async function updateTransactionStatus(id: string, status: string) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
 
-  const workspaceId = await getActiveWorkspaceId(user.uid);
+  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
   if (!workspaceId) return { success: false };
 
   const validation = StatusSchema.safeParse(status);
-  if (!validation.success) return { success: false, error: "Status invalido" };
+  if (!validation.success) return { success: false, error: "Status inválido" };
   const validStatus = validation.data;
 
   try {
@@ -302,8 +233,8 @@ export async function editTransaction(id: string, rawData: any) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
 
-  const workspaceId = await getActiveWorkspaceId(user.uid);
-  if (!workspaceId) return { success: false, error: "Workspace nao encontrado." };
+  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
+  if (!workspaceId) return { success: false, error: "Workspace não encontrado." };
 
   const validation = TransactionSchema.safeParse(rawData);
   if (!validation.success) {
@@ -327,16 +258,10 @@ export async function editTransaction(id: string, rawData: any) {
       const batch = adminDb.batch();
 
       batch.update(docRef, {
-        description: data.description,
-        amount: data.amount,
-        category: data.category,
-        type: data.type,
-        status: data.status,
-        dueDate: data.dueDate,
-        pixCode: data.pixCode || null,
-        barCode: data.barCode || null,
-        observation: data.observation || null,
-        linkedInvestmentId: data.linkedInvestmentId || currentData?.linkedInvestmentId || null,
+        ...buildEditableTransactionFields(
+          data,
+          currentData?.linkedInvestmentId
+        ),
         isRecurrent: true,
         recurrenceMonths: recurrenceCount,
         recurrenceGroupId,
@@ -347,8 +272,8 @@ export async function editTransaction(id: string, rawData: any) {
 
       Array.from({ length: Math.max(0, recurrenceCount - 1) }).forEach((_, index) => {
         batch.set(collection.doc(), {
-          ...getBaseTransaction(data, user),
-          dueDate: addMonths(data.dueDate, index + 1),
+          ...buildBaseTransaction(data, user),
+          dueDate: addMonthsToDateKey(data.dueDate, index + 1),
           recurrenceGroupId,
           recurrenceIndex: index + 2,
           recurrenceTotal: recurrenceCount,
@@ -363,21 +288,9 @@ export async function editTransaction(id: string, rawData: any) {
       return { success: true, count: recurrenceCount };
     }
 
-    await docRef.update({
-      description: data.description,
-      amount: data.amount,
-      category: data.category,
-      type: data.type,
-      status: data.status,
-      dueDate: data.dueDate,
-      pixCode: data.pixCode || null,
-      barCode: data.barCode || null,
-      observation: data.observation || null,
-      linkedInvestmentId: data.linkedInvestmentId || currentData?.linkedInvestmentId || null,
-      isRecurrent: data.isRecurrent || false,
-      recurrenceMonths: data.isRecurrent ? data.recurrenceMonths : null,
-      paidAt: data.status === "paid" ? new Date() : null,
-    });
+    await docRef.update(
+      buildEditableTransactionFields(data, currentData?.linkedInvestmentId)
+    );
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/transactions");

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useFinance } from "@/hooks/use-finance";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,8 +11,11 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { DateRangeFilter } from "@/components/date-range-filter";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import * as XLSX from "xlsx";
+import { formatCurrency } from "@/lib/utils";
+import {
+  calculateReportsData,
+  exportTransactionsReport,
+} from "@/lib/finance/reports";
 import {
   Download,
   Calendar,
@@ -77,125 +81,25 @@ export default function ReportsPage() {
   const { transactions, dateRange, setDateRange, loading } = useFinance();
 
   const handleExportExcel = () => {
-    const dataToExport = transactions.map((t) => ({
-      Data: formatDate(t.dueDate),
-      Descrição: t.description,
-      Categoria: t.category,
-      Tipo: t.type === "income" ? "Entrada" : "Saída",
-      Valor: Number(t.amount),
-      Status: t.status === "paid" ? "Pago" : "Pendente",
-      Observação: t.observation || "",
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Relatório Financeiro");
-
-    const wscols = [
-      { wch: 12 },
-      { wch: 30 },
-      { wch: 15 },
-      { wch: 10 },
-      { wch: 12 },
-      { wch: 10 },
-      { wch: 30 },
-    ];
-    worksheet["!cols"] = wscols;
-
-    XLSX.writeFile(workbook, `financas_${dateRange.from}_${dateRange.to}.xlsx`);
+    exportTransactionsReport(transactions, dateRange);
   };
 
-  const incomeTransactions = transactions.filter((t) => t.type === "income");
-  const expenseTransactions = transactions.filter((t) => t.type === "expense");
-
-  const totalIncome = incomeTransactions.reduce(
-    (acc, t) => acc + Number(t.amount),
-    0
+  const reportData = useMemo(
+    () => calculateReportsData(transactions),
+    [transactions]
   );
-  const totalExpense = expenseTransactions.reduce(
-    (acc, t) => acc + Number(t.amount),
-    0
-  );
-
-  const grossInvested = expenseTransactions
-    .filter((t) => t.category === "Investimento")
-    .reduce((acc, t) => acc + Number(t.amount), 0);
-
-  const redeemedInvested = incomeTransactions
-    .filter((t) => t.category === "Investimento")
-    .reduce((acc, t) => acc + Number(t.amount), 0);
-
-  const netInvested = grossInvested - redeemedInvested;
-
-  const realExpense = totalExpense - grossInvested;
-
-  const balance = totalIncome - totalExpense;
-
-  const adjustedIncome = totalIncome - redeemedInvested;
-  const savingsRate =
-    adjustedIncome > 0
-      ? ((adjustedIncome - realExpense) / adjustedIncome) * 100
-      : 0;
-
-  const expensesByCategory = expenseTransactions
-    .filter((t) => t.category !== "Investimento")
-    .reduce((acc, curr) => {
-      const existing = acc.find((i) => i.name === curr.category);
-      if (existing) {
-        existing.value += Number(curr.amount);
-      } else {
-        acc.push({ name: curr.category, value: Number(curr.amount) });
-      }
-      return acc;
-    }, [] as { name: string; value: number }[])
-    .sort((a, b) => b.value - a.value);
-
-  const radarData = expensesByCategory.slice(0, 6).map((item) => ({
-    subject: item.name,
-    A: item.value,
-    fullMark: Math.max(...expensesByCategory.map((i) => i.value)),
-  }));
-
-  const dailyData = transactions
-    .reduce((acc, curr) => {
-      const dateKey = curr.dueDate;
-      let entry = acc.find((m) => m.date === dateKey);
-      if (!entry) {
-        entry = {
-          date: dateKey,
-          displayDate: formatDate(dateKey).slice(0, 5),
-          Receitas: 0,
-          Despesas: 0,
-          Saldo: 0,
-        };
-        acc.push(entry);
-      }
-
-      if (curr.category !== "Investimento") {
-        if (curr.type === "income") entry.Receitas += Number(curr.amount);
-        else entry.Despesas += Number(curr.amount);
-      }
-
-      return acc;
-    }, [] as any[])
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  let accumulated = 0;
-  const cumulativeData = dailyData.map((day) => {
-    accumulated += day.Receitas - day.Despesas;
-    return { ...day, Acumulado: accumulated };
-  });
-
-  const topExpenses = expenseTransactions
-    .filter((t) => t.category !== "Investimento")
-    .sort((a, b) => Number(b.amount) - Number(a.amount))
-    .slice(0, 5);
-
-  const pendingBills = expenseTransactions
-    .filter((t) => t.status === "pending")
-    .sort(
-      (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-    );
+  const {
+    totalIncome,
+    netInvested,
+    realExpense,
+    balance,
+    savingsRate,
+    expensesByCategory,
+    radarData,
+    cumulativeData,
+    topExpenses,
+    pendingBills,
+  } = reportData;
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
