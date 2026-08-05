@@ -135,17 +135,17 @@ export default function VerifyEmailPage() {
                     <ShieldCheck className="text-emerald-400" size={32} />
                 </div>
                 <h2 className="text-4xl font-bold leading-tight mb-4">
-                    Lorem ipsum dolor sit amet <br/>
-                    <span className="text-indigo-400">consectetur adipiscing elit.</span>
+                    Sua segurança começa <br/>
+                    <span className="text-indigo-400">com um e-mail confirmado.</span>
                 </h2>
                 <p className="text-lg text-slate-300 leading-relaxed font-light">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                    A verificação protege sua conta e garante que somente você possa acessar seus espaços financeiros.
                 </p>
             </div>
             
             <div className="flex items-center gap-3 text-xs text-slate-500 uppercase tracking-widest font-semibold">
                 <div className="h-1 w-1 bg-emerald-500 rounded-full"></div>
-                Lorem ipsum dolor sit amet
+                Identidade protegida
             </div>
         </div>
       </div>

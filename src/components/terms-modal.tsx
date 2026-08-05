@@ -74,6 +74,18 @@ export function TermsModal({ isOpen, onAccept, onDecline }: TermsModalProps) {
               <p className="mb-3">
                 O <strong>Controle A Dois</strong> é uma aplicação desenvolvida exclusivamente para fins de portfólio e estudo de programação. Não se trata de um produto comercial ou serviço profissional oferecido ao público.
               </p>
+              <p className="mb-3">
+                O projeto é desenvolvido e mantido por{" "}
+                <a
+                  href="https://brianlucca.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
+                >
+                  Brian Lucca
+                </a>
+                .
+              </p>
               <p>
                 Esta aplicação está em constante desenvolvimento e pode apresentar bugs, falhas ou limitações técnicas. O uso é feito por conta e risco do usuário.
               </p>

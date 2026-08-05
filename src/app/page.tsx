@@ -51,20 +51,19 @@ export default function LandingPage() {
 
           <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold uppercase tracking-widest mb-6">
-              <ShieldCheck size={14} /> Lorem Ipsum
+              <ShieldCheck size={14} /> Finanças compartilhadas, decisões melhores
             </div>
 
             <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-8 leading-tight">
-              Lorem ipsum dolor <br className="hidden md:block" />
+              Organize a vida financeira <br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">
-                sit amet consectetur.
+                de vocês em um só lugar.
               </span>
             </h1>
 
             <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed font-light">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-              eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
-              enim ad minim veniam, quis nostrud exercitation.
+              Registre receitas e despesas, acompanhe contas e investimentos e
+              compartilhe o controle do orçamento com quem planeja ao seu lado.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -95,18 +94,18 @@ export default function LandingPage() {
             <div className="grid md:grid-cols-3 gap-8">
               <Feature
                 icon={<Lock className="w-6 h-6 text-emerald-400" />}
-                title="Lorem Ipsum"
-                desc="Neque porro quisquam est qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit."
+                title="Acesso protegido"
+                desc="Sua conta é autenticada e cada espaço financeiro mantém seus dados e participantes organizados."
               />
               <Feature
                 icon={<Wallet className="w-6 h-6 text-indigo-400" />}
-                title="Dolor Sit Amet"
-                desc="Curabitur pretium tincidunt lacus. Nulla gravida orci a odio. Nullam varius, turpis et commodo pharetra."
+                title="Tudo sob controle"
+                desc="Acompanhe saldo, receitas, despesas, investimentos e próximos vencimentos em uma visão centralizada."
               />
               <Feature
                 icon={<CheckCircle2 className="w-6 h-6 text-cyan-400" />}
-                title="Consectetur Elit"
-                desc="Fusce egestas elit eget lorem. Suspendisse nisl elit, rhoncus eget, elementum ac, condimentum eget, diam."
+                title="Planejamento em conjunto"
+                desc="Crie espaços, convide participantes e mantenha as decisões financeiras alinhadas com dados atualizados."
               />
             </div>
           </div>
@@ -118,7 +117,18 @@ export default function LandingPage() {
           <Building2 size={20} /> Controle A Dois
         </div>
         <p className="text-slate-500 text-sm">
-          © {new Date().getFullYear()} | Lorem ipsum dolor sit amet.
+          © {new Date().getFullYear()} | Controle financeiro simples e compartilhado.
+        </p>
+        <p className="mt-2 text-sm text-slate-500">
+          Desenvolvido por{" "}
+          <a
+            href="https://brianlucca.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-slate-300 transition-colors hover:text-white"
+          >
+            Brian Lucca
+          </a>
         </p>
       </footer>
     </div>

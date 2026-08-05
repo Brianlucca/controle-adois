@@ -218,17 +218,17 @@ export default function RegisterPage() {
         <div className="relative z-10 h-full flex flex-col justify-end p-16 xl:p-24 text-white max-w-2xl">
             <div className="mb-8">
                 <h2 className="text-5xl font-bold leading-tight mb-6">
-                    Lorem ipsum dolor sit amet <br/>
-                    <span className="text-indigo-400">consectetur adipiscing elit.</span>
+                    Planejem juntos. <br/>
+                    <span className="text-indigo-400">Conquistem juntos.</span>
                 </h2>
                 <p className="text-lg text-slate-300 leading-relaxed font-light">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                    Reúna receitas, despesas, contas e investimentos em um espaço compartilhado, claro e fácil de acompanhar.
                 </p>
             </div>
             
             <div className="flex items-center gap-4 text-sm text-slate-400 font-medium tracking-wider uppercase">
                 <div className="h-px w-12 bg-indigo-500"></div>
-                Lorem ipsum dolor sit amet
+                Finanças compartilhadas
             </div>
         </div>
       </div>
