@@ -2,7 +2,6 @@ import "server-only";
 import { initializeApp, getApps, cert, getApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
-import { getDatabase } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 
 function formatPrivateKey(key: string | undefined) {
@@ -24,7 +23,6 @@ if (getApps().length === 0) {
     try {
       initializeApp({
         credential: cert({ projectId: projectId.trim(), clientEmail: clientEmail.trim(), privateKey: formatPrivateKey(privateKey) }),
-        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
       });
     } catch (error) {
       console.error("firebase_admin_initialization_failed", { code: error instanceof Error ? error.name : "unknown" });
@@ -37,7 +35,6 @@ if (getApps().length === 0) {
     // instead of crashing every Server Component during module evaluation.
     initializeApp({
       projectId: projectId || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
     });
   }
 }
@@ -46,9 +43,8 @@ const app = getApp();
 
 export const adminDb = getFirestore(app);
 export const adminAuth = getAuth(app);
-export const adminMessaging = getMessaging(app);
-export const adminRdb = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
-  ? getDatabase(app)
-  : null;
+export function getAdminMessaging() {
+  return getMessaging(app);
+}
 
 export const db = adminDb;
