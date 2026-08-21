@@ -1,6 +1,8 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { DateRange, Transaction } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import { getLocalDateKey } from "@/lib/finance/date";
+import { calculatePeriodFinancialMetrics } from "@/lib/finance/financial-metrics";
 
 export interface CategoryTotal {
   name: string;
@@ -17,7 +19,7 @@ export interface DailyReportPoint {
   Acumulado?: number;
 }
 
-export function exportTransactionsReport(
+export async function exportTransactionsReport(
   transactions: Transaction[],
   dateRange: DateRange
 ) {
@@ -31,53 +33,37 @@ export function exportTransactionsReport(
     Observacao: transaction.observation || "",
   }));
 
-  const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Relatorio Financeiro");
-
-  worksheet["!cols"] = [
-    { wch: 12 },
-    { wch: 30 },
-    { wch: 15 },
-    { wch: 10 },
-    { wch: 12 },
-    { wch: 10 },
-    { wch: 30 },
-  ];
-
-  XLSX.writeFile(workbook, `financas_${dateRange.from}_${dateRange.to}.xlsx`);
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Relatorio Financeiro");
+  const headers = Object.keys(dataToExport[0] || {
+    Data: "", Descricao: "", Categoria: "", Tipo: "", Valor: "", Status: "", Observacao: "",
+  });
+  worksheet.columns = headers.map((header, index) => ({
+    header,
+    key: header,
+    width: [12, 30, 15, 10, 12, 10, 30][index],
+  }));
+  dataToExport.forEach((row) => worksheet.addRow(row));
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer as BlobPart], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `financas_${dateRange.from}_${dateRange.to}.xlsx`;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
-export function calculateReportsData(transactions: Transaction[]) {
-  const incomeTransactions = transactions.filter(
-    (transaction) => transaction.type === "income"
-  );
-  const expenseTransactions = transactions.filter(
-    (transaction) => transaction.type === "expense"
-  );
-
-  const totalIncome = sumAmounts(incomeTransactions);
-  const totalExpense = sumAmounts(expenseTransactions);
-
-  const grossInvested = sumAmounts(
-    expenseTransactions.filter(
-      (transaction) => transaction.category === "Investimento"
-    )
-  );
-  const redeemedInvested = sumAmounts(
-    incomeTransactions.filter(
-      (transaction) => transaction.category === "Investimento"
-    )
-  );
-
-  const netInvested = grossInvested - redeemedInvested;
-  const realExpense = totalExpense - grossInvested;
-  const balance = totalIncome - totalExpense;
-  const adjustedIncome = totalIncome - redeemedInvested;
-  const savingsRate =
-    adjustedIncome > 0
-      ? ((adjustedIncome - realExpense) / adjustedIncome) * 100
-      : 0;
+export function calculateReportsData(transactions: Transaction[], todayKey = getLocalDateKey(new Date())) {
+  const metrics = calculatePeriodFinancialMetrics(transactions, todayKey);
+  const {
+    incomeTransactions, expenseTransactions, totalIncome, totalExpense,
+    grossInvested, redeemedInvested, netInvested, realExpense,
+    adjustedIncome, savingsRate,
+  } = metrics;
+  const balance = metrics.periodBalance;
 
   const expensesByCategory = expenseTransactions
     .filter((transaction) => transaction.category !== "Investimento")
@@ -102,7 +88,7 @@ export function calculateReportsData(transactions: Transaction[]) {
     fullMark,
   }));
 
-  const dailyData = transactions
+  const dailyData = metrics.confirmed
     .reduce((acc, transaction) => {
       const dateKey = transaction.dueDate;
       let entry = acc.find((point) => point.date === dateKey);
@@ -140,8 +126,11 @@ export function calculateReportsData(transactions: Transaction[]) {
     .sort((a, b) => Number(b.amount) - Number(a.amount))
     .slice(0, 5);
 
-  const pendingBills = expenseTransactions
-    .filter((transaction) => transaction.status === "pending")
+  const pendingBills = transactions
+    .filter(
+      (transaction) =>
+        transaction.type === "expense" && transaction.status === "pending"
+    )
     .sort(
       (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     );
@@ -165,11 +154,4 @@ export function calculateReportsData(transactions: Transaction[]) {
     topExpenses,
     pendingBills,
   };
-}
-
-function sumAmounts(transactions: Transaction[]) {
-  return transactions.reduce(
-    (acc, transaction) => acc + Number(transaction.amount),
-    0
-  );
 }
