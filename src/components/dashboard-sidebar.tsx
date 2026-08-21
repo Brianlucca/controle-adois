@@ -24,13 +24,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/actions/auth-actions";
-import {
-  getUserWorkspaces,
-  switchActiveWorkspace,
-  getActiveWorkspaceId,
-} from "@/actions/workspace-actions";
-import { auth } from "@/lib/firebase-client";
-import { onAuthStateChanged } from "firebase/auth";
 import { useWorkspace } from "@/contexts/workspace-context";
 
 export function DashboardSidebar() {
@@ -48,22 +41,14 @@ export function DashboardSidebar() {
   const workspaceContext = useWorkspace();
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const list = await getUserWorkspaces(user.uid);
-        setWorkspaces(list);
-
-        const storedActiveId = await getActiveWorkspaceId(user.uid);
-
-        if (list.length > 0) {
-          const current = list.find((w) => w.id === storedActiveId) || list[0];
-          setActiveWsId(current.id);
-          setActiveWsName(current.name);
-        }
-      }
-    });
-    return () => unsub();
-  }, []);
+    const list = workspaceContext?.workspaces || [];
+    setWorkspaces(list);
+    const current = workspaceContext?.activeWorkspace || list[0];
+    if (current) {
+      setActiveWsId(current.id);
+      setActiveWsName(current.name);
+    }
+  }, [workspaceContext?.workspaces, workspaceContext?.activeWorkspace]);
 
   const handleSwitch = async (wsId: string) => {
     if (wsId === "new") {
@@ -86,12 +71,11 @@ export function DashboardSidebar() {
     }
 
     setIsSwitcherOpen(false);
-    await switchActiveWorkspace(wsId, auth.currentUser?.uid);
     if (targetWs && workspaceContext?.setActiveWorkspace) {
       await workspaceContext.setActiveWorkspace({
         id: targetWs.id,
         name: targetWs.name,
-        ownerId: targetWs.isOwner ? auth.currentUser?.uid || "" : "",
+        ownerId: targetWs.ownerId || "",
         currency: "BRL",
       });
     }
