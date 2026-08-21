@@ -84,8 +84,7 @@ function useFinanceController() {
           getFinancialCycleRange(new Date(), preferences.startDay, preferences.endDay)
         );
       }
-      setCycleReady(true);
-    });
+    }).catch(() => undefined).finally(() => setCycleReady(true));
   }, [user]);
 
   async function fetchData(uid: string) {
@@ -109,6 +108,7 @@ function useFinanceController() {
     setLoading(true);
     cacheReady.current = false;
     loadedRanges.current.clear();
+    try {
     const cached = await readFinanceCache(scope).catch(() => null);
     if (sequence !== requestSequence.current) return;
     if (cached?.transactions.length) {
@@ -130,8 +130,12 @@ function useFinanceController() {
     setSnapshotTransactions(merged);
     loadedRanges.current.add(`${syncRange.from}:${syncRange.to}`);
     cacheReady.current = true;
-    setLoading(false);
     await writeFinanceCache(scope, merged).catch(() => undefined);
+    } catch {
+      cacheReady.current = true;
+    } finally {
+      if (sequence === requestSequence.current) setLoading(false);
+    }
   }
 
   const ensureRangeLoaded = useCallback(async (range: { from: string; to: string }, force = false) => {
