@@ -114,6 +114,7 @@ export default function LoginPage() {
                         <Mail className="absolute left-3 top-3.5 text-slate-400" size={18} />
                         <Input 
                             type="email"
+                            autoComplete="username"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required 
