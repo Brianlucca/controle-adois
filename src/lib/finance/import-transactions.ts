@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { getLocalDateKey } from "@/lib/finance/date";
 import { TransactionPayload } from "@/lib/types";
 
@@ -43,12 +43,9 @@ function readImportValue(row: ImportRow, keys: string[], fallbackIndex?: number)
 
 function parseImportDate(value: unknown) {
   if (typeof value === "number") {
-    const parsed = XLSX.SSF.parse_date_code(value);
-    if (parsed) {
-      return `${parsed.y}-${String(parsed.m).padStart(2, "0")}-${String(
-        parsed.d
-      ).padStart(2, "0")}`;
-    }
+    const epoch = new Date(Date.UTC(1899, 11, 30));
+    epoch.setUTCDate(epoch.getUTCDate() + Math.floor(value));
+    return getLocalDateKey(epoch);
   }
 
   const raw = String(value || "").trim();
@@ -120,16 +117,24 @@ function mapImportRow(row: ImportRow): ImportedTransaction | null {
   };
 }
 
-export function parseTransactionsWorkbook(buffer: ArrayBuffer) {
-  const workbook = XLSX.read(buffer, { type: "array" });
+export async function parseTransactionsWorkbook(buffer: ArrayBuffer) {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
 
-  if (workbook.SheetNames.length === 0) {
+  if (workbook.worksheets.length === 0) {
     return { items: [], hasSheets: false };
   }
 
-  const rows = workbook.SheetNames.flatMap((sheetName) => {
-    const sheet = workbook.Sheets[sheetName];
-    return XLSX.utils.sheet_to_json<ImportRow>(sheet, { defval: "" });
+  const rows = workbook.worksheets.flatMap((sheet) => {
+    const headers = (sheet.getRow(1).values as unknown[]).slice(1).map(String);
+    const parsedRows: ImportRow[] = [];
+    sheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      const values = (row.values as unknown[]).slice(1);
+      const parsed = Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
+      parsedRows.push(parsed);
+    });
+    return parsedRows;
   });
 
   return {
