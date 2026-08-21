@@ -42,6 +42,7 @@ export function buildWorkspaceRecord({
     name,
     ...(inviteCode ? { inviteCode } : {}),
     members: [buildWorkspaceMember(ownerId, email, "admin")],
+    memberIds: [ownerId],
     budgetLimit,
     createdAt: new Date(),
   };
