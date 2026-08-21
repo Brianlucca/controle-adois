@@ -13,3 +13,7 @@ The dashboard turns transaction data into an overview of balances, cash flow, pe
 Authentication and email verification protect user access. Financial data is stored in Firebase and server-side operations use authenticated sessions to connect each action to the current user and workspace.
 
 The project is built around a simple idea: when finances are shared, the information used to manage them should be shared too.
+
+## Runtime
+
+Production requires Node.js 22 because Firebase Admin 14 does not support older Node.js runtimes. The version is pinned in `package.json` so server routes use the correct runtime on Vercel.
