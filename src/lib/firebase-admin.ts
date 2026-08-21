@@ -21,15 +21,17 @@ if (getApps().length === 0) {
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (projectId && clientEmail && privateKey) {
-    initializeApp({
-      credential: cert({
-        projectId: projectId.trim(),
-        clientEmail: clientEmail.trim(),
-        privateKey: formatPrivateKey(privateKey),
-      }),
-      databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
-    });
-  } else {
+    try {
+      initializeApp({
+        credential: cert({ projectId: projectId.trim(), clientEmail: clientEmail.trim(), privateKey: formatPrivateKey(privateKey) }),
+        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+      });
+    } catch (error) {
+      console.error("firebase_admin_initialization_failed", { code: error instanceof Error ? error.name : "unknown" });
+    }
+  }
+
+  if (getApps().length === 0) {
     // Keep modules renderable when production credentials are temporarily
     // unavailable. Database calls will fail inside their guarded actions
     // instead of crashing every Server Component during module evaluation.

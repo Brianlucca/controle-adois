@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
 import { useRouter } from "next/navigation";
-import { createSession } from "@/actions/auth-actions";
+import { createClientSession } from "@/lib/auth/client-session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Lock, Mail, AlertCircle, ArrowRight, Building2, Eye, EyeOff, X, CheckCircle2 } from "lucide-react";
@@ -34,7 +34,7 @@ export default function LoginPage() {
       const user = userCredential.user;
       const idToken = await user.getIdToken();
 
-      const result = await createSession(idToken);
+      const result = await createClientSession(idToken);
 
       if (!result.success) {
         await signOut(auth);
@@ -109,11 +109,14 @@ export default function LoginPage() {
             <form onSubmit={handleLogin} className="space-y-5">
                 
                 <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">E-mail</label>
+                    <label htmlFor="login-email" className="text-xs font-bold text-slate-700 uppercase tracking-wide">E-mail</label>
                     <div className="relative">
                         <Mail className="absolute left-3 top-3.5 text-slate-400" size={18} />
                         <Input 
                             type="email"
+                            id="login-email"
+                            name="email"
+                            autoComplete="username"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required 
@@ -125,7 +128,7 @@ export default function LoginPage() {
 
                 <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
-                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Senha</label>
+                        <label htmlFor="login-password" className="text-xs font-bold text-slate-700 uppercase tracking-wide">Senha</label>
                         <button 
                             type="button"
                             onClick={() => {
@@ -142,6 +145,9 @@ export default function LoginPage() {
                         <Lock className="absolute left-3 top-3.5 text-slate-400" size={18} />
                         <Input 
                             type={showPassword ? "text" : "password"}
+                            id="login-password"
+                            name="password"
+                            autoComplete="current-password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required 
@@ -229,11 +235,14 @@ export default function LoginPage() {
 
                 <form onSubmit={handleForgotPassword} className="space-y-4">
                     <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Seu E-mail</label>
+                        <label htmlFor="forgot-email" className="text-xs font-bold text-slate-700 uppercase tracking-wide">Seu E-mail</label>
                         <div className="relative">
                             <Mail className="absolute left-3 top-3.5 text-slate-400" size={18} />
                             <Input 
                                 type="email"
+                                id="forgot-email"
+                                name="email"
+                                autoComplete="email"
                                 value={forgotEmail}
                                 onChange={(e) => setForgotEmail(e.target.value)}
                                 required 

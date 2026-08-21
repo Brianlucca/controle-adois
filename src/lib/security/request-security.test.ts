@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { consumeRateLimit, hasTrustedMutationOrigin, RateLimitEntry } from "./request-security";
+import { consumeRateLimit, hasTrustedMutationOrigin, isDocumentNavigation, RateLimitEntry } from "./request-security";
 
 describe("request security", () => {
   it("blocks requests above the configured window limit", () => {
@@ -14,5 +14,11 @@ describe("request security", () => {
     expect(hasTrustedMutationOrigin("https://controle.example", "controle.example")).toBe(true);
     expect(hasTrustedMutationOrigin("https://evil.example", "controle.example")).toBe(false);
     expect(hasTrustedMutationOrigin(null, "controle.example")).toBe(false);
+  });
+
+  it("redirects only full page GET navigations", () => {
+    expect(isDocumentNavigation("GET", "text/html", "document")).toBe(true);
+    expect(isDocumentNavigation("POST", "text/x-component", "empty")).toBe(false);
+    expect(isDocumentNavigation("GET", "text/x-component", "empty")).toBe(false);
   });
 });

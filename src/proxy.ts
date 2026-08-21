@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { consumeRateLimit, hasTrustedMutationOrigin, RateLimitEntry } from "@/lib/security/request-security";
+import { consumeRateLimit, hasTrustedMutationOrigin, isDocumentNavigation, RateLimitEntry } from "@/lib/security/request-security";
 
 const globalRateStore = globalThis as typeof globalThis & {
   controleRateLimits?: Map<string, RateLimitEntry>;
@@ -12,6 +12,11 @@ export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isMutation = request.method !== "GET" && request.method !== "HEAD" && request.method !== "OPTIONS";
   const isServerAction = Boolean(request.headers.get("next-action"));
+  const isNavigation = isDocumentNavigation(
+    request.method,
+    request.headers.get("accept"),
+    request.headers.get("sec-fetch-dest")
+  );
 
   if (isMutation && isServerAction && !hasTrustedMutationOrigin(
     request.headers.get("origin"),
@@ -38,8 +43,8 @@ export function proxy(request: NextRequest) {
     for (const [key, entry] of rateLimits) if (entry.resetAt <= now) rateLimits.delete(key);
   }
 
-  if (session && path.startsWith("/auth")) return NextResponse.redirect(new URL("/dashboard", request.url));
-  if (!session && path.startsWith("/dashboard")) return NextResponse.redirect(new URL("/auth/login", request.url));
+  if (isNavigation && session && path.startsWith("/auth")) return NextResponse.redirect(new URL("/dashboard", request.url));
+  if (isNavigation && !session && path.startsWith("/dashboard")) return NextResponse.redirect(new URL("/auth/login", request.url));
 
   const response = NextResponse.next();
   response.headers.set("X-RateLimit-Remaining", String(rate.remaining));

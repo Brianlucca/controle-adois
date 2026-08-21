@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase-client";
 import { sendEmailVerification } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { createSession } from "@/actions/auth-actions";
+import { createClientSession } from "@/lib/auth/client-session";
 import { Mail, CheckCircle2, Loader2, RefreshCw, Building2, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -22,7 +22,7 @@ export default function VerifyEmailPage() {
           clearInterval(interval);
           setStatus("verified");
           const idToken = await auth.currentUser.getIdToken();
-          await createSession(idToken);
+          await createClientSession(idToken);
           setTimeout(() => router.push("/dashboard"), 2000);
         }
       }

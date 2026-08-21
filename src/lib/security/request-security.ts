@@ -31,3 +31,7 @@ export function hasTrustedMutationOrigin(origin: string | null, host: string | n
     return false;
   }
 }
+
+export function isDocumentNavigation(method: string, accept: string | null, destination: string | null) {
+  return method === "GET" && (destination === "document" || Boolean(accept?.includes("text/html")));
+}
