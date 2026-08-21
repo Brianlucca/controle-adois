@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
 import { useRouter } from "next/navigation";
-import { createSession } from "@/actions/auth-actions";
+import { createClientSession } from "@/lib/auth/client-session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Lock, Mail, AlertCircle, ArrowRight, Building2, Eye, EyeOff, X, CheckCircle2 } from "lucide-react";
@@ -34,7 +34,7 @@ export default function LoginPage() {
       const user = userCredential.user;
       const idToken = await user.getIdToken();
 
-      const result = await createSession(idToken);
+      const result = await createClientSession(idToken);
 
       if (!result.success) {
         await signOut(auth);
@@ -142,6 +142,7 @@ export default function LoginPage() {
                         <Lock className="absolute left-3 top-3.5 text-slate-400" size={18} />
                         <Input 
                             type={showPassword ? "text" : "password"}
+                            autoComplete="current-password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required 
