@@ -117,10 +117,13 @@ export default function RegisterPage() {
             <form onSubmit={handleRegister} className="space-y-5">
                 
                 <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Nome Completo</label>
+                    <label htmlFor="register-name" className="text-xs font-bold text-slate-700 uppercase tracking-wide">Nome Completo</label>
                     <div className="relative">
                         <User className="absolute left-3 top-3.5 text-slate-400" size={18} />
                         <Input 
+                            id="register-name"
+                            name="name"
+                            autoComplete="name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required 
@@ -131,11 +134,14 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">E-mail Profissional</label>
+                    <label htmlFor="register-email" className="text-xs font-bold text-slate-700 uppercase tracking-wide">E-mail Profissional</label>
                     <div className="relative">
                         <Mail className="absolute left-3 top-3.5 text-slate-400" size={18} />
                         <Input 
                             type="email"
+                            id="register-email"
+                            name="email"
+                            autoComplete="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required 
@@ -147,11 +153,14 @@ export default function RegisterPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Senha</label>
+                        <label htmlFor="register-password" className="text-xs font-bold text-slate-700 uppercase tracking-wide">Senha</label>
                         <div className="relative">
                             <Lock className="absolute left-3 top-3.5 text-slate-400" size={18} />
                             <Input 
                                 type={showPassword ? "text" : "password"}
+                                id="register-password"
+                                name="new-password"
+                                autoComplete="new-password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required 
@@ -165,11 +174,14 @@ export default function RegisterPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Confirmar</label>
+                        <label htmlFor="register-password-confirmation" className="text-xs font-bold text-slate-700 uppercase tracking-wide">Confirmar</label>
                         <div className="relative">
                             <Lock className={`absolute left-3 top-3.5 ${passwordsMatch && confirmPassword ? 'text-emerald-600' : 'text-slate-400'}`} size={18} />
                             <Input 
                                 type={showPassword ? "text" : "password"}
+                                id="register-password-confirmation"
+                                name="new-password-confirmation"
+                                autoComplete="new-password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required 
