@@ -1,7 +1,9 @@
 "use server";
 
 import { FieldValue } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 import { adminDb } from "@/lib/firebase-admin";
+import { getAuthenticatedUser } from "@/lib/server/action-context";
 import {
   clearPersistedActiveWorkspace,
   getActiveWorkspaceId as resolveActiveWorkspaceId,
@@ -23,11 +25,24 @@ import {
 } from "@/lib/workspace/workspace-records";
 
 export async function getActiveWorkspaceId(userId?: string) {
-  return resolveActiveWorkspaceId(userId);
+  const user = await getAuthenticatedUser();
+  if (!user || (userId && userId !== user.uid)) return null;
+  return resolveActiveWorkspaceId(user.uid);
 }
 
-export async function ensurePersonalWorkspace(userId: string, email: string) {
+async function authenticatedUid(claimedUserId?: string) {
+  const user = await getAuthenticatedUser();
+  if (!user || (claimedUserId && claimedUserId !== user.uid)) return null;
+  return user.uid;
+}
+
+export async function ensurePersonalWorkspace(idToken: string, email: string) {
   try {
+    const verified = await getAuth().verifyIdToken(idToken, true);
+    const userId = verified.uid;
+    if (!verified.email || verified.email.toLowerCase() !== email.trim().toLowerCase()) {
+      return { error: "Identidade inválida." };
+    }
     const savedWorkspaceId = await getFallbackWorkspaceId(userId);
     if (savedWorkspaceId) {
       await persistActiveWorkspace(userId, savedWorkspaceId);
@@ -45,6 +60,10 @@ export async function ensurePersonalWorkspace(userId: string, email: string) {
       })
     );
 
+    await adminDb.collection("users").doc(userId).set({
+      workspaceIds: FieldValue.arrayUnion(workspaceRef.id),
+    }, { merge: true });
+
     await persistActiveWorkspace(userId, workspaceRef.id);
     return { workspaceId: workspaceRef.id };
   } catch {
@@ -58,6 +77,7 @@ export async function createSharedWorkspace(
   name: string
 ) {
   try {
+    if (!(await authenticatedUid(userId))) return { success: false, error: "Sessão inválida." };
     const workspaceRef = adminDb.collection("workspaces").doc();
     await workspaceRef.set(
       buildWorkspaceRecord({
@@ -69,6 +89,10 @@ export async function createSharedWorkspace(
         inviteCode: createInviteCode(),
       })
     );
+
+    await adminDb.collection("users").doc(userId).set({
+      workspaceIds: FieldValue.arrayUnion(workspaceRef.id),
+    }, { merge: true });
 
     await persistActiveWorkspace(userId, workspaceRef.id);
     return { success: true };
@@ -83,6 +107,7 @@ export async function joinWorkspace(
   inviteCode: string
 ) {
   try {
+    if (!(await authenticatedUid(userId))) return { success: false, error: "Sessão inválida." };
     const querySnapshot = await adminDb
       .collection("workspaces")
       .where("inviteCode", "==", inviteCode)
@@ -108,7 +133,12 @@ export async function joinWorkspace(
         members: FieldValue.arrayUnion(
           buildWorkspaceMember(userId, email, "member")
         ),
+        memberIds: FieldValue.arrayUnion(userId),
       });
+
+    await adminDb.collection("users").doc(userId).set({
+      workspaceIds: FieldValue.arrayUnion(workspaceId),
+    }, { merge: true });
 
     await persistActiveWorkspace(userId, workspaceId);
     return { success: true, message: "Você entrou no grupo!" };
@@ -118,19 +148,45 @@ export async function joinWorkspace(
 }
 
 export async function getUserWorkspaces(userId: string) {
-  const allWorkspaces = await adminDb.collection("workspaces").get();
+  try {
+    if (!(await authenticatedUid(userId))) return [];
+    const userDoc = await adminDb.collection("users").doc(userId).get();
+    const knownIds = new Set<string>(userDoc.data()?.workspaceIds || []);
+    if (userDoc.data()?.workspaceId) knownIds.add(userDoc.data()?.workspaceId);
 
-  return allWorkspaces.docs
-    .map((doc) => ({ id: doc.id, ...doc.data() } as any))
-    .filter((workspace) => isWorkspaceMember(workspace, userId))
-    .map((workspace) => toWorkspaceListItem(workspace.id, workspace, userId));
+    const [owned, member] = await Promise.all([
+      adminDb.collection("workspaces").where("ownerId", "==", userId).get(),
+      adminDb.collection("workspaces").where("memberIds", "array-contains", userId).get(),
+    ]);
+    owned.docs.forEach((doc) => knownIds.add(doc.id));
+    member.docs.forEach((doc) => knownIds.add(doc.id));
+
+    const loaded = new Map<string, FirebaseFirestore.DocumentSnapshot>();
+    [...owned.docs, ...member.docs].forEach((doc) => loaded.set(doc.id, doc));
+    const missing = [...knownIds].filter((id) => !loaded.has(id));
+    const missingDocs = await Promise.all(missing.map((id) => adminDb.collection("workspaces").doc(id).get()));
+    missingDocs.forEach((doc) => { if (doc.exists) loaded.set(doc.id, doc); });
+
+    const result = [...loaded.values()]
+      .filter((doc) => doc.exists && isWorkspaceMember(doc.data(), userId))
+      .map((doc) => toWorkspaceListItem(doc.id, doc.data() || {}, userId));
+
+    const ids = result.map((workspace) => workspace.id).sort();
+    const savedIds = [...(userDoc.data()?.workspaceIds || [])].sort();
+    if (ids.length && JSON.stringify(ids) !== JSON.stringify(savedIds)) {
+      await adminDb.collection("users").doc(userId).set({ workspaceIds: ids }, { merge: true });
+    }
+    return result;
+  } catch {
+    return [];
+  }
 }
 
 export async function switchActiveWorkspace(
   workspaceId: string,
   userId?: string
 ) {
-  if (!userId) {
+  if (!userId || !(await authenticatedUid(userId))) {
     return { success: false, error: "Usuário não autenticado." };
   }
 
@@ -149,6 +205,7 @@ export async function setPrimaryWorkspace(
   makePersonal = false
 ) {
   try {
+    if (!(await authenticatedUid(userId))) return { success: false, error: "Sessão inválida." };
     const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
     const workspaceDoc = await workspaceRef.get();
 
@@ -197,6 +254,7 @@ export async function setPrimaryWorkspace(
 
 export async function leaveWorkspace(userId: string, workspaceId: string) {
   try {
+    if (!(await authenticatedUid(userId))) return { success: false, error: "Sessão inválida." };
     const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
     const workspaceDoc = await workspaceRef.get();
 
@@ -220,7 +278,11 @@ export async function leaveWorkspace(userId: string, workspaceId: string) {
 
     await workspaceRef.update({
       members: removeWorkspaceMember(workspace?.members, userId),
+      memberIds: FieldValue.arrayRemove(userId),
     });
+    await adminDb.collection("users").doc(userId).set({
+      workspaceIds: FieldValue.arrayRemove(workspaceId),
+    }, { merge: true });
 
     const fallbackId = await getFallbackWorkspaceId(userId, workspaceId);
     if (fallbackId) await persistActiveWorkspace(userId, fallbackId);
@@ -238,6 +300,7 @@ export async function updateMemberPermissions(
   permissions: Record<string, unknown>
 ) {
   try {
+    if (!(await authenticatedUid(userId))) return { success: false };
     const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
     const workspaceDoc = await workspaceRef.get();
 
@@ -262,6 +325,7 @@ export async function updateWorkspaceSettings(
   userId: string,
   settings: { budgetLimit: number }
 ) {
+  if (!(await authenticatedUid(userId))) return { success: false, error: "Sessão inválida." };
   const workspaceId = await getActiveWorkspaceId(userId);
   if (!workspaceId) {
     return { success: false, error: "Nenhum workspace ativo" };
@@ -276,6 +340,7 @@ export async function updateWorkspaceSettings(
 }
 
 export async function updateWorkspaceName(userId: string, newName: string) {
+  if (!(await authenticatedUid(userId))) return { success: false, error: "Sessão inválida." };
   const workspaceId = await getActiveWorkspaceId(userId);
   if (!workspaceId) {
     return { success: false, error: "Nenhum workspace ativo" };
@@ -286,7 +351,9 @@ export async function updateWorkspaceName(userId: string, newName: string) {
 }
 
 export async function getWorkspaceDetails(userId: string) {
-  let workspaceId = await getActiveWorkspaceId(userId);
+  try {
+    if (!(await authenticatedUid(userId))) return null;
+    let workspaceId = await getActiveWorkspaceId(userId);
 
   if (!workspaceId) {
     workspaceId = await getFallbackWorkspaceId(userId);
@@ -304,11 +371,15 @@ export async function getWorkspaceDetails(userId: string) {
     workspaceDoc = await adminDb.collection("workspaces").doc(workspaceId).get();
   }
 
-  return toWorkspaceDetails(workspaceDoc.id, workspaceDoc.data() || {});
+    return toWorkspaceDetails(workspaceDoc.id, workspaceDoc.data() || {});
+  } catch {
+    return null;
+  }
 }
 
 export async function deleteWorkspace(userId: string, workspaceId: string) {
   try {
+    if (!(await authenticatedUid(userId))) return { success: false, error: "Sessão inválida." };
     const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
     const workspaceDoc = await workspaceRef.get();
 
