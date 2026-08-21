@@ -190,7 +190,7 @@ export function GlobalFinancialAssistant() {
         <aside className="fixed inset-0 z-[100] flex items-end justify-end bg-black/40 backdrop-blur-sm sm:p-4 lg:p-6" onClick={() => setOpen(false)}>
           <div className="flex h-[90dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-[#0d111b] shadow-2xl sm:h-[min(760px,88dvh)] sm:max-w-[500px] sm:rounded-3xl" onClick={(event) => event.stopPropagation()}>
             <header className="shrink-0 border-b border-white/10 bg-gradient-to-r from-violet-500/15 to-cyan-500/10 p-4">
-              <div className="flex items-center gap-2"><div className="rounded-xl bg-violet-500/20 p-2 text-violet-200"><Bot size={22} /></div><div className="min-w-0"><h2 className="font-bold text-white">Assistente Controle</h2><p className="truncate text-[11px] text-slate-400">Ciclo {cycleStartDay}–{cycleEndDay} · {dateRange.from.slice(8, 10)}/{dateRange.from.slice(5, 7)}–{dateRange.to.slice(8, 10)}/{dateRange.to.slice(5, 7)}</p></div><button type="button" onClick={() => setShowHelp((value) => !value)} className="ml-auto flex items-center gap-1 rounded-lg px-2 py-1.5 text-[10px] font-bold text-cyan-200 hover:bg-cyan-400/10"><CircleHelp size={14} /> {showHelp ? "Fechar" : "Perguntas"}</button><button onClick={() => setOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white"><X size={19} /></button></div>
+              <div className="flex items-center gap-2"><div className="rounded-xl bg-violet-500/20 p-2 text-violet-200"><Bot size={22} /></div><div className="min-w-0"><h2 className="font-bold text-white">Assistente Controle</h2><p className="truncate text-[11px] text-slate-400">Ciclo {cycleStartDay}–{cycleEndDay} · {dateRange.from.slice(8, 10)}/{dateRange.from.slice(5, 7)}–{dateRange.to.slice(8, 10)}/{dateRange.to.slice(5, 7)}</p></div><button type="button" onClick={() => setShowHelp((value) => !value)} className="ml-auto flex items-center gap-1 rounded-lg px-2 py-1.5 text-[10px] font-bold text-cyan-200 hover:bg-cyan-400/10"><CircleHelp size={14} /> {showHelp ? "Fechar" : "Como usar"}</button><button onClick={() => setOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white"><X size={19} /></button></div>
               <div className="mt-4 grid grid-cols-2 rounded-xl bg-black/20 p-1"><button onClick={() => setTab("chat")} className={`rounded-lg py-2 text-xs font-bold ${tab === "chat" ? "bg-white/10 text-white" : "text-slate-500"}`}>Conversa</button><button onClick={() => setTab("goals")} className={`rounded-lg py-2 text-xs font-bold ${tab === "goals" ? "bg-white/10 text-white" : "text-slate-500"}`}>Objetivos ({goals.length})</button></div>
             </header>
 
@@ -198,7 +198,12 @@ export function GlobalFinancialAssistant() {
               <div className="custom-scrollbar flex-1 space-y-3 overflow-y-auto p-4">
                 <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-2"><span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Analisando</span><select value={assistantPeriod} onChange={(event) => setAssistantPeriod(event.target.value as "current" | "custom" | "previous" | "all")} className="h-8 rounded-lg border border-white/10 bg-[#151a26] px-2 text-xs font-semibold text-slate-200 outline-none"><option value="current">Meu ciclo</option><option value="custom">Personalizado</option><option value="previous">Ciclo anterior</option><option value="all">Todo o histórico</option></select><span className="text-[10px] text-slate-500">{assistantRange.from.split("-").reverse().join("/")}–{assistantRange.to.split("-").reverse().join("/")}</span>{assistantPeriod === "custom" && <div className="grid w-full grid-cols-2 gap-2"><input aria-label="Início" type="date" value={customRange.from} onChange={(event) => setCustomRange((range) => ({ ...range, from: event.target.value }))} className="h-8 w-full rounded-lg border border-white/10 bg-[#151a26] px-2 text-[11px] text-slate-200" /><input aria-label="Fim" type="date" value={customRange.to} onChange={(event) => setCustomRange((range) => ({ ...range, to: event.target.value }))} className="h-8 w-full rounded-lg border border-white/10 bg-[#151a26] px-2 text-[11px] text-slate-200" /></div>}</div>
                 {showHelp && <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-                  <p className="text-xs leading-5 text-slate-400">Escolha uma pergunta ou escreva do seu jeito. Para lançar valores, diga “adiciona 20 reais de cachorro-quente hoje”, “recebi 30 reais hoje” ou “tenho que pagar 100 reais de internet amanhã”.</p>
+                  <div><p className="text-xs font-bold text-white">Como adicionar movimentações</p><p className="mt-1 text-[11px] leading-5 text-slate-400">Use: <span className="text-violet-200">tipo + valor + nome + data + status</span>. Se faltar nome, data ou status, eu pergunto antes de salvar.</p></div>
+                  <HelpSection title="Saídas" text="Comandos aceitos: adiciona, adicione, coloca, coloque, registra, registre, lança, lance, anota, anote, saída, paguei, gastei, comprei, vou pagar e tenho que pagar." examples={["Adiciona 28,99 de Uber para 25 de setembro como pendente", "Paguei 377 de cartão hoje", "Tenho que pagar 100 de internet amanhã"]} />
+                  <HelpSection title="Entradas" text="Comandos aceitos: entrada, recebi, recebeu, entrou, ganhei, caiu, vou receber e a receber." examples={["Recebi 2.000 de salário hoje", "Entrada de 500 de freela em 25/09/2026, pendente", "Vou receber 300 de cliente amanhã"]} />
+                  <HelpSection title="Datas e status" text="Datas aceitas: hoje, amanhã, ontem, 25/09, 25/09/2026 ou 25 de setembro. Status aceitos: pago, paga, recebido, recebida, pendente, a pagar e a receber." examples={[]} />
+                  <p className="text-[10px] leading-4 text-amber-200/80">Valores aceitos: 28,99; 28.99; 1.234,56 ou R$ 1.234,56. Nunca use a data como nome: informe, por exemplo, “salário”, “Uber” ou “internet”.</p>
+                  <p className="border-t border-white/10 pt-3 text-xs font-bold text-white">Tudo que você pode perguntar</p>
                   {ASSISTANT_QUESTION_GROUPS.map((group) => <div key={group.title}><p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">{group.title}</p><div className="flex flex-wrap gap-1.5">{group.questions.map((item) => <button key={item} type="button" disabled={answering} onClick={() => { answerQuestion(item); setShowHelp(false); }} className="rounded-lg border border-white/10 bg-black/20 px-2.5 py-2 text-left text-[11px] text-slate-300 hover:border-violet-400/30 hover:text-white disabled:opacity-40">{item}</button>)}</div></div>)}
                   <div><p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Suas compras</p><p className="mb-2 text-[11px] leading-4 text-slate-400">Digite “quanto gastei em” e o nome de qualquer compra. Erros pequenos de escrita também são reconhecidos.</p><div className="flex flex-wrap gap-1.5">{merchantQuestions.map((item) => <button key={item} type="button" onClick={() => { answerQuestion(item); setShowHelp(false); }} className="rounded-lg border border-violet-400/20 bg-violet-400/[0.07] px-2.5 py-2 text-left text-[11px] text-violet-200">{item}</button>)}</div></div>
                 </div>}
@@ -232,10 +237,19 @@ export function GlobalFinancialAssistant() {
 }
 
 function clarificationPrompt(draft: TransactionCommandDraft) {
+  const needsDescription = draft.missing.includes("description");
   const needsDate = draft.missing.includes("date");
   const needsStatus = draft.missing.includes("status");
-  if (needsDate && needsStatus) {
-    return "Antes de registrar: para qual data é esse lançamento e ele está pago ou pendente? Ex.: “25/09/2026, pendente”.";
+  if (draft.missing.length > 1) {
+    const fields = [
+      needsDescription ? "o nome/descrição" : "",
+      needsDate ? "a data" : "",
+      needsStatus ? (draft.command.type === "income" ? "se foi recebida ou está pendente" : "se foi paga ou está pendente") : "",
+    ].filter(Boolean);
+    return `Antes de registrar, informe ${fields.join(", ").replace(/, ([^,]*)$/, " e $1")}. Ex.: “${needsDescription ? "Uber, " : ""}${needsDate ? "25/09/2026, " : ""}${needsStatus ? "pendente" : ""}”.`;
+  }
+  if (needsDescription) {
+    return "Qual é o nome ou a descrição dessa movimentação? Ex.: “salário”, “Uber” ou “internet”.";
   }
   if (needsDate) {
     return "Para qual data é esse lançamento? Ex.: “25/09/2026”, “hoje” ou “amanhã”.";
@@ -243,6 +257,16 @@ function clarificationPrompt(draft: TransactionCommandDraft) {
   return draft.command.type === "income"
     ? "Essa entrada já foi recebida ou ainda está pendente?"
     : "Essa despesa já foi paga ou ainda está pendente?";
+}
+
+function HelpSection({ title, text, examples }: { title: string; text: string; examples: string[] }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/15 p-3">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-violet-200">{title}</p>
+      <p className="mt-1 text-[11px] leading-5 text-slate-400">{text}</p>
+      {examples.map((example) => <p key={example} className="mt-1 text-[11px] text-slate-200">• {example}</p>)}
+    </div>
+  );
 }
 
 function shiftMonth(key: string, offset: number) {

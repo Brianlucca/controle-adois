@@ -14,7 +14,7 @@ describe("assistant transaction commands", () => {
   it("parses received income", () => {
     expect(parseTransactionCommand("Recebi 30 reais hoje", now)).toMatchObject({
       command: { type: "income", status: "paid", amount: 30, dueDate: "2026-08-20" },
-      missing: [],
+      missing: ["description"],
     });
   });
 
@@ -29,6 +29,28 @@ describe("assistant transaction commands", () => {
     expect(parseTransactionCommand("coloca 28,99 uber para 25 de setembro", now)).toMatchObject({
       command: { type: "expense", amount: 28.99, description: "Uber", dueDate: "2026-09-25", category: "Transporte" },
       missing: ["status"],
+    });
+  });
+
+  it("parses decimal points without moving cents into the description", () => {
+    expect(parseTransactionCommand("Adiciona 28.99 uber para dia 25 de setembro como pendente", now)).toMatchObject({
+      command: { amount: 28.99, description: "Uber", dueDate: "2026-09-25", status: "pending" },
+      missing: [],
+    });
+  });
+
+  it("does not use a date as the transaction description", () => {
+    const draft = parseTransactionCommand("entrada 2 reais 25/09/2026", now);
+    expect(draft).toMatchObject({
+      command: { amount: 2, dueDate: "2026-09-25", description: "Entrada" },
+      missing: ["description", "status"],
+    });
+    const withStatus = completeTransactionCommand(draft!, "recebida", now);
+    expect(withStatus.missing).toEqual(["description"]);
+    const completed = completeTransactionCommand(withStatus, "Salário", now);
+    expect(completed).toMatchObject({
+      command: { description: "Salário", status: "paid", dueDate: "2026-09-25" },
+      missing: [],
     });
   });
 
