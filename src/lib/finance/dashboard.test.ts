@@ -57,7 +57,7 @@ describe("financial position", () => {
       paidAt: "2026-08-20T12:00:00.000Z",
     });
 
-    expect(isCurrentCashTransaction(income, "2026-08-20")).toBe(true);
+    expect(isCurrentCashTransaction(income, "2026-08-20")).toBe(false);
     expect(isCurrentCashTransaction(expense, "2026-08-20")).toBe(true);
 
     const result = calculateDashboardData(
@@ -102,7 +102,7 @@ describe("financial position", () => {
     expect(overview.totalAssets).toBe(1_000);
   });
 
-  it("includes income in the current balance when marked received early", () => {
+  it("keeps future income out of current assets until its expected date", () => {
     const snapshot = [
       transaction("cash", 1_200, "income", "paid", "2026-08-01"),
       transaction("future-income", 2_000, "income", "paid", "2026-08-25", {
@@ -111,8 +111,9 @@ describe("financial position", () => {
       transaction("bills", 2_500, "expense", "pending", "2026-08-28"),
     ];
     const result = calculateDashboardData(snapshot, 4_000, "2026-08-20", snapshot, "2026-08-31");
-    expect(result.balance).toBe(3_200);
-    expect(result.pendingIncome).toBe(0);
+    expect(result.balance).toBe(1_200);
+    expect(result.pendingIncome).toBe(2_000);
     expect(result.projectedBalance).toBe(700);
+    expect(calculateFinanceOverview(snapshot, "2026-08-20").totalAssets).toBe(1_200);
   });
 });

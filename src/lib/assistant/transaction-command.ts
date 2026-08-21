@@ -11,7 +11,7 @@ export interface ParsedTransactionCommand {
 
 export interface TransactionCommandDraft {
   command: ParsedTransactionCommand;
-  missing: Array<"date" | "status">;
+  missing: Array<"description" | "date" | "status">;
 }
 
 export function parseTransactionCommand(input: string, now = new Date()): TransactionCommandDraft | null {
@@ -21,16 +21,17 @@ export function parseTransactionCommand(input: string, now = new Date()): Transa
   const expense = /\b(adiciona|adicione|coloca|coloque|registrar?|registre|lanca|lance|anota|anote|paguei|gastei|comprei|saida|vou pagar|tenho que pagar)\b/.test(normalized);
   if (!income && !expense) return null;
 
-  const amountMatch = input.match(/(?:r\$\s*)?(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:reais?|real)?/i);
+  const amountMatch = input.match(/(?:r\$\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:reais?|real)?/i);
   if (!amountMatch) return null;
-  const amount = Number(amountMatch[1].replace(/\./g, "").replace(",", "."));
+  const amount = parseAmount(amountMatch[1]);
   if (!Number.isFinite(amount) || amount <= 0) return null;
 
   const type = income ? "income" : "expense";
   const parsedStatus = parseCommandStatus(normalized);
   const parsedDate = parseCommandDate(input, now);
-  const description = extractDescription(input, amountMatch[0], type);
+  const description = extractDescription(input, amountMatch[0]);
   const missing: TransactionCommandDraft["missing"] = [];
+  if (!description) missing.push("description");
   if (!parsedDate.explicit) missing.push("date");
   if (!parsedStatus.explicit) missing.push("status");
 
@@ -39,7 +40,7 @@ export function parseTransactionCommand(input: string, now = new Date()): Transa
       type,
       status: parsedStatus.status,
       amount,
-      description,
+      description: description || (type === "income" ? "Entrada" : "Saída"),
       dueDate: parsedDate.date,
       category: inferCategory(description, type),
     },
@@ -54,7 +55,9 @@ export function completeTransactionCommand(
 ): TransactionCommandDraft {
   const parsedDate = parseCommandDate(input, now);
   const parsedStatus = parseCommandStatus(normalize(input));
+  const parsedDescription = extractDescription(input);
   const missing = draft.missing.filter((field) => {
+    if (field === "description") return !parsedDescription;
     if (field === "date") return !parsedDate.explicit;
     return !parsedStatus.explicit;
   });
@@ -68,6 +71,12 @@ export function completeTransactionCommand(
       status: draft.missing.includes("status") && parsedStatus.explicit
         ? parsedStatus.status
         : draft.command.status,
+      description: draft.missing.includes("description") && parsedDescription
+        ? parsedDescription
+        : draft.command.description,
+      category: draft.missing.includes("description") && parsedDescription
+        ? inferCategory(parsedDescription, draft.command.type)
+        : draft.command.category,
     },
     missing,
   };
@@ -110,17 +119,19 @@ function parseCommandDate(input: string, now: Date) {
   return { date: getLocalDateKey(date), explicit: false };
 }
 
-function extractDescription(input: string, amountText: string, type: "income" | "expense") {
-  let result = input
-    .replace(new RegExp(escapeRegex(amountText), "i"), " ")
+function extractDescription(input: string, amountText?: string) {
+  let result = input;
+  if (amountText) result = result.replace(new RegExp(escapeRegex(amountText), "i"), " ");
+  result = result
     .replace(/\b(adiciona|adicione|coloca|coloque|registrar|registre|registra|lança|lanca|lance|anota|anote|recebi|recebeu|entrou|entrada|ganhei|caiu|paguei|gastei|comprei|saída|saida|vou receber|vou pagar|tenho que pagar)\b/gi, " ")
-    .replace(/(?:no dia de hoje|no dia|de hoje|hoje|amanhã|amanha|ontem|dia \d{1,2}\/\d{1,2}(?:\/\d{2,4})?|(?:para|em|no dia)?\s*\d{1,2}\s+(?:de\s+)?(?:janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+(?:de\s+)?\d{4})?)/gi, " ")
+    .replace(/\b(?:como\s+)?(?:pendente|pago|paga|recebido|recebida|a pagar|a receber)\b/gi, " ")
+    .replace(/(?:no dia de hoje|no dia|de hoje|hoje|amanhã|amanha|ontem|(?:para\s+|em\s+|no\s+)?(?:dia\s+)?\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|(?:para\s+|em\s+|no\s+)?(?:dia\s+)?\d{1,2}\s+(?:de\s+)?(?:janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+(?:de\s+)?\d{4})?)/gi, " ")
     .replace(/\b(reais|real|r\$)\b/gi, " ")
-    .replace(/^\s*(de|do|da|em|no|na|com)\s+/i, " ")
+    .replace(/^\s*(de|do|da|em|no|na|com|para)\s+/i, " ")
     .replace(/[?!.,]+$/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  if (!result) result = type === "income" ? "Entrada" : "Saída";
+  if (!result || /^\d+(?:[.,]\d+)?$/.test(result)) return "";
   return result.charAt(0).toUpperCase() + result.slice(1);
 }
 
@@ -136,3 +147,10 @@ function inferCategory(description: string, type: "income" | "expense") {
 
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+function parseAmount(value: string) {
+  if (value.includes(",")) return Number(value.replace(/\./g, "").replace(",", "."));
+  const dots = value.match(/\./g)?.length || 0;
+  if (dots > 1 || (dots === 1 && /\.\d{3}$/.test(value))) return Number(value.replace(/\./g, ""));
+  return Number(value);
+}
