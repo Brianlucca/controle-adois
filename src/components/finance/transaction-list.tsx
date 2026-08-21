@@ -9,7 +9,7 @@ import {
 import { BrandIcon } from "@/components/brand-icon";
 import { TransactionStatusBadge } from "@/components/finance/transaction-status-badge";
 import { Button } from "@/components/ui/button";
-import { getTransactionRowStateClass } from "@/lib/finance/transaction-calculations";
+import { getTransactionRowStateClass, isOverduePendingExpense } from "@/lib/finance/transaction-calculations";
 import { Transaction, TransactionSortMode } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
@@ -89,7 +89,9 @@ export function TransactionList({
               <span className="text-right">Valor</span>
             </div>
 
-            {transactions.map((transaction) => (
+            {transactions.map((transaction) => {
+              const isOverdue = isOverduePendingExpense(transaction, todayKey);
+              return (
               <button
                 key={transaction.id}
                 type="button"
@@ -123,18 +125,20 @@ export function TransactionList({
                   </div>
                 </div>
                 <div className="hidden lg:block">
-                  <TransactionStatusBadge transaction={transaction} />
+                  <TransactionStatusBadge transaction={transaction} todayKey={todayKey} />
                 </div>
-                <div className="hidden font-mono text-xs font-semibold text-slate-400 lg:block">
+                <div className={`hidden font-mono text-xs font-semibold lg:block ${isOverdue ? "text-red-400" : "text-slate-400"}`}>
                   {formatDate(transaction.dueDate)}
                 </div>
                 <div className="col-span-2 mt-1 flex items-center justify-between gap-3 lg:col-span-1 lg:mt-0 lg:block lg:text-right">
                   <div className="lg:hidden">
-                    <TransactionStatusBadge transaction={transaction} />
+                    <TransactionStatusBadge transaction={transaction} todayKey={todayKey} />
                   </div>
                   <p
                     className={`font-mono text-sm font-bold ${
-                      transaction.type === "income"
+                      isOverdue
+                        ? "text-red-400"
+                        : transaction.type === "income"
                         ? "text-emerald-300"
                         : "text-slate-100"
                     }`}
@@ -144,7 +148,8 @@ export function TransactionList({
                   </p>
                 </div>
               </button>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

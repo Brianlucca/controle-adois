@@ -12,6 +12,8 @@ import { BrandIcon } from "@/components/brand-icon";
 import { TransactionStatusBadge } from "@/components/finance/transaction-status-badge";
 import { Button } from "@/components/ui/button";
 import { Transaction, TransactionStatus } from "@/lib/types";
+import { getLocalDateKey } from "@/lib/finance/date";
+import { isOverduePendingExpense } from "@/lib/finance/transaction-calculations";
 import { createGoogleCalendarLink, formatDate } from "@/lib/utils";
 
 interface TransactionDetailsModalContentProps {
@@ -39,6 +41,8 @@ export function TransactionDetailsModalContent({
   onStatusChange,
   onRedeemInvestment,
 }: TransactionDetailsModalContentProps) {
+  const todayKey = getLocalDateKey(new Date());
+  const isOverdue = isOverduePendingExpense(transaction, todayKey);
   return (
     <div className="space-y-4 pb-2">
       <div
@@ -67,7 +71,7 @@ export function TransactionDetailsModalContent({
         </div>
         <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <TransactionStatusBadge transaction={transaction} />
+            <TransactionStatusBadge transaction={transaction} todayKey={todayKey} />
           </div>
           <p
             className={`font-mono text-3xl font-bold tracking-tight sm:text-right ${
@@ -93,7 +97,9 @@ export function TransactionDetailsModalContent({
           </p>
           <p
             className={`font-bold ${
-              transaction.status === "pending"
+              isOverdue
+                ? "text-red-400"
+                : transaction.status === "pending"
                 ? "text-amber-400"
                 : transaction.type === "income"
                 ? "text-emerald-400"
