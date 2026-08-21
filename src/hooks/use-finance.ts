@@ -142,17 +142,21 @@ function useFinanceController() {
     if (!user || !cacheScope || !range.from || !range.to) return;
     const key = `${range.from}:${range.to}`;
     if (!force && loadedRanges.current.has(key)) return;
-    const serverData = await getTransactions(user.uid, range.from, range.to);
-    setSnapshotTransactions((items) => mergeTransactionRange(items, serverData, range));
-    loadedRanges.current.add(key);
+    try {
+      const serverData = await getTransactions(user.uid, range.from, range.to);
+      setSnapshotTransactions((items) => mergeTransactionRange(items, serverData, range));
+      loadedRanges.current.add(key);
+    } catch { /* preserve cached data when a deployment changes */ }
   }, [user, cacheScope]);
 
   const loadAllTransactions = useCallback(async () => {
     if (!user || !cacheScope) return;
-    const serverData = await getTransactionsThrough("2100-12-31");
-    setSnapshotTransactions(serverData);
-    loadedRanges.current.add("all");
-    await writeFinanceCache(cacheScope, serverData).catch(() => undefined);
+    try {
+      const serverData = await getTransactionsThrough("2100-12-31");
+      setSnapshotTransactions(serverData);
+      loadedRanges.current.add("all");
+      await writeFinanceCache(cacheScope, serverData).catch(() => undefined);
+    } catch { /* preserve cached data when a deployment changes */ }
   }, [user, cacheScope]);
 
   const setDateRange = useCallback((range: { from: string; to: string }) => {

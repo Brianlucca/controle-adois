@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  deploymentId:
+    process.env.VERCEL_GIT_COMMIT_SHA ||
+    process.env.VERCEL_DEPLOYMENT_ID ||
+    process.env.NEXT_DEPLOYMENT_ID,
   // Diz ao Next.js para não tentar compilar o firebase-admin
   serverExternalPackages: ["firebase-admin"],
   async headers() {
