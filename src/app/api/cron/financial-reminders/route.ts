@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb, adminMessaging } from "@/lib/firebase-admin";
+import { adminDb, getAdminMessaging } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
 
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     if (tokens.length === 0) continue;
 
     const dueToday = pending.filter((doc) => doc.data().dueDate === todayKey).length;
-    const response = await adminMessaging.sendEachForMulticast({
+    const response = await getAdminMessaging().sendEachForMulticast({
       tokens: tokens.slice(0, 500),
       notification: {
         title: dueToday ? `${dueToday} conta(s) vencem hoje` : "Próximos vencimentos",
