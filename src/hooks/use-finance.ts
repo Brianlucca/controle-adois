@@ -16,7 +16,7 @@ function useFinanceController() {
   const [snapshotTransactions, setSnapshotTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const { activeWorkspace } = useWorkspace();
+  const { activeWorkspace, loadingWorkspaces } = useWorkspace();
   const router = useRouter();
   
   const today = new Date();
@@ -63,6 +63,13 @@ function useFinanceController() {
   useEffect(() => {
     if (user && cycleReady && cacheScope) hydrateAndSync(user.uid, cacheScope);
   }, [user, cycleReady, cacheScope]);
+
+  useEffect(() => {
+    if (user && !loadingWorkspaces && !activeWorkspace) {
+      setSnapshotTransactions([]);
+      setLoading(false);
+    }
+  }, [user, loadingWorkspaces, activeWorkspace]);
 
   useEffect(() => {
     if (!cacheScope || !cacheReady.current) return;
