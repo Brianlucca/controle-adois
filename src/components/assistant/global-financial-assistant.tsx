@@ -8,7 +8,12 @@ import { ASSISTANT_QUESTION_GROUPS, ASSISTANT_QUICK_QUESTIONS, buildProactiveMes
 import { FinancialGoal } from "@/lib/assistant/types";
 import { deleteFinancialGoal, getFinancialGoals, saveFinancialGoal } from "@/actions/goal-actions";
 import { formatCurrency } from "@/lib/utils";
-import { parseTransactionCommand } from "@/lib/assistant/transaction-command";
+import {
+  completeTransactionCommand,
+  parseTransactionCommand,
+  ParsedTransactionCommand,
+  TransactionCommandDraft,
+} from "@/lib/assistant/transaction-command";
 
 type ChatMessage = { role: "assistant" | "user"; text: string };
 
@@ -24,6 +29,7 @@ export function GlobalFinancialAssistant() {
   const [messages, setMessages] = useState<ChatMessage[]>([{ role: "assistant", text: "Pergunte sobre suas contas ou registre naturalmente: “gastei 20 reais com lanche hoje” e “recebi 30 reais hoje”. Toque em “Como usar” para ver exemplos." }]);
   const [saving, setSaving] = useState(false);
   const [answering, setAnswering] = useState(false);
+  const [pendingTransaction, setPendingTransaction] = useState<TransactionCommandDraft | null>(null);
   const answeringRef = useRef(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
@@ -76,9 +82,29 @@ export function GlobalFinancialAssistant() {
     setMessages((items) => [...items, { role: "user", text: clean }]);
     setQuestion("");
     setAnswering(true);
-    const command = parseTransactionCommand(clean);
-    if (command) {
-      void registerTransactionCommand(command);
+    if (pendingTransaction) {
+      const completed = completeTransactionCommand(pendingTransaction, clean);
+      if (completed.missing.length > 0) {
+        setPendingTransaction(completed);
+        setMessages((items) => [...items, { role: "assistant", text: clarificationPrompt(completed) }]);
+        setAnswering(false);
+        answeringRef.current = false;
+        return;
+      }
+      setPendingTransaction(null);
+      void registerTransactionCommand(completed.command);
+      return;
+    }
+    const parsed = parseTransactionCommand(clean);
+    if (parsed) {
+      if (parsed.missing.length > 0) {
+        setPendingTransaction(parsed);
+        setMessages((items) => [...items, { role: "assistant", text: clarificationPrompt(parsed) }]);
+        setAnswering(false);
+        answeringRef.current = false;
+        return;
+      }
+      void registerTransactionCommand(parsed.command);
       return;
     }
     window.setTimeout(() => {
@@ -92,7 +118,7 @@ export function GlobalFinancialAssistant() {
     }, 280);
   }
 
-  async function registerTransactionCommand(command: NonNullable<ReturnType<typeof parseTransactionCommand>>) {
+  async function registerTransactionCommand(command: ParsedTransactionCommand) {
     try {
       const result = await addTransaction({
         ...command,
@@ -203,6 +229,20 @@ export function GlobalFinancialAssistant() {
       )}
     </>
   );
+}
+
+function clarificationPrompt(draft: TransactionCommandDraft) {
+  const needsDate = draft.missing.includes("date");
+  const needsStatus = draft.missing.includes("status");
+  if (needsDate && needsStatus) {
+    return "Antes de registrar: para qual data é esse lançamento e ele está pago ou pendente? Ex.: “25/09/2026, pendente”.";
+  }
+  if (needsDate) {
+    return "Para qual data é esse lançamento? Ex.: “25/09/2026”, “hoje” ou “amanhã”.";
+  }
+  return draft.command.type === "income"
+    ? "Essa entrada já foi recebida ou ainda está pendente?"
+    : "Essa despesa já foi paga ou ainda está pendente?";
 }
 
 function shiftMonth(key: string, offset: number) {
