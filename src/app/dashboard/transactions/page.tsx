@@ -30,6 +30,7 @@ import {
   calculateFinanceOverview,
   filterAndSortTransactions,
 } from "@/lib/finance/transaction-calculations";
+import { calculateFinancialPosition } from "@/lib/finance/financial-position";
 import {
   Transaction,
   TransactionFormData,
@@ -61,6 +62,7 @@ export default function TransactionsPage() {
   const router = useRouter();
   const {
     transactions,
+    snapshotTransactions,
     loading,
     addTransaction,
     editTransaction,
@@ -68,7 +70,13 @@ export default function TransactionsPage() {
     deleteRecurrence,
     updateTransactionStatus,
     importTransactions,
+    dateRange,
     setDateRange,
+    cycleRange,
+    cycleStartDay,
+    cycleEndDay,
+    resetToFinancialCycle,
+    saveFinancialCycle,
   } = useFinance();
   const { hideValues, toggleHideValues } = usePreferences();
 
@@ -91,26 +99,17 @@ export default function TransactionsPage() {
     useState<TransactionSortMode>("priority");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [isGlobalStats, setIsGlobalStats] = useState(true);
-  
   const todayKey = getLocalDateKey(new Date());
 
-  const [uiDateRange, setUiDateRange] = useState({
-    from: "2000-01-01",
-    to: "2099-12-31",
-  });
+  const [uiDateRange, setUiDateRange] = useState(dateRange);
 
   useEffect(() => {
-    if (isGlobalStats) {
-      setDateRange({ from: "2000-01-01", to: "2099-12-31" });
-    } else {
-      setDateRange(uiDateRange);
-    }
-  }, [isGlobalStats, uiDateRange, setDateRange]);
+    setUiDateRange(dateRange);
+  }, [dateRange]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterTerm, selectedCategory, statusFilter, uiDateRange, isGlobalStats]);
+  }, [filterTerm, selectedCategory, statusFilter, uiDateRange]);
 
   const handleAuthError = (response: any) => {
     if (response?.error === "unauthenticated") {
@@ -243,7 +242,7 @@ export default function TransactionsPage() {
     setIsImporting(true);
     try {
       const buffer = await file.arrayBuffer();
-      const { items: imported, hasSheets } = parseTransactionsWorkbook(buffer);
+      const { items: imported, hasSheets } = await parseTransactionsWorkbook(buffer);
 
       if (!hasSheets) {
         alert("Esse arquivo nao tem nenhuma aba para importar.");
@@ -388,15 +387,29 @@ export default function TransactionsPage() {
     () => calculateFinanceOverview(transactions, todayKey),
     [transactions, todayKey]
   );
+  const assetOverview = useMemo(
+    () => calculateFinanceOverview(snapshotTransactions, todayKey),
+    [snapshotTransactions, todayKey]
+  );
   const {
     income,
     expense,
     pendingExpense,
-    balance,
+  } = overview;
+  const {
     netInvestments,
     totalAssets,
     investmentOptions,
-  } = overview;
+  } = assetOverview;
+  const financialPosition = useMemo(
+    () =>
+      calculateFinancialPosition(
+        snapshotTransactions,
+        todayKey,
+        dateRange.to
+      ),
+    [snapshotTransactions, todayKey, dateRange.to]
+  );
   const selectedInvestment =
     investmentOptions.find((item) => item.id === selectedInvestmentId) ||
     investmentOptions[0];
@@ -496,7 +509,8 @@ export default function TransactionsPage() {
         income={income}
         expense={expense}
         pendingExpense={pendingExpense}
-        balance={balance}
+        projectedBalance={financialPosition.projectedBalance}
+        balance={financialPosition.availableBalance}
         netInvestments={netInvestments}
         totalAssets={totalAssets}
         hideValues={hideValues}
@@ -508,14 +522,20 @@ export default function TransactionsPage() {
         filterTerm={filterTerm}
         selectedCategory={selectedCategory}
         statusFilter={statusFilter}
-        isGlobalStats={isGlobalStats}
         dateRange={uiDateRange}
+        cycleRange={cycleRange}
+        cycleStartDay={cycleStartDay}
+        cycleEndDay={cycleEndDay}
         fileInputRef={fileInputRef}
         onFilterTermChange={setFilterTerm}
         onCategoryChange={setSelectedCategory}
         onStatusFilterChange={setStatusFilter}
-        onToggleGlobalStats={() => setIsGlobalStats((current) => !current)}
-        onDateRangeChange={setUiDateRange}
+        onUseCycle={resetToFinancialCycle}
+        onSaveCycle={saveFinancialCycle}
+        onDateRangeChange={(range) => {
+          setUiDateRange(range);
+          setDateRange(range);
+        }}
         onImportFileChange={handleImportExcel}
       />
 
