@@ -42,11 +42,21 @@ export function getTransactionRowStateClass(
     return "hover:bg-white/[0.03]";
   }
 
-  if (transaction.dueDate < todayKey) {
-    return "bg-red-500/[0.06] hover:bg-red-500/[0.1] border-l-2 border-red-500/70";
+  if (isOverduePendingExpense(transaction, todayKey)) {
+    return "bg-red-500/[0.12] hover:bg-red-500/[0.17] border-l-4 border-red-500";
   }
 
   return "bg-amber-500/[0.06] hover:bg-amber-500/[0.1] border-l-2 border-amber-500/70";
+}
+
+export function isOverduePendingExpense(
+  transaction: Pick<Transaction, "type" | "status" | "dueDate">,
+  todayKey: string
+) {
+  return transaction.type === "expense" &&
+    transaction.status === "pending" &&
+    Boolean(transaction.dueDate) &&
+    transaction.dueDate < todayKey;
 }
 
 export function filterAndSortTransactions(

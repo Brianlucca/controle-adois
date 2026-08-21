@@ -2,7 +2,12 @@ import { isDueUntil } from "@/lib/finance/date";
 import { Transaction } from "@/lib/types";
 
 export function isCurrentCashTransaction(transaction: Transaction, todayKey: string) {
-  return transaction.status === "paid" && isDueUntil(transaction.dueDate, todayKey);
+  if (transaction.status !== "paid") return false;
+
+  // paidAt is written when the user confirms the payment/receipt. Once cash
+  // actually moved, it must affect the current balance even when dueDate is in
+  // the future. Older records without paidAt keep using their due date.
+  return Boolean(transaction.paidAt) || isDueUntil(transaction.dueDate, todayKey);
 }
 
 export function calculatePeriodFinancialMetrics(transactions: Transaction[], todayKey: string) {
