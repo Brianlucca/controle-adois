@@ -47,7 +47,7 @@ export default function DashboardPage() {
     if (auth.currentUser) {
       getWorkspaceDetails(auth.currentUser.uid).then((data) => {
         if (data && data.budgetLimit) setBudgetLimit(data.budgetLimit);
-      });
+      }).catch(() => undefined);
     }
   }, []);
 
