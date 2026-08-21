@@ -61,11 +61,12 @@ export async function getFallbackWorkspaceId(
   );
   if (personal) return personal.id;
 
-  const allWorkspaces = await adminDb.collection("workspaces").get();
-  const available = allWorkspaces.docs.find((doc) => {
-    if (doc.id === excludeWorkspaceId) return false;
-    return isWorkspaceMember(doc.data(), userId);
-  });
+  const memberSnapshot = await adminDb
+    .collection("workspaces")
+    .where("memberIds", "array-contains", userId)
+    .limit(5)
+    .get();
+  const available = memberSnapshot.docs.find((doc) => doc.id !== excludeWorkspaceId);
 
   return available?.id || null;
 }

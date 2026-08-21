@@ -56,6 +56,18 @@
 }
 
 @layer utilities {
+  .app-shell {
+    background:
+      radial-gradient(circle at 75% -15%, rgba(99, 102, 241, 0.16), transparent 34%),
+      radial-gradient(circle at 15% 105%, rgba(6, 182, 212, 0.08), transparent 28%),
+      #080b12;
+  }
+
+  .assistant-nudge {
+    animation: assistant-nudge 5s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+
   .glass {
     @apply bg-slate-900/60 backdrop-blur-xl border border-white/10;
   }
@@ -83,6 +95,18 @@
   ::-webkit-scrollbar-thumb:hover {
     background: #475569; 
   }
+}
+
+@keyframes assistant-nudge {
+  0%, 82%, 100% { transform: translateY(0) rotate(0); }
+  86% { transform: translateY(-7px) rotate(-7deg); }
+  90% { transform: translateY(0) rotate(6deg); }
+  94% { transform: translateY(-3px) rotate(-3deg); }
+  97% { transform: translateY(0) rotate(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-nudge { animation: none; }
 }
 
 @layer base {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useFinance } from "@/hooks/use-finance";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,16 +17,12 @@ import {
 } from "lucide-react";
 
 export default function PaymentsPage() {
-  const { transactions, updateTransactionStatus, loading, setDateRange } =
+  const { snapshotTransactions, updateTransactionStatus, loading } =
     useFinance();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setDateRange({ from: "2020-01-01", to: "2030-12-31" });
-  }, [setDateRange]);
-
-  const bills = transactions
+  const bills = snapshotTransactions
     .filter((t) => {
       const isExpense = t.type === "expense";
       const isPending = t.status === "pending";
@@ -62,10 +58,8 @@ export default function PaymentsPage() {
     if (payingId) return;
 
     setPayingId(id);
-    window.setTimeout(async () => {
-      await updateTransactionStatus(id, "paid");
-      setPayingId(null);
-    }, 950);
+    await updateTransactionStatus(id, "paid");
+    setPayingId(null);
   };
 
   const getUrgency = (dateStr: string) => {

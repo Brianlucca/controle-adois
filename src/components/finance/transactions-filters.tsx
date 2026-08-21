@@ -1,7 +1,6 @@
 import { ChangeEvent, RefObject } from "react";
-import { Filter, Layers, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { DateRangeFilter } from "@/components/date-range-filter";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateRange, TransactionStatusFilter } from "@/lib/types";
 
@@ -10,13 +9,16 @@ interface TransactionsFiltersProps {
   filterTerm: string;
   selectedCategory: string;
   statusFilter: TransactionStatusFilter;
-  isGlobalStats: boolean;
   dateRange: DateRange;
+  cycleRange: DateRange;
+  cycleStartDay: number;
+  cycleEndDay: number;
   fileInputRef: RefObject<HTMLInputElement | null>;
   onFilterTermChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
   onStatusFilterChange: (value: TransactionStatusFilter) => void;
-  onToggleGlobalStats: () => void;
+  onUseCycle: () => void;
+  onSaveCycle: (startDay: number, endDay: number) => Promise<unknown>;
   onDateRangeChange: (range: DateRange) => void;
   onImportFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }
@@ -26,19 +28,22 @@ export function TransactionsFilters({
   filterTerm,
   selectedCategory,
   statusFilter,
-  isGlobalStats,
   dateRange,
+  cycleRange,
+  cycleStartDay,
+  cycleEndDay,
   fileInputRef,
   onFilterTermChange,
   onCategoryChange,
   onStatusFilterChange,
-  onToggleGlobalStats,
+  onUseCycle,
+  onSaveCycle,
   onDateRangeChange,
   onImportFileChange,
 }: TransactionsFiltersProps) {
   return (
     <div className="mt-5 rounded-lg border border-white/10 bg-[#121722] p-3">
-      <div className="grid gap-2 lg:grid-cols-[minmax(220px,1fr)_180px_150px_auto_auto] lg:items-center">
+      <div className="grid gap-2 lg:grid-cols-[minmax(220px,1fr)_180px_150px_auto] lg:items-center">
         <div className="relative w-full">
           <Search className="absolute left-3 top-3.5 text-slate-500" size={16} />
           <Input
@@ -74,35 +79,15 @@ export function TransactionsFilters({
           <option value="received">Recebido</option>
         </select>
 
-        <Button
-          variant="outline"
-          onClick={onToggleGlobalStats}
-          className={`h-11 rounded-lg border-white/10 px-4 ${
-            isGlobalStats
-              ? "bg-[#0B0E14] text-slate-300 hover:bg-white/10 hover:text-white"
-              : "bg-indigo-500/20 text-indigo-300 border-indigo-500/50 hover:bg-indigo-500/30"
-          }`}
-          title={
-            isGlobalStats
-              ? "Os cartões mostram o total geral. Clique para filtrar os totais pela data."
-              : "Os cartões mostram apenas o período selecionado."
-          }
-        >
-          {isGlobalStats ? (
-            <>
-              <Layers size={16} className="mr-2" /> Totais Gerais
-            </>
-          ) : (
-            <>
-              <Filter size={16} className="mr-2" /> Filtrar Totais
-            </>
-          )}
-        </Button>
-
         <DateRangeFilter
           from={dateRange.from}
           to={dateRange.to}
           onChange={onDateRangeChange}
+          cycleRange={cycleRange}
+          onUseCycle={onUseCycle}
+          cycleStartDay={cycleStartDay}
+          cycleEndDay={cycleEndDay}
+          onSaveCycle={onSaveCycle}
         />
 
         <input

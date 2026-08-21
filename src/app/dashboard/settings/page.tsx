@@ -26,7 +26,7 @@ const Switch = ({ checked, onCheckedChange, disabled = false }: { checked: boole
 
 export default function SettingsPage() {
   const { user, loading: authLoading } = useAuth();
-  const { hideValues, toggleHideValues, notifications, toggleNotifications } = usePreferences();
+  const { hideValues, toggleHideValues, notifications, notificationPermission, toggleNotifications } = usePreferences();
   
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -140,10 +140,16 @@ export default function SettingsPage() {
                         <div className="rounded-lg bg-slate-800 p-2.5 text-amber-400"><Bell size={20}/></div>
                         <div>
                             <p className="font-bold text-white">Notificações</p>
-                            <p className="text-xs text-slate-500">Alertas sobre vencimentos. (Em breve)</p>
+                            <p className="text-xs text-slate-500">
+                              {notificationPermission === "denied"
+                                ? "Bloqueadas pelo navegador. Libere nas permissões do site."
+                                : notificationPermission === "unsupported"
+                                  ? "Este navegador não oferece notificações."
+                                  : "Alertas de contas vencidas, próximas do vencimento e projeção negativa."}
+                            </p>
                         </div>
                     </div>
-                    <Switch checked={notifications} onCheckedChange={toggleNotifications} />
+                    <Switch checked={notifications} onCheckedChange={toggleNotifications} disabled={notificationPermission === "unsupported"} />
                 </div>
             </CardContent>
         </Card>

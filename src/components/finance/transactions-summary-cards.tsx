@@ -13,6 +13,7 @@ interface TransactionsSummaryCardsProps {
   income: number;
   expense: number;
   pendingExpense: number;
+  projectedBalance: number;
   balance: number;
   netInvestments: number;
   totalAssets: number;
@@ -24,6 +25,7 @@ export function TransactionsSummaryCards({
   income,
   expense,
   pendingExpense,
+  projectedBalance,
   balance,
   netInvestments,
   totalAssets,
@@ -34,8 +36,8 @@ export function TransactionsSummaryCards({
     hideValues ? "••••••" : formatCurrency(value);
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
-      <div className="relative overflow-hidden rounded-lg border border-white/10 bg-[#121722] p-5 shadow-xl shadow-black/15">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[1.8fr_1fr_1fr_1fr]">
+      <div className="relative overflow-hidden rounded-lg border border-white/10 bg-[#121722] p-5 shadow-xl shadow-black/15 md:col-span-2 xl:col-span-1">
         <button
           type="button"
           onClick={onToggleHideValues}
@@ -50,10 +52,10 @@ export function TransactionsSummaryCards({
 
         <div className="flex items-center gap-2 mb-2">
           <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">
-            Patrimonio
+            Patrimônio real
           </p>
           <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-300">
-            Saldo + Inv.
+            Hoje
           </span>
         </div>
 
@@ -65,19 +67,30 @@ export function TransactionsSummaryCards({
           {displayValue(totalAssets)}
         </h3>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-slate-500">Em Conta:</span>
-            <span className="font-bold text-slate-300">
+        <div className="mt-5 border-t border-white/10 pt-4">
+          <div className="grid grid-cols-2 gap-6">
+          <div className="min-w-0 overflow-hidden">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Disponível</span>
+            <span className="mt-1 block truncate text-sm font-bold text-slate-200">
               {displayValue(balance)}
             </span>
           </div>
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-slate-500 flex items-center gap-1">
-              <TrendingUp size={10} className="text-indigo-400" /> Investido:
+          <div className="min-w-0 overflow-hidden">
+            <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <TrendingUp size={10} className="text-indigo-400" /> Investido
             </span>
-            <span className="font-bold text-indigo-400">
+            <span className="mt-1 block truncate text-sm font-bold text-indigo-300">
               {displayValue(netInvestments)}
+            </span>
+          </div>
+          </div>
+          <div className="mt-3 flex min-w-0 flex-col gap-2 rounded-lg border border-white/[0.06] bg-black/15 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Previsão do ciclo</span>
+              <span className="mt-0.5 block text-[10px] text-slate-600">Após entradas e contas previstas</span>
+            </div>
+            <span className={`shrink-0 text-sm font-bold ${projectedBalance >= 0 ? "text-cyan-300" : "text-red-400"}`}>
+              {displayValue(projectedBalance)}
             </span>
           </div>
         </div>

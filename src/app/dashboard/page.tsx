@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useFinance } from "@/hooks/use-finance";
+import { useFinancialNotifications } from "@/hooks/use-financial-notifications";
 import { usePreferences } from "@/contexts/preferences-context";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getLocalDateKey } from "@/lib/finance/date";
 import { calculateDashboardData } from "@/lib/finance/dashboard";
+import { calculateFinancialAssistant } from "@/lib/finance/assistant";
 import { BrandIcon } from "@/components/brand-icon";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { getWorkspaceDetails } from "@/actions/workspace-actions";
@@ -36,8 +38,8 @@ import {
 import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
-  const { transactions, loading, dateRange, setDateRange } = useFinance();
-  const { hideValues, toggleHideValues } = usePreferences();
+  const { transactions, snapshotTransactions, loading, dateRange, setDateRange, cycleRange, cycleStartDay, cycleEndDay, resetToFinancialCycle, saveFinancialCycle } = useFinance();
+  const { hideValues, toggleHideValues, notifications } = usePreferences();
   const [budgetLimit, setBudgetLimit] = useState(3000);
   const todayKey = getLocalDateKey(new Date());
 
@@ -55,21 +57,40 @@ export default function DashboardPage() {
   };
 
   const dashboardData = useMemo(
-    () => calculateDashboardData(transactions, budgetLimit, todayKey),
-    [transactions, budgetLimit, todayKey]
+    () =>
+      calculateDashboardData(
+        transactions,
+        budgetLimit,
+        todayKey,
+        snapshotTransactions,
+        dateRange.to
+      ),
+    [transactions, snapshotTransactions, budgetLimit, todayKey, dateRange.to]
   );
   const {
     income,
     expense,
     balance,
+    pendingIncome,
     pendingExpense,
-    liquidBalance,
+    projectedBalance,
     budgetPercent,
     budgetColor,
     chartData,
     recentTransactions,
     upcomingBills,
   } = dashboardData;
+
+  useFinancialNotifications({
+    transactions: snapshotTransactions,
+    enabled: notifications,
+    projectedBalance,
+  });
+
+  const assistantData = useMemo(
+    () => calculateFinancialAssistant(snapshotTransactions, todayKey),
+    [snapshotTransactions, todayKey]
+  );
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -96,7 +117,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5 animate-in fade-in duration-700 pb-24 lg:pb-12">
-      <div className="flex flex-col items-start justify-between gap-4 rounded-lg border border-white/10 bg-[#121722] p-4 shadow-xl shadow-black/10 md:flex-row md:items-end">
+      <div className="relative z-30 flex flex-col items-start justify-between gap-4 overflow-visible rounded-2xl border border-white/10 bg-gradient-to-r from-[#151a28] via-[#121722] to-indigo-950/40 p-5 shadow-2xl shadow-black/20 md:flex-row md:items-end md:p-6">
         <div>
           <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
             Painel de Controle
@@ -117,6 +138,11 @@ export default function DashboardPage() {
             from={dateRange.from}
             to={dateRange.to}
             onChange={setDateRange}
+            cycleRange={cycleRange}
+            onUseCycle={resetToFinancialCycle}
+            cycleStartDay={cycleStartDay}
+            cycleEndDay={cycleEndDay}
+            onSaveCycle={saveFinancialCycle}
           />
           <Link href="/dashboard/transactions">
             <Button className="h-11 w-full rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-900/20 hover:bg-indigo-700">
@@ -134,12 +160,12 @@ export default function DashboardPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-[#121722] p-5 shadow-xl shadow-black/10 transition-all hover:border-indigo-500/30">
+            <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.025] p-5 shadow-xl shadow-black/10 transition-all hover:-translate-y-0.5 hover:border-indigo-400/30">
               <div className="absolute right-0 top-0 p-6 opacity-5">
                 <Wallet size={64} />
               </div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
-                Saldo Atual
+                Saldo disponível hoje
               </p>
               <h3
                 className={`text-3xl font-bold ${
@@ -159,7 +185,7 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="relative overflow-hidden rounded-lg border border-cyan-500/15 bg-cyan-500/[0.06] p-5 transition-all hover:border-cyan-500/30">
+            <div className="relative overflow-hidden rounded-2xl border border-cyan-500/15 bg-gradient-to-br from-cyan-500/[0.12] to-cyan-950/[0.08] p-5 transition-all hover:-translate-y-0.5 hover:border-cyan-500/30">
               <div className="absolute right-0 top-0 p-6 opacity-5">
                 <Calculator size={64} />
               </div>
@@ -167,26 +193,23 @@ export default function DashboardPage() {
                 <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-400">
                   <Calculator size={24} />
                 </div>
-                <span className="text-[10px] bg-white/10 px-2 py-1 rounded text-slate-300 font-bold uppercase tracking-wider">
-                  Sem investimentos
-                </span>
               </div>
               <p className="text-sm text-slate-400 font-medium">
-                Saldo Líquido
+                Saldo previsto
               </p>
               <h3
                 className={`text-2xl font-bold mt-1 ${
-                  liquidBalance >= 0 ? "text-white" : "text-red-400"
+                  projectedBalance >= 0 ? "text-white" : "text-red-400"
                 }`}
               >
-                {displayValue(liquidBalance)}
+                {displayValue(projectedBalance)}
               </h3>
               <p className="text-xs text-slate-500 mt-2">
-                {displayValue(pendingExpense)} em contas pendentes
+                Atual + {displayValue(pendingIncome)} a receber − {displayValue(pendingExpense)} a pagar
               </p>
             </div>
 
-            <div className="rounded-lg border border-emerald-500/15 bg-emerald-500/[0.07] p-5 transition-all hover:border-emerald-500/30">
+            <div className="rounded-2xl border border-emerald-500/15 bg-gradient-to-br from-emerald-500/[0.12] to-emerald-950/[0.08] p-5 transition-all hover:-translate-y-0.5 hover:border-emerald-500/30">
               <div className="flex justify-between items-start mb-4">
                 <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
                   <ArrowUpRight size={24} />
@@ -200,7 +223,7 @@ export default function DashboardPage() {
               </h3>
             </div>
 
-            <div className="rounded-lg border border-red-500/15 bg-red-500/[0.07] p-5 transition-all hover:border-red-500/30">
+            <div className="rounded-2xl border border-red-500/15 bg-gradient-to-br from-red-500/[0.12] to-red-950/[0.08] p-5 transition-all hover:-translate-y-0.5 hover:border-red-500/30">
               <div className="flex justify-between items-start mb-4">
                 <div className="p-2 bg-red-500/10 rounded-lg text-red-500">
                   <ArrowDownRight size={24} />
@@ -213,6 +236,12 @@ export default function DashboardPage() {
                 {displayValue(expense)}
               </h3>
             </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"><p className="text-xs text-slate-500">Média livre por mês</p><p className={`mt-1 text-xl font-bold ${assistantData.averageMonthlySurplus >= 0 ? "text-emerald-300" : "text-red-300"}`}>{displayValue(assistantData.averageMonthlySurplus)}</p></div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"><p className="text-xs text-slate-500">Estimativa em 12 meses</p><p className={`mt-1 text-xl font-bold ${assistantData.estimatedBalanceIn12Months >= 0 ? "text-white" : "text-red-300"}`}>{displayValue(assistantData.estimatedBalanceIn12Months)}</p><p className="mt-1 text-[10px] text-slate-600">Baseada na média dos últimos 90 dias</p></div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"><p className="text-xs text-slate-500">Reserva sugerida</p><p className="mt-1 text-xl font-bold text-violet-200">{displayValue(assistantData.emergencyReserveTarget)}</p><p className="mt-1 text-[10px] text-slate-600">Seis meses da despesa média</p></div>
           </div>
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import "@/lib/firebase-admin";
+import { getAuthenticatedUser } from "@/lib/server/action-context";
 
 export async function createSession(idToken: string) {
   try {
@@ -41,10 +42,15 @@ export async function logout() {
 
 export async function recordTermsAcceptance(userId: string, userAgent?: string) {
   try {
+    const user = await getAuthenticatedUser();
+    const safeUserId = user?.uid || "anonymous";
+    if (userId !== "anonymous" && userId !== safeUserId) {
+      return { success: false, error: "Sessão inválida" };
+    }
     const db = getFirestore();
 
     const acceptanceData = {
-      userId,
+      userId: safeUserId,
       acceptedAt: new Date(),
       userAgent: userAgent || 'Unknown',
       termsVersion: '1.0',
@@ -61,6 +67,8 @@ export async function recordTermsAcceptance(userId: string, userAgent?: string) 
 
 export async function getTermsAcceptances() {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user?.admin) return { success: false, error: "Permissão negada" };
     const db = getFirestore();
 
     const snapshot = await db.collection('terms_acceptances')

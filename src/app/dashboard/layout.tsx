@@ -5,6 +5,8 @@ import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
 import { usePathname } from "next/navigation";
+import { GlobalFinancialAssistant } from "@/components/assistant/global-financial-assistant";
+import { FinanceProvider } from "@/hooks/use-finance";
 
 export default function DashboardLayout({
   children,
@@ -43,11 +45,11 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#0B0E14] text-slate-50 overflow-hidden font-sans">
+    <FinanceProvider><div className="app-shell flex h-screen w-full text-slate-50 overflow-hidden font-sans">
       <DashboardSidebar />
 
       <main className="flex-1 flex flex-col h-full overflow-hidden relative z-0">
-        <header className="z-20 flex h-16 shrink-0 items-center justify-between border-b border-white/5 bg-[#0B0E14]/80 px-4 pl-16 backdrop-blur-sm md:h-20 md:px-8">
+        <header className="z-20 flex h-16 shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#090c13]/70 px-4 pl-16 backdrop-blur-xl md:h-20 md:px-8">
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-bold text-white tracking-tight">
               {getPageTitle()}
@@ -73,6 +75,7 @@ export default function DashboardLayout({
           <div className="max-w-7xl mx-auto space-y-8">{children}</div>
         </div>
       </main>
-    </div>
+      <GlobalFinancialAssistant />
+    </div></FinanceProvider>
   );
 }

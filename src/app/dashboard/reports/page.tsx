@@ -78,10 +78,10 @@ const CHART_COLORS = [
 ];
 
 export default function ReportsPage() {
-  const { transactions, dateRange, setDateRange, loading } = useFinance();
+  const { transactions, dateRange, setDateRange, loading, cycleRange, cycleStartDay, cycleEndDay, resetToFinancialCycle, saveFinancialCycle } = useFinance();
 
-  const handleExportExcel = () => {
-    exportTransactionsReport(transactions, dateRange);
+  const handleExportExcel = async () => {
+    await exportTransactionsReport(transactions, dateRange);
   };
 
   const reportData = useMemo(
@@ -147,6 +147,11 @@ export default function ReportsPage() {
             from={dateRange.from}
             to={dateRange.to}
             onChange={setDateRange}
+            cycleRange={cycleRange}
+            onUseCycle={resetToFinancialCycle}
+            cycleStartDay={cycleStartDay}
+            cycleEndDay={cycleEndDay}
+            onSaveCycle={saveFinancialCycle}
           />
           <Button
             onClick={handleExportExcel}
@@ -161,7 +166,7 @@ export default function ReportsPage() {
         <Card className="group border-white/10 bg-[#121722] transition-all hover:border-emerald-500/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center justify-between">
-              Saldo Líquido
+              Resultado do período
               <Wallet
                 size={16}
                 className="text-emerald-500 group-hover:scale-110 transition-transform"

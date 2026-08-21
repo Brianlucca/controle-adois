@@ -69,7 +69,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         if (nextWorkspace) {
           setActiveWorkspaceState(nextWorkspace);
           localStorage.setItem("lastActiveWorkspaceId", nextWorkspace.id);
-          await switchActiveWorkspace(nextWorkspace.id, currentUser.uid);
         } else {
           setActiveWorkspaceState(null);
         }

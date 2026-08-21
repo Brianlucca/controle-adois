@@ -5,7 +5,10 @@ import {
   TransactionSortMode,
   TransactionStatusFilter,
 } from "@/lib/types";
-import { getDateTime, isDueUntil } from "@/lib/finance/date";
+import { getDateTime } from "@/lib/finance/date";
+import { calculatePeriodFinancialMetrics, isCurrentCashTransaction } from "@/lib/finance/financial-metrics";
+
+export { isCurrentCashTransaction } from "@/lib/finance/financial-metrics";
 
 export interface InvestmentOption extends Transaction {
   investedAmount: number;
@@ -20,19 +23,6 @@ export interface TransactionFilterState {
   dateRange: DateRange;
   sortMode: TransactionSortMode;
   todayKey: string;
-}
-
-export function isCurrentCashTransaction(
-  transaction: Transaction,
-  todayKey: string
-) {
-  if (transaction.status !== "paid") return false;
-  if (transaction.type === "income") {
-    return isDueUntil(transaction.dueDate, todayKey);
-  }
-
-  const paidDate = String(transaction.paidAt || "").slice(0, 10);
-  return paidDate ? paidDate <= todayKey : true;
 }
 
 export function getPriorityRank(transaction: Transaction, todayKey: string) {
@@ -113,9 +103,11 @@ export function calculateFinanceOverview(
   transactions: Transaction[],
   todayKey: string
 ) {
-  let income = 0;
-  let expense = 0;
-  let pendingExpense = 0;
+  const metrics = calculatePeriodFinancialMetrics(transactions, todayKey);
+  const income = metrics.totalIncome;
+  const expense = metrics.totalExpense;
+  const pendingExpense = metrics.pendingExpense;
+  const pendingIncome = metrics.pendingIncome;
   let grossInvestments = 0;
   let redeemedInvestments = 0;
 
@@ -124,14 +116,7 @@ export function calculateFinanceOverview(
   for (const transaction of transactions) {
     const amount = Number(transaction.amount) || 0;
 
-    if (transaction.type === "expense" && transaction.status === "pending") {
-      pendingExpense += amount;
-    }
-
     if (isCurrentCashTransaction(transaction, todayKey)) {
-      if (transaction.type === "income") income += amount;
-      if (transaction.type === "expense") expense += amount;
-
       if (
         transaction.status === "paid" &&
         transaction.category === "Investimento"
@@ -190,6 +175,7 @@ export function calculateFinanceOverview(
     income,
     expense,
     pendingExpense,
+    pendingIncome,
     balance,
     grossInvestments,
     redeemedInvestments,

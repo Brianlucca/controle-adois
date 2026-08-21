@@ -53,6 +53,40 @@ export async function getTransactions(uid: string, startDate: string, endDate: s
   }
 }
 
+export async function getTransactionsThrough(endDate: string) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    await handleAuthFailure();
+    return [];
+  }
+
+  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
+  if (!workspaceId) return [];
+
+  try {
+    const snapshot = await adminDb
+      .collection("workspaces")
+      .doc(workspaceId)
+      .collection("transactions")
+      .where("dueDate", "<=", endDate)
+      .get();
+
+    return snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        ...data,
+        id: doc.id,
+        createdAt: data.createdAt?.toDate?.().toISOString() || new Date().toISOString(),
+        dueDate: data.dueDate || "",
+        paidAt: data.paidAt?.toDate?.().toISOString() || data.paidAt,
+        importedAt: data.importedAt?.toDate?.().toISOString() || data.importedAt || null,
+      };
+    }) as any[];
+  } catch {
+    return [];
+  }
+}
+
 export async function addTransaction(rawData: any) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
@@ -71,14 +105,23 @@ export async function addTransaction(rawData: any) {
     const recurrenceCount = data.isRecurrent && data.type === "expense" ? data.recurrenceMonths : 1;
     const recurrenceGroupId = data.isRecurrent ? collection.doc().id : null;
     const batch = adminDb.batch();
+    const createdTransactions: any[] = [];
 
     Array.from({ length: recurrenceCount }).forEach((_, index) => {
-      batch.set(collection.doc(), {
+      const transactionRef = collection.doc();
+      const record = {
         ...buildBaseTransaction(data, user),
         dueDate: index === 0 ? data.dueDate : addMonthsToDateKey(data.dueDate, index),
         recurrenceGroupId,
         recurrenceIndex: index + 1,
         recurrenceTotal: recurrenceCount,
+      };
+      batch.set(transactionRef, record);
+      createdTransactions.push({
+        ...record,
+        id: transactionRef.id,
+        createdAt: record.createdAt.toISOString(),
+        paidAt: record.paidAt?.toISOString() || undefined,
       });
     });
 
@@ -87,7 +130,7 @@ export async function addTransaction(rawData: any) {
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/transactions");
     revalidatePath("/dashboard/reports");
-    return { success: true, count: recurrenceCount };
+    return { success: true, count: recurrenceCount, transactions: createdTransactions };
   } catch (error) {
     return { success: false, error: "Erro interno ao salvar." };
   }
@@ -224,8 +267,8 @@ export async function updateTransactionStatus(id: string, status: string) {
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/transactions");
     return { success: true };
-  } catch (error) {
-    return { success: false };
+  } catch (error: any) {
+    return { success: false, error: error?.code === 8 ? "Cota do banco temporariamente esgotada." : "Não foi possível atualizar o status." };
   }
 }
 

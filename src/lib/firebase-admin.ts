@@ -3,6 +3,7 @@ import { initializeApp, getApps, cert, getApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { getDatabase } from "firebase-admin/database";
+import { getMessaging } from "firebase-admin/messaging";
 
 function formatPrivateKey(key: string | undefined) {
   return key?.replace(/\\n/g, "\n");
@@ -30,6 +31,7 @@ const app = getApp();
 
 export const adminDb = getFirestore(app);
 export const adminAuth = getAuth(app);
+export const adminMessaging = getMessaging(app);
 export const adminRdb = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
   ? getDatabase(app)
   : null;
