@@ -49,16 +49,31 @@ describe("financial position", () => {
     expect(result.projectedBalance).toBe(650);
   });
 
-  it("does not count future paid income or expense before its effective date", () => {
+  it("counts a future bill immediately when it is marked as paid", () => {
     const income = transaction("income", 500, "income", "paid", "2026-08-25", {
       paidAt: "2026-08-20T12:00:00.000Z",
     });
-    const expense = transaction("expense", 200, "expense", "paid", "2026-08-25", {
+    const expense = transaction("expense", 377, "expense", "paid", "2026-08-25", {
       paidAt: "2026-08-20T12:00:00.000Z",
     });
 
-    expect(isCurrentCashTransaction(income, "2026-08-20")).toBe(false);
-    expect(isCurrentCashTransaction(expense, "2026-08-20")).toBe(false);
+    expect(isCurrentCashTransaction(income, "2026-08-20")).toBe(true);
+    expect(isCurrentCashTransaction(expense, "2026-08-20")).toBe(true);
+
+    const result = calculateDashboardData(
+      [transaction("cash", 1_000, "income", "paid", "2026-08-01"), expense],
+      2_000,
+      "2026-08-20",
+      [transaction("cash", 1_000, "income", "paid", "2026-08-01"), expense],
+      "2026-08-31"
+    );
+
+    expect(result.balance).toBe(623);
+    expect(result.pendingExpense).toBe(0);
+    expect(calculateFinanceOverview(
+      [transaction("cash", 1_000, "income", "paid", "2026-08-01"), expense],
+      "2026-08-20"
+    ).totalAssets).toBe(623);
   });
 
   it("includes overdue pending bills in the projection", () => {
@@ -87,7 +102,7 @@ describe("financial position", () => {
     expect(overview.totalAssets).toBe(1_000);
   });
 
-  it("includes future income in projection even when marked received early", () => {
+  it("includes income in the current balance when marked received early", () => {
     const snapshot = [
       transaction("cash", 1_200, "income", "paid", "2026-08-01"),
       transaction("future-income", 2_000, "income", "paid", "2026-08-25", {
@@ -96,8 +111,8 @@ describe("financial position", () => {
       transaction("bills", 2_500, "expense", "pending", "2026-08-28"),
     ];
     const result = calculateDashboardData(snapshot, 4_000, "2026-08-20", snapshot, "2026-08-31");
-    expect(result.balance).toBe(1_200);
-    expect(result.pendingIncome).toBe(2_000);
+    expect(result.balance).toBe(3_200);
+    expect(result.pendingIncome).toBe(0);
     expect(result.projectedBalance).toBe(700);
   });
 });
