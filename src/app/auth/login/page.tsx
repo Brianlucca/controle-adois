@@ -109,11 +109,13 @@ export default function LoginPage() {
             <form onSubmit={handleLogin} className="space-y-5">
                 
                 <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">E-mail</label>
+                    <label htmlFor="login-email" className="text-xs font-bold text-slate-700 uppercase tracking-wide">E-mail</label>
                     <div className="relative">
                         <Mail className="absolute left-3 top-3.5 text-slate-400" size={18} />
                         <Input 
                             type="email"
+                            id="login-email"
+                            name="email"
                             autoComplete="username"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -126,7 +128,7 @@ export default function LoginPage() {
 
                 <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
-                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Senha</label>
+                        <label htmlFor="login-password" className="text-xs font-bold text-slate-700 uppercase tracking-wide">Senha</label>
                         <button 
                             type="button"
                             onClick={() => {
@@ -143,6 +145,8 @@ export default function LoginPage() {
                         <Lock className="absolute left-3 top-3.5 text-slate-400" size={18} />
                         <Input 
                             type={showPassword ? "text" : "password"}
+                            id="login-password"
+                            name="password"
                             autoComplete="current-password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -231,11 +235,14 @@ export default function LoginPage() {
 
                 <form onSubmit={handleForgotPassword} className="space-y-4">
                     <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Seu E-mail</label>
+                        <label htmlFor="forgot-email" className="text-xs font-bold text-slate-700 uppercase tracking-wide">Seu E-mail</label>
                         <div className="relative">
                             <Mail className="absolute left-3 top-3.5 text-slate-400" size={18} />
                             <Input 
                                 type="email"
+                                id="forgot-email"
+                                name="email"
+                                autoComplete="email"
                                 value={forgotEmail}
                                 onChange={(e) => setForgotEmail(e.target.value)}
                                 required 
