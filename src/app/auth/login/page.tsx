@@ -5,6 +5,7 @@ import { signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "fir
 import { auth } from "@/lib/firebase-client";
 import { useRouter } from "next/navigation";
 import { createClientSession } from "@/lib/auth/client-session";
+import { ensurePersonalWorkspace } from "@/actions/workspace-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Lock, Mail, AlertCircle, ArrowRight, Building2, Eye, EyeOff, X, CheckCircle2 } from "lucide-react";
@@ -39,6 +40,14 @@ export default function LoginPage() {
       if (!result.success) {
         await signOut(auth);
         setError(result.error || "Erro ao iniciar sessão.");
+        setLoading(false);
+        return;
+      }
+
+      const workspace = await ensurePersonalWorkspace(idToken, user.email || email);
+      if (workspace.error) {
+        await signOut(auth);
+        setError("Não foi possível carregar seu workspace. Tente novamente.");
         setLoading(false);
         return;
       }
