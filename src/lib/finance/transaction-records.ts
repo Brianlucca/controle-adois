@@ -15,6 +15,7 @@ export function buildBaseTransaction(
     userId: user.uid,
     userName: user.name || user.email || "Usuario",
     createdAt: new Date(),
+    paidAt: data.status === "paid" ? new Date() : null,
     pixCode: data.pixCode || null,
     barCode: data.barCode || null,
     observation: data.observation || null,
