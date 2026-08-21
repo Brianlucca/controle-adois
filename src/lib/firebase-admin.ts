@@ -6,7 +6,13 @@ import { getDatabase } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 
 function formatPrivateKey(key: string | undefined) {
-  return key?.replace(/\\n/g, "\n");
+  if (!key) return undefined;
+  const trimmed = key.trim().replace(/^['"]|['"]$/g, "");
+  try {
+    const decoded = Buffer.from(trimmed, "base64").toString("utf8");
+    if (decoded.includes("BEGIN PRIVATE KEY")) return decoded;
+  } catch { /* not base64 */ }
+  return trimmed.replace(/\\n/g, "\n");
 }
 
 if (getApps().length === 0) {
@@ -17,13 +23,20 @@ if (getApps().length === 0) {
   if (projectId && clientEmail && privateKey) {
     initializeApp({
       credential: cert({
-        projectId,
-        clientEmail,
+        projectId: projectId.trim(),
+        clientEmail: clientEmail.trim(),
         privateKey: formatPrivateKey(privateKey),
       }),
       databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
     });
   } else {
+    // Keep modules renderable when production credentials are temporarily
+    // unavailable. Database calls will fail inside their guarded actions
+    // instead of crashing every Server Component during module evaluation.
+    initializeApp({
+      projectId: projectId || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+    });
   }
 }
 

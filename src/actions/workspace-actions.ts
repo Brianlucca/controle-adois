@@ -4,6 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { adminDb } from "@/lib/firebase-admin";
 import { getAuthenticatedUser } from "@/lib/server/action-context";
+import { isSameIdentity } from "@/lib/security/authorization";
 import {
   clearPersistedActiveWorkspace,
   getActiveWorkspaceId as resolveActiveWorkspaceId,
@@ -26,13 +27,13 @@ import {
 
 export async function getActiveWorkspaceId(userId?: string) {
   const user = await getAuthenticatedUser();
-  if (!user || (userId && userId !== user.uid)) return null;
+  if (!user || (userId && !isSameIdentity(user.uid, userId))) return null;
   return resolveActiveWorkspaceId(user.uid);
 }
 
 async function authenticatedUid(claimedUserId?: string) {
   const user = await getAuthenticatedUser();
-  if (!user || (claimedUserId && claimedUserId !== user.uid)) return null;
+  if (!user || (claimedUserId && !isSameIdentity(user.uid, claimedUserId))) return null;
   return user.uid;
 }
 

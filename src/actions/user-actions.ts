@@ -3,6 +3,7 @@
 import { db } from "@/lib/firebase-admin"; 
 import { revalidatePath } from "next/cache";
 import { getAuthenticatedUser } from "@/lib/server/action-context";
+import { isSameIdentity } from "@/lib/security/authorization";
 
 export async function getFinancialCyclePreferences() {
   try {
@@ -30,7 +31,7 @@ export async function updateFinancialCyclePreferences(startDay: number, endDay: 
 
 export async function deleteFullAccountData(uid: string) {
   const user = await getAuthenticatedUser();
-  if (!user || !uid || user.uid !== uid) {
+  if (!user || !isSameIdentity(user.uid, uid)) {
     return { success: false, error: "Sessão inválida" };
   }
 
