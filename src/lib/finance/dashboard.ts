@@ -1,5 +1,6 @@
-import { isCurrentCashTransaction } from "@/lib/finance/transaction-calculations";
+import { calculatePeriodFinancialMetrics } from "@/lib/finance/financial-metrics";
 import { Transaction } from "@/lib/types";
+import { calculateFinancialPosition } from "@/lib/finance/financial-position";
 
 export interface DashboardChartPoint {
   name: string;
@@ -9,48 +10,25 @@ export interface DashboardChartPoint {
 }
 
 export function calculateDashboardData(
-  transactions: Transaction[],
+  periodTransactions: Transaction[],
   budgetLimit: number,
-  todayKey: string
+  todayKey: string,
+  snapshotTransactions: Transaction[] = periodTransactions,
+  projectionEndKey: string = todayKey
 ) {
-  const income = transactions
-    .filter(
-      (transaction) =>
-        transaction.type === "income" &&
-        isCurrentCashTransaction(transaction, todayKey)
-    )
-    .reduce((acc, transaction) => acc + (Number(transaction.amount) || 0), 0);
+  const periodMetrics = calculatePeriodFinancialMetrics(periodTransactions, todayKey);
+  const income = periodMetrics.totalIncome;
+  const expense = periodMetrics.totalExpense;
 
-  const expense = transactions
-    .filter(
-      (transaction) =>
-        transaction.type === "expense" &&
-        isCurrentCashTransaction(transaction, todayKey)
-    )
-    .reduce((acc, transaction) => acc + (Number(transaction.amount) || 0), 0);
-
-  const balance = income - expense;
-  const liquidIncome = transactions
-    .filter(
-      (transaction) =>
-        transaction.type === "income" && !isInvestment(transaction.category)
-    )
-    .reduce((acc, transaction) => acc + (Number(transaction.amount) || 0), 0);
-  const liquidExpense = transactions
-    .filter(
-      (transaction) =>
-        transaction.type === "expense" && !isInvestment(transaction.category)
-    )
-    .reduce((acc, transaction) => acc + (Number(transaction.amount) || 0), 0);
-  const pendingExpense = transactions
-    .filter(
-      (transaction) =>
-        transaction.type === "expense" &&
-        transaction.status === "pending" &&
-        !isInvestment(transaction.category)
-    )
-    .reduce((acc, transaction) => acc + (Number(transaction.amount) || 0), 0);
-  const liquidBalance = liquidIncome - liquidExpense;
+  const position = calculateFinancialPosition(
+    snapshotTransactions,
+    todayKey,
+    projectionEndKey
+  );
+  const balance = position.availableBalance;
+  const pendingIncome = position.scheduledIncome;
+  const pendingExpense = position.scheduledExpense;
+  const projectedBalance = position.projectedBalance;
 
   const budgetPercent =
     budgetLimit > 0 ? Math.min((expense / budgetLimit) * 100, 100) : 0;
@@ -58,7 +36,7 @@ export function calculateDashboardData(
   if (budgetPercent > 70) budgetColor = "bg-amber-500";
   if (budgetPercent > 90) budgetColor = "bg-red-500";
 
-  const chartMap = transactions.reduce((acc, transaction) => {
+  const chartMap = periodTransactions.reduce((acc, transaction) => {
     if (!transaction.dueDate) return acc;
     const [, month, day] = transaction.dueDate.split("-");
     const label = `${day}/${month}`;
@@ -89,7 +67,7 @@ export function calculateDashboardData(
     (a, b) => a.dateSort - b.dateSort
   );
 
-  const recentTransactions = [...transactions]
+  const recentTransactions = [...snapshotTransactions]
     .sort(
       (a, b) =>
         new Date(b.createdAt || b.dueDate).getTime() -
@@ -97,7 +75,7 @@ export function calculateDashboardData(
     )
     .slice(0, 5);
 
-  const upcomingBills = transactions
+  const upcomingBills = snapshotTransactions
     .filter(
       (transaction) =>
         transaction.type === "expense" && transaction.status === "pending"
@@ -111,18 +89,13 @@ export function calculateDashboardData(
     income,
     expense,
     balance,
-    liquidIncome,
-    liquidExpense,
+    pendingIncome,
     pendingExpense,
-    liquidBalance,
+    projectedBalance,
     budgetPercent,
     budgetColor,
     chartData,
     recentTransactions,
     upcomingBills,
   };
-}
-
-function isInvestment(category?: string) {
-  return category === "Investimento";
 }
