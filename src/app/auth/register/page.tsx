@@ -77,10 +77,10 @@ export default function RegisterPage() {
       const user = userCredential.user;
 
       await updateProfile(user, { displayName: name });
-      await ensurePersonalWorkspace(user.uid, email);
+      await ensurePersonalWorkspace(await user.getIdToken(), email);
       await sendEmailVerification(user);
 
-      await recordTermsAcceptance(user.uid, navigator.userAgent);
+      await recordTermsAcceptance("anonymous", navigator.userAgent);
 
       router.push("/auth/verify"); 
 
