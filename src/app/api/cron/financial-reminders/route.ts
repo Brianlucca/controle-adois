@@ -12,16 +12,19 @@ export async function GET(request: NextRequest) {
   const today = new Date();
   const end = new Date(today);
   end.setDate(end.getDate() + 3);
+  const overdueStart = new Date(today);
+  overdueStart.setDate(overdueStart.getDate() - 30);
   const todayKey = getBahiaDateKey(today);
   const endKey = getBahiaDateKey(end);
+  const overdueStartKey = getBahiaDateKey(overdueStart);
   try {
     const bills = await adminDb.collectionGroup("transactions")
-      .where("dueDate", ">=", todayKey).where("dueDate", "<=", endKey).get();
+      .where("dueDate", ">=", overdueStartKey).where("dueDate", "<=", endKey).get();
     const pendingByWorkspace = new Map<string, typeof bills.docs>();
     bills.docs.forEach((doc) => {
       const data = doc.data();
       const workspaceId = doc.ref.parent.parent?.id;
-      if (!workspaceId || data.type !== "expense" || data.status !== "pending") return;
+      if (!workspaceId || data.deletedAt || data.type !== "expense" || data.status !== "pending") return;
       pendingByWorkspace.set(workspaceId, [...(pendingByWorkspace.get(workspaceId) || []), doc]);
     });
     let sent = 0;
@@ -36,14 +39,22 @@ export async function GET(request: NextRequest) {
       ...(workspace.members || []).map((member: { uid?: string }) => member.uid),
     ].filter(Boolean))] as string[];
     const users = await Promise.all(memberIds.map((uid) => adminDb.collection("users").doc(uid).get()));
-    const tokens = [...new Set(users.flatMap((doc) => doc.data()?.notificationTokens || []))] as string[];
+    const tokens = [...new Set(users.flatMap((doc) => {
+      const data = doc.data();
+      return data?.notificationsEnabled === false ? [] : data?.notificationTokens || [];
+    }))] as string[];
     if (tokens.length === 0) continue;
 
+    const overdue = pending.filter((doc) => doc.data().dueDate < todayKey).length;
     const dueToday = pending.filter((doc) => doc.data().dueDate === todayKey).length;
     const response = await getAdminMessaging().sendEachForMulticast({
       tokens: tokens.slice(0, 500),
       notification: {
-        title: dueToday ? `${dueToday} conta(s) vencem hoje` : "Próximos vencimentos",
+        title: overdue
+          ? `${overdue} conta(s) atrasada(s)`
+          : dueToday
+            ? `${dueToday} conta(s) vencem hoje`
+            : "Próximos vencimentos",
         body: `${pending.length} conta(s) exigem atenção em ${workspace.name || "seu espaço"}.`,
       },
       webpush: { fcmOptions: { link: "/dashboard/payments" } },

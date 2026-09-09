@@ -77,6 +77,7 @@ export function DashboardSidebar() {
         name: targetWs.name,
         ownerId: targetWs.ownerId || "",
         currency: "BRL",
+        budgetLimit: targetWs.budgetLimit || 3000,
       });
     }
     router.refresh();
@@ -101,8 +102,8 @@ export function DashboardSidebar() {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-[70] flex flex-col border-r border-white/10 bg-[#0B0E14]/95 shadow-2xl shadow-black/30 backdrop-blur-xl transition-all duration-300 ease-in-out md:relative",
-          isCollapsed ? "w-[80px]" : "w-72",
+          "fixed inset-y-0 left-0 z-[70] flex flex-col border-r border-white/[0.07] bg-gradient-to-b from-[#101522] via-[#0b0f18] to-[#080b11] shadow-2xl shadow-black/40 backdrop-blur-xl transition-all duration-300 ease-in-out md:relative",
+          isCollapsed ? "w-[76px]" : "w-64",
           isMobileOpen
             ? "translate-x-0 w-72"
             : "-translate-x-full md:translate-x-0"
@@ -390,7 +391,7 @@ function NavItem({ href, icon, label, active, collapsed }: any) {
       </span>
 
       {active && !collapsed && (
-        <div className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-300 shadow-sm"></div>
+        <div className="ml-auto h-5 w-1 rounded-full bg-indigo-400 shadow-[0_0_12px_rgba(129,140,248,.8)]"></div>
       )}
     </Link>
   );

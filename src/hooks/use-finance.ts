@@ -1,21 +1,22 @@
 "use client";
 
 import { createContext, createElement, ReactNode, useState, useEffect, useCallback, useContext, useMemo, useRef } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase-client";
 import { getTransactions, getTransactionsThrough, addTransaction, deleteTransaction, updateTransactionStatus, editTransaction, importTransactions, deleteRecurrence } from "@/actions/finance-actions";
 import { logout } from "@/actions/auth-actions";
 import { Transaction } from "@/lib/types";
-import { getFinancialCycleRange, inferFinancialCycleStartDay } from "@/lib/finance/financial-cycle";
+import { getFinancialCycleRange } from "@/lib/finance/financial-cycle";
 import { getFinancialCyclePreferences, updateFinancialCyclePreferences } from "@/actions/user-actions";
 import { mergeTransactionRange, readFinanceCache, writeFinanceCache } from "@/lib/finance/finance-cache";
 import { useWorkspace } from "@/contexts/workspace-context";
+import { useAuth } from "@/contexts/auth-context";
 
 function useFinanceController() {
   const [snapshotTransactions, setSnapshotTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const { user } = useAuth();
   const { activeWorkspace, loadingWorkspaces } = useWorkspace();
   const router = useRouter();
   
@@ -23,8 +24,6 @@ function useFinanceController() {
   const initialCycle = getFinancialCycleRange(today, 1);
   const [cycleStartDay, setCycleStartDay] = useState(1);
   const [cycleEndDay, setCycleEndDay] = useState(31);
-  const [hasSavedCycle, setHasSavedCycle] = useState(false);
-  const [cycleReady, setCycleReady] = useState(false);
   const [rangeMode, setRangeMode] = useState<"cycle" | "custom">("cycle");
 
   const [dateRange, setInternalDateRange] = useState(initialCycle);
@@ -48,21 +47,28 @@ function useFinanceController() {
   };
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (currentUser) => {
-      setCycleReady(false);
-      setHasSavedCycle(false);
-      setUser(currentUser);
-      if (!currentUser) {
-        setSnapshotTransactions([]);
-        setLoading(false);
-      }
-    });
-    return () => unsub();
-  }, []);
+    if (!user) {
+      setSnapshotTransactions([]);
+      setLoading(false);
+      return;
+    }
+    if (!cacheScope) return;
+
+    let active = true;
+    setLoading(true);
+    void readFinanceCache(cacheScope).then((cached) => {
+      if (!active || !cached) return;
+      setSnapshotTransactions(cached.transactions);
+      setLoading(false);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [user, cacheScope]);
 
   useEffect(() => {
-    if (user && cycleReady && cacheScope) hydrateAndSync(user.uid, cacheScope);
-  }, [user, cycleReady, cacheScope]);
+    if (user && cacheScope && !loadingWorkspaces) {
+      void hydrateAndSync(user.uid, cacheScope);
+    }
+  }, [user, cacheScope, loadingWorkspaces]);
 
   useEffect(() => {
     if (user && !loadingWorkspaces && !activeWorkspace) {
@@ -83,7 +89,6 @@ function useFinanceController() {
     if (!user) return;
     getFinancialCyclePreferences().then((preferences) => {
       if (preferences) {
-        setHasSavedCycle(true);
         setCycleStartDay(preferences.startDay);
         setCycleEndDay(preferences.endDay);
         setRangeMode("cycle");
@@ -91,36 +96,21 @@ function useFinanceController() {
           getFinancialCycleRange(new Date(), preferences.startDay, preferences.endDay)
         );
       }
-    }).catch(() => undefined).finally(() => setCycleReady(true));
+    }).catch(() => undefined);
   }, [user]);
-
-  async function fetchData(uid: string) {
-    const sequence = ++requestSequence.current;
-    setLoading(true);
-    const snapshotData = await getTransactionsThrough("2100-12-31");
-    if (sequence !== requestSequence.current) return;
-    setSnapshotTransactions(snapshotData);
-    const inferredDay = inferFinancialCycleStartDay(snapshotData);
-    if (cycleReady && !hasSavedCycle && rangeMode === "cycle" && inferredDay !== cycleStartDay) {
-      setCycleStartDay(inferredDay);
-      const inferredEnd = inferredDay === 1 ? 31 : inferredDay - 1;
-      setCycleEndDay(inferredEnd);
-      setInternalDateRange(getFinancialCycleRange(new Date(), inferredDay, inferredEnd));
-    }
-    if (sequence === requestSequence.current) setLoading(false);
-  }
 
   async function hydrateAndSync(uid: string, scope: string) {
     const sequence = ++requestSequence.current;
-    setLoading(true);
     cacheReady.current = false;
     loadedRanges.current.clear();
     try {
     const cached = await readFinanceCache(scope).catch(() => null);
     if (sequence !== requestSequence.current) return;
-    if (cached?.transactions.length) {
+    if (cached) {
       setSnapshotTransactions(cached.transactions);
       setLoading(false);
+    } else {
+      setLoading(true);
     }
 
     const cycle = getFinancialCycleRange(new Date(), cycleStartDay, cycleEndDay);
@@ -128,8 +118,8 @@ function useFinanceController() {
     syncEnd.setFullYear(syncEnd.getFullYear() + 1);
     const syncRange = { from: cycle.from, to: syncEnd.toISOString().slice(0, 10) };
     const serverData = cached
-      ? await getTransactions(uid, syncRange.from, syncRange.to)
-      : await getTransactionsThrough("2100-12-31");
+      ? await retryOnce(() => getTransactions(uid, syncRange.from, syncRange.to))
+      : await retryOnce(() => getTransactionsThrough("2100-12-31"));
     if (sequence !== requestSequence.current) return;
     const merged = cached
       ? mergeTransactionRange(cached.transactions, serverData, syncRange)
@@ -150,7 +140,7 @@ function useFinanceController() {
     const key = `${range.from}:${range.to}`;
     if (!force && loadedRanges.current.has(key)) return;
     try {
-      const serverData = await getTransactions(user.uid, range.from, range.to);
+      const serverData = await retryOnce(() => getTransactions(user.uid, range.from, range.to));
       setSnapshotTransactions((items) => mergeTransactionRange(items, serverData, range));
       loadedRanges.current.add(key);
     } catch { /* preserve cached data when a deployment changes */ }
@@ -159,7 +149,7 @@ function useFinanceController() {
   const loadAllTransactions = useCallback(async () => {
     if (!user || !cacheScope) return;
     try {
-      const serverData = await getTransactionsThrough("2100-12-31");
+      const serverData = await retryOnce(() => getTransactionsThrough("2100-12-31"));
       setSnapshotTransactions(serverData);
       loadedRanges.current.add("all");
       await writeFinanceCache(cacheScope, serverData).catch(() => undefined);
@@ -180,7 +170,6 @@ function useFinanceController() {
   const saveFinancialCycle = useCallback(async (startDay: number, endDay: number) => {
     const result = await updateFinancialCyclePreferences(startDay, endDay);
     if (!result.success || !result.startDay || !result.endDay) return result;
-    setHasSavedCycle(true);
     setCycleStartDay(result.startDay);
     setCycleEndDay(result.endDay);
     setRangeMode("cycle");
@@ -189,7 +178,7 @@ function useFinanceController() {
   }, []);
 
   const refresh = () => {
-    if (user) fetchData(user.uid);
+    if (user) void ensureRangeLoaded(dateRange, true);
   };
 
   return {
@@ -289,4 +278,13 @@ export function useFinance() {
   const value = useContext(FinanceContext);
   if (!value) throw new Error("useFinance precisa estar dentro de FinanceProvider.");
   return value;
+}
+
+async function retryOnce<T>(operation: () => Promise<T>) {
+  try {
+    return await operation();
+  } catch {
+    await new Promise((resolve) => window.setTimeout(resolve, 500));
+    return operation();
+  }
 }

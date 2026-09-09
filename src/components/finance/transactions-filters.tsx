@@ -47,7 +47,7 @@ export function TransactionsFilters({
         <div className="relative w-full">
           <Search className="absolute left-3 top-3.5 text-slate-500" size={16} />
           <Input
-            placeholder="Buscar lançamentos..."
+            placeholder="Buscar por nome, categoria, valor ou ID..."
             className="h-11 w-full rounded-lg border-white/10 bg-[#0B0E14] pl-10 text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:ring-0"
             value={filterTerm}
             onChange={(event) => onFilterTermChange(event.target.value)}

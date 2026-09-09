@@ -175,7 +175,7 @@ export function GlobalFinancialAssistant() {
         onClick={() => setOpen(true)}
         aria-label={currentOpinion ? `Assistente: ${currentOpinion.title}` : "Abrir assistente financeiro"}
         title={currentOpinion ? "Tenho uma opinião sobre suas contas" : "Abrir assistente"}
-        className={`fixed bottom-5 right-4 z-[90] flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-xl shadow-violet-950/50 transition-transform hover:scale-110 lg:right-6 ${currentOpinion && !loading ? "assistant-nudge" : ""}`}
+        className={`fixed right-4 z-[90] flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-xl shadow-violet-950/50 transition-transform hover:scale-110 lg:bottom-5 lg:right-6 ${pathname.startsWith("/dashboard/transactions") ? "bottom-20" : "bottom-5"} ${currentOpinion && !loading ? "assistant-nudge" : ""}`}
       >
         <Bot size={22} />
         {currentOpinion && !loading && (

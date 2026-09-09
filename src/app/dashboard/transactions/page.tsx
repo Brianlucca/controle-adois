@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   TrendingUp,
   Upload,
+  History,
 } from "lucide-react";
 import {
   formatCurrency,
@@ -23,6 +24,7 @@ import { TransactionDetailsModalContent } from "@/components/finance/transaction
 import { TransactionFormModalContent } from "@/components/finance/transaction-form-modal-content";
 import { TransactionList } from "@/components/finance/transaction-list";
 import { TransactionsSummaryCards } from "@/components/finance/transactions-summary-cards";
+import { AuditHistoryModal } from "@/components/finance/audit-history-modal";
 import { usePreferences } from "@/contexts/preferences-context";
 import { getLocalDateKey } from "@/lib/finance/date";
 import { parseTransactionsWorkbook } from "@/lib/finance/import-transactions";
@@ -77,6 +79,7 @@ export default function TransactionsPage() {
     cycleEndDay,
     resetToFinancialCycle,
     saveFinancialCycle,
+    refresh,
   } = useFinance();
   const { hideValues, toggleHideValues } = usePreferences();
 
@@ -95,6 +98,7 @@ export default function TransactionsPage() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isImporting, setIsImporting] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [sortMode, setSortMode] =
     useState<TransactionSortMode>("priority");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -204,6 +208,8 @@ export default function TransactionsPage() {
   };
 
   const handleDeleteWrapper = async (id: string) => {
+    const transaction = snapshotTransactions.find((item) => item.id === id);
+    if (!window.confirm(`Mover "${transaction?.description || "esta transação"}" (${transaction ? formatCurrency(transaction.amount) : id}) para a lixeira? Você poderá restaurá-la pelo histórico.`)) return;
     const result = await deleteTransaction(id);
     if (handleAuthError(result)) return;
     setSelectedTx(null);
@@ -383,9 +389,29 @@ export default function TransactionsPage() {
     return hideValues ? "••••••" : formatCurrency(val);
   };
 
+  const filteredTransactions = useMemo(
+    () =>
+      filterAndSortTransactions(transactions, {
+        filterTerm,
+        selectedCategory,
+        statusFilter,
+        dateRange: uiDateRange,
+        sortMode,
+        todayKey,
+      }),
+    [
+      transactions,
+      filterTerm,
+      selectedCategory,
+      statusFilter,
+      uiDateRange,
+      sortMode,
+      todayKey,
+    ]
+  );
   const overview = useMemo(
-    () => calculateFinanceOverview(transactions, todayKey),
-    [transactions, todayKey]
+    () => calculateFinanceOverview(filteredTransactions, todayKey),
+    [filteredTransactions, todayKey]
   );
   const assetOverview = useMemo(
     () => calculateFinanceOverview(snapshotTransactions, todayKey),
@@ -420,27 +446,6 @@ export default function TransactionsPage() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const filteredTransactions = useMemo(
-    () =>
-      filterAndSortTransactions(transactions, {
-        filterTerm,
-        selectedCategory,
-        statusFilter,
-        dateRange: uiDateRange,
-        sortMode,
-        todayKey,
-      }),
-    [
-      transactions,
-      filterTerm,
-      selectedCategory,
-      statusFilter,
-      uiDateRange,
-      sortMode,
-      todayKey,
-    ]
-  );
-
   const handleDateSortToggle = () => {
     setSortMode((mode) => {
       if (mode === "priority") return "desc";
@@ -472,6 +477,7 @@ export default function TransactionsPage() {
         </div>
 
         <div className="hidden gap-2 lg:flex">
+          <Button type="button" variant="outline" onClick={() => setIsHistoryOpen(true)} className="h-10 rounded-lg border-indigo-500/20 bg-indigo-500/10 px-3 text-indigo-200 hover:bg-indigo-500/20"><History size={16} className="mr-2" /> Histórico</Button>
           <Button
             type="button"
             variant="outline"
@@ -555,7 +561,8 @@ export default function TransactionsPage() {
       />
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#0B0E14]/95 p-3 backdrop-blur lg:hidden">
-        <div className="grid grid-cols-[1fr_1fr_1.2fr] gap-2">
+        <div className="grid grid-cols-4 gap-2">
+          <Button type="button" variant="outline" onClick={() => setIsHistoryOpen(true)} className="h-11 rounded-lg border-indigo-500/20 bg-indigo-500/10 px-1 text-xs text-indigo-200"><History size={15} className="mr-1" />Histórico</Button>
           <Button
             type="button"
             variant="outline"
@@ -687,6 +694,7 @@ export default function TransactionsPage() {
           </div>
         </div>
       )}
+      {isHistoryOpen && <AuditHistoryModal onClose={() => setIsHistoryOpen(false)} onRestored={refresh} />}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { registerPushNotifications } from "@/lib/notifications/register-push";
+import { setPushNotificationsEnabled } from "@/actions/notification-actions";
 
 interface PreferencesContextType {
   hideValues: boolean;
@@ -28,6 +29,21 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     setNotifications(storedNotif && permission === "granted");
     setNotificationPermission(permission);
     setLoaded(true);
+
+    if (storedNotif && permission === "granted") {
+      const refreshPushToken = () => {
+        void registerPushNotifications()
+          .then((registered) => {
+            localStorage.setItem("pushNotifications", String(registered));
+          })
+          .catch(() => {
+            localStorage.setItem("pushNotifications", "false");
+          });
+      };
+      refreshPushToken();
+      window.addEventListener("online", refreshPushToken);
+      return () => window.removeEventListener("online", refreshPushToken);
+    }
   }, []);
 
   const toggleHideValues = () => {
@@ -40,6 +56,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     if (enabled && !("Notification" in window)) {
       setNotifications(false);
       localStorage.setItem("notifications", "false");
+      await setPushNotificationsEnabled(false).catch(() => undefined);
       return false;
     }
 
@@ -53,6 +70,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     const pushRegistered = newValue
       ? await registerPushNotifications().catch(() => false)
       : false;
+    if (!newValue) await setPushNotificationsEnabled(false).catch(() => undefined);
     setNotifications(newValue);
     localStorage.setItem("notifications", String(newValue));
     localStorage.setItem("pushNotifications", String(pushRegistered));
