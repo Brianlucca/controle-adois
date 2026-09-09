@@ -15,6 +15,7 @@ interface TransactionsSummaryCardsProps {
   pendingExpense: number;
   projectedBalance: number;
   balance: number;
+  filteredBalance: number;
   netInvestments: number;
   totalAssets: number;
   hideValues: boolean;
@@ -27,6 +28,7 @@ export function TransactionsSummaryCards({
   pendingExpense,
   projectedBalance,
   balance,
+  filteredBalance,
   netInvestments,
   totalAssets,
   hideValues,
@@ -84,7 +86,21 @@ export function TransactionsSummaryCards({
             </span>
           </div>
           </div>
-          <div className="mt-3 flex min-w-0 flex-col gap-2 rounded-lg border border-white/[0.06] bg-black/15 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div className="min-w-0 rounded-lg border border-white/[0.06] bg-black/15 px-3 py-2.5">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Resultado do filtro</span>
+              <span className={`mt-1 block text-sm font-bold ${filteredBalance >= 0 ? "text-emerald-300" : "text-red-400"}`}>
+                {displayValue(filteredBalance)}
+              </span>
+            </div>
+            <div className="min-w-0 rounded-lg border border-white/[0.06] bg-black/15 px-3 py-2.5">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Fora do filtro</span>
+              <span className="mt-1 block text-sm font-bold text-slate-300">
+                {displayValue(balance - filteredBalance)}
+              </span>
+            </div>
+          </div>
+          <div className="mt-2 flex min-w-0 flex-col gap-2 rounded-lg border border-white/[0.06] bg-black/15 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Previsão do ciclo</span>
               <span className="mt-0.5 block text-[10px] text-slate-600">Após entradas e contas previstas</span>
@@ -108,7 +124,7 @@ export function TransactionsSummaryCards({
         <h3 className="text-2xl font-bold text-white">
           {displayValue(income)}
         </h3>
-        <p className="text-sm text-slate-500 mt-1">Entradas ate hoje</p>
+        <p className="text-sm text-slate-500 mt-1">Recebidas no filtro atual</p>
       </div>
 
       <div className="relative overflow-hidden rounded-lg border border-red-500/15 bg-red-500/[0.07] p-4 transition-colors hover:border-red-500/30">
@@ -123,7 +139,7 @@ export function TransactionsSummaryCards({
         <h3 className="text-2xl font-bold text-white">
           {displayValue(expense)}
         </h3>
-        <p className="text-sm text-slate-500 mt-1">Saidas ate hoje</p>
+        <p className="text-sm text-slate-500 mt-1">Pagas no filtro atual</p>
       </div>
 
       <div className="relative overflow-hidden rounded-lg border border-amber-500/15 bg-amber-500/[0.07] p-4 transition-colors hover:border-amber-500/30">
