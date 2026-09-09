@@ -19,6 +19,8 @@ export interface Transaction {
   recurrenceIndex?: number;
   recurrenceTotal?: number;
   createdAt: string;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
 }
 
 export interface FinanceSummary {
