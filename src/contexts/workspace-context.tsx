@@ -9,6 +9,7 @@ export type Workspace = {
   name: string;
   ownerId: string;
   currency: string;
+  budgetLimit: number;
 };
 
 interface WorkspaceContextType {
@@ -20,6 +21,26 @@ interface WorkspaceContextType {
 
 const WorkspaceContext = createContext<WorkspaceContextType>({} as any);
 
+function workspaceCacheKey(userId: string) {
+  return `workspace-cache:${userId}`;
+}
+
+function readWorkspaceCache(userId: string): Workspace[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(workspaceCacheKey(userId)) || "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is Workspace =>
+      Boolean(item && typeof item.id === "string" && typeof item.name === "string")
+    );
+  } catch {
+    return [];
+  }
+}
+
+function writeWorkspaceCache(userId: string, items: Workspace[]) {
+  localStorage.setItem(workspaceCacheKey(userId), JSON.stringify(items));
+}
+
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -29,6 +50,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const setActiveWorkspace = async (ws: Workspace) => {
     setActiveWorkspaceState(ws);
     localStorage.setItem("lastActiveWorkspaceId", ws.id);
+    if (user) writeWorkspaceCache(user.uid, workspaces.some((item) => item.id === ws.id) ? workspaces : [...workspaces, ws]);
     await switchActiveWorkspace(ws.id, user?.uid);
   };
 
@@ -42,11 +64,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;
 
     const currentUser = user;
+    const cachedWorkspaces = readWorkspaceCache(currentUser.uid);
+    const cachedActiveId = localStorage.getItem("lastActiveWorkspaceId");
+    const cachedActive =
+      cachedWorkspaces.find((workspace) => workspace.id === cachedActiveId) ||
+      cachedWorkspaces[0] ||
+      null;
+    if (cachedWorkspaces.length) setWorkspaces(cachedWorkspaces);
+    if (cachedActive) setActiveWorkspaceState(cachedActive);
 
     async function loadWorkspaces() {
       try {
         setLoadingWorkspaces(true);
-        const data = await getUserWorkspaces(currentUser.uid);
+        const [data, activeDetails] = await Promise.all([
+          getUserWorkspaces(currentUser.uid),
+          getWorkspaceDetails(currentUser.uid),
+        ]);
         if (!isMounted) return;
 
         const wsList = data.map((ws: any) => ({
@@ -54,11 +87,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           name: ws.name,
           ownerId: ws.isOwner ? currentUser.uid : "",
           currency: "BRL",
+          budgetLimit: Number(ws.budgetLimit) || 3000,
         })) as Workspace[];
 
         setWorkspaces(wsList);
+        writeWorkspaceCache(currentUser.uid, wsList);
 
-        const activeDetails = await getWorkspaceDetails(currentUser.uid);
         const lastId = localStorage.getItem("lastActiveWorkspaceId");
         const nextWorkspace =
           (activeDetails?.id && wsList.find((workspace) => workspace.id === activeDetails.id)) ||
@@ -73,7 +107,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           setActiveWorkspaceState(null);
         }
       } catch (error) {
-        if (isMounted) {
+        if (isMounted && cachedWorkspaces.length === 0) {
           setWorkspaces([]);
           setActiveWorkspaceState(null);
         }
