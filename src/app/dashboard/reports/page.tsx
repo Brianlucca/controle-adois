@@ -90,8 +90,8 @@ export default function ReportsPage() {
   );
   const {
     totalIncome,
+    totalExpense,
     netInvested,
-    realExpense,
     balance,
     savingsRate,
     expensesByCategory,
@@ -230,7 +230,7 @@ export default function ReportsPage() {
         <Card className="group border-red-500/15 bg-red-500/[0.07] transition-all hover:border-red-500/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center justify-between">
-              Consumo Real
+              Saídas
               <ArrowDownRight
                 size={16}
                 className="text-red-500 group-hover:scale-110 transition-transform"
@@ -239,11 +239,11 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-red-400">
-              {formatCurrency(realExpense)}
+              {formatCurrency(totalExpense)}
             </div>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-bold">
-                Exclui investimentos
+                Saídas confirmadas no período
               </span>
             </div>
           </CardContent>
