@@ -11,7 +11,10 @@ export async function getAuthenticatedUser() {
     if (!sessionCookie) return null;
 
     try {
-      return await getAuth().verifySessionCookie(sessionCookie, true);
+      // The session cookie is created only after a revocation-aware ID-token check.
+      // Verifying its signature locally keeps routine server actions from making an
+      // extra Auth network request every time a screen loads.
+      return await getAuth().verifySessionCookie(sessionCookie);
     } catch {
       return await getAuth().verifyIdToken(sessionCookie, true);
     }
