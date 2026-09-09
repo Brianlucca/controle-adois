@@ -28,8 +28,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         setUser(currentUser);
-        
-        try {
+        setLoading(false);
+
+        // Profile repair is best-effort and must not block the whole dashboard.
+        void (async () => { try {
           const userRef = doc(db, "users", currentUser.uid);
           const userSnap = await getDoc(userRef);
           
@@ -42,8 +44,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               createdAt: serverTimestamp(),
             });
           }
-        } catch (error) {
-        }
+        } catch {
+          // The authenticated session can continue while Firestore reconnects.
+        } })();
+        return;
       } else {
         setUser(null);
       }
