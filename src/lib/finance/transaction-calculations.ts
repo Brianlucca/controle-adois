@@ -63,13 +63,15 @@ export function filterAndSortTransactions(
   transactions: Transaction[],
   filters: TransactionFilterState
 ) {
-  const normalizedTerm = filters.filterTerm.trim().toLowerCase();
+  const normalizedTerm = normalizeSearch(filters.filterTerm);
 
   return transactions
     .filter((transaction) => {
-      const matchesTerm = transaction.description
-        .toLowerCase()
-        .includes(normalizedTerm);
+      const searchableValues = [transaction.description, transaction.category, transaction.id,
+        transaction.type === "income" ? "entrada receita recebido" : "saida despesa pago",
+        transaction.status === "paid" ? "pago recebido" : "pendente", String(transaction.amount),
+        Number(transaction.amount).toFixed(2), Number(transaction.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })];
+      const matchesTerm = normalizeSearch(searchableValues.join(" ")).includes(normalizedTerm);
       const matchesCategory =
         filters.selectedCategory === "Todas" ||
         transaction.category === filters.selectedCategory;
@@ -83,7 +85,8 @@ export function filterAndSortTransactions(
           transaction.status === "paid" && transaction.type === "expense";
       }
       if (filters.statusFilter === "received") {
-        matchesStatus = transaction.type === "income";
+        matchesStatus =
+          transaction.type === "income" && transaction.status === "paid";
       }
 
       const matchesDate =
@@ -107,6 +110,10 @@ export function filterAndSortTransactions(
 
       return dateB - dateA;
     });
+}
+
+function normalizeSearch(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
 export function calculateFinanceOverview(
