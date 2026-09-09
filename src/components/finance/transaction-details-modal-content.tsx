@@ -114,6 +114,7 @@ export function TransactionDetailsModalContent({
           </p>
         </div>
       </div>
+      <CopyableCode label="ID da transação" value={transaction.id} field="transactionId" copiedField={copiedField} color="slate" onCopy={onCopy} />
 
       {transaction.observation && (
         <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
