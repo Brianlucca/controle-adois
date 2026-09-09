@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useFinance } from "@/hooks/use-finance";
 import { useFinancialNotifications } from "@/hooks/use-financial-notifications";
@@ -11,8 +11,7 @@ import { calculateDashboardData } from "@/lib/finance/dashboard";
 import { calculateFinancialAssistant } from "@/lib/finance/assistant";
 import { BrandIcon } from "@/components/brand-icon";
 import { DateRangeFilter } from "@/components/date-range-filter";
-import { getWorkspaceDetails } from "@/actions/workspace-actions";
-import { auth } from "@/lib/firebase-client";
+import { useWorkspace } from "@/contexts/workspace-context";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -40,16 +39,9 @@ import { Button } from "@/components/ui/button";
 export default function DashboardPage() {
   const { transactions, snapshotTransactions, loading, dateRange, setDateRange, cycleRange, cycleStartDay, cycleEndDay, resetToFinancialCycle, saveFinancialCycle } = useFinance();
   const { hideValues, toggleHideValues, notifications } = usePreferences();
-  const [budgetLimit, setBudgetLimit] = useState(3000);
+  const { activeWorkspace } = useWorkspace();
+  const budgetLimit = activeWorkspace?.budgetLimit || 3000;
   const todayKey = getLocalDateKey(new Date());
-
-  useEffect(() => {
-    if (auth.currentUser) {
-      getWorkspaceDetails(auth.currentUser.uid).then((data) => {
-        if (data && data.budgetLimit) setBudgetLimit(data.budgetLimit);
-      }).catch(() => undefined);
-    }
-  }, []);
 
   const displayValue = (val: number) => {
     if (isNaN(val)) return hideValues ? "••••••" : formatCurrency(0);
