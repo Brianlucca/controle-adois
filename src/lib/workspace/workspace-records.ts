@@ -58,6 +58,7 @@ export function toWorkspaceListItem(
     name: workspace.name,
     type: workspace.type || "shared",
     isOwner: workspace.ownerId === userId,
+    budgetLimit: Number(workspace.budgetLimit) || 3000,
   };
 }
 
