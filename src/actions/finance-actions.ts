@@ -17,6 +17,7 @@ import {
   getValidatedActiveWorkspaceId,
   handleAuthFailure,
 } from "@/lib/server/action-context";
+import { buildAuditRecord } from "@/lib/finance/audit-log";
 
 export async function getTransactions(uid: string, startDate: string, endDate: string) {
   const user = await getAuthenticatedUser();
@@ -37,7 +38,7 @@ export async function getTransactions(uid: string, startDate: string, endDate: s
       .where("dueDate", "<=", endDate)
       .get();
 
-    return snapshot.docs.map((doc) => {
+    return snapshot.docs.filter((doc) => !doc.data().deletedAt).map((doc) => {
       const data = doc.data();
       return {
         ...data,
@@ -49,7 +50,8 @@ export async function getTransactions(uid: string, startDate: string, endDate: s
       };
     }) as any[];
   } catch (error) {
-    return [];
+    console.error("get_transactions_failed", error);
+    throw new Error("Não foi possível carregar as transações.");
   }
 }
 
@@ -71,7 +73,7 @@ export async function getTransactionsThrough(endDate: string) {
       .where("dueDate", "<=", endDate)
       .get();
 
-    return snapshot.docs.map((doc) => {
+    return snapshot.docs.filter((doc) => !doc.data().deletedAt).map((doc) => {
       const data = doc.data();
       return {
         ...data,
@@ -82,8 +84,9 @@ export async function getTransactionsThrough(endDate: string) {
         importedAt: data.importedAt?.toDate?.().toISOString() || data.importedAt || null,
       };
     }) as any[];
-  } catch {
-    return [];
+  } catch (error) {
+    console.error("get_transactions_through_failed", error);
+    throw new Error("Não foi possível carregar as transações.");
   }
 }
 
@@ -117,6 +120,9 @@ export async function addTransaction(rawData: any) {
         recurrenceTotal: recurrenceCount,
       };
       batch.set(transactionRef, record);
+      batch.set(collection.parent!.collection("auditLogs").doc(), buildAuditRecord({
+        action: "created", user, transactionId: transactionRef.id, after: record,
+      }));
       createdTransactions.push({
         ...record,
         id: transactionRef.id,
@@ -154,13 +160,18 @@ export async function importTransactions(rawItems: any[]) {
     let operationCount = 0;
 
     for (const item of validation.data) {
-      batch.set(collection.doc(), {
+      const transactionRef = collection.doc();
+      const record = {
         ...buildBaseTransaction(item, user),
         importedAt: new Date(),
-      });
-      operationCount += 1;
+      };
+      batch.set(transactionRef, record);
+      batch.set(collection.parent!.collection("auditLogs").doc(), buildAuditRecord({
+        action: "imported", user, transactionId: transactionRef.id, after: record,
+      }));
+      operationCount += 2;
 
-      if (operationCount === 450) {
+      if (operationCount >= 440) {
         await batch.commit();
         batch = adminDb.batch();
         operationCount = 0;
@@ -188,10 +199,22 @@ export async function deleteTransaction(id: string) {
   if (!workspaceId) return { success: false, error: "Workspace não encontrado." };
 
   try {
-    await adminDb.collection("workspaces").doc(workspaceId).collection("transactions").doc(id).delete();
+    const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
+    const transactionRef = workspaceRef.collection("transactions").doc(id);
+    const current = await transactionRef.get();
+    if (!current.exists) return { success: false, error: "Transação não encontrada." };
+    if (current.data()?.deletedAt) {
+      return { success: false, error: "Esta transação já está na lixeira." };
+    }
+    const batch = adminDb.batch();
+    const deletedAt = new Date();
+    batch.update(transactionRef, { deletedAt, deletedBy: user.uid });
+    batch.set(workspaceRef.collection("auditLogs").doc(), buildAuditRecord({ action: "deleted", user, transactionId: id, before: current.data() || null, after: { ...current.data(), deletedAt, deletedBy: user.uid } }));
+    await batch.commit();
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/transactions");
+    revalidatePath("/dashboard/reports");
     return { success: true };
   } catch (error) {
     return { success: false, error: "Erro ao excluir." };
@@ -211,16 +234,23 @@ export async function deleteRecurrence(id: string) {
     if (!doc.exists) return { success: false, error: "Transação não encontrada." };
 
     const data = doc.data();
+    if (data?.deletedAt) {
+      return { success: false, error: "Esta transação já está na lixeira." };
+    }
     const recurrenceGroupId = data?.recurrenceGroupId;
 
     if (!recurrenceGroupId) {
-      await collection.doc(id).update({
+      const changes = {
         isRecurrent: false,
         recurrenceMonths: null,
         recurrenceGroupId: null,
         recurrenceIndex: null,
         recurrenceTotal: null,
-      });
+      };
+      const batch = adminDb.batch();
+      batch.update(collection.doc(id), changes);
+      batch.set(collection.parent!.collection("auditLogs").doc(), buildAuditRecord({ action: "updated", user, transactionId: id, before: data || null, after: { ...data, ...changes } }));
+      await batch.commit();
       revalidatePath("/dashboard");
       revalidatePath("/dashboard/transactions");
       return { success: true, count: 1 };
@@ -231,8 +261,13 @@ export async function deleteRecurrence(id: string) {
     let deletedCount = 0;
 
     snapshot.docs.forEach((transactionDoc) => {
-      if (transactionDoc.data().status === "pending") {
-        batch.delete(transactionDoc.ref);
+      if (
+        transactionDoc.data().status === "pending" &&
+        !transactionDoc.data().deletedAt
+      ) {
+        const deletedAt = new Date();
+        batch.update(transactionDoc.ref, { deletedAt, deletedBy: user.uid });
+        batch.set(collection.parent!.collection("auditLogs").doc(), buildAuditRecord({ action: "deleted", user, transactionId: transactionDoc.id, before: transactionDoc.data(), after: { ...transactionDoc.data(), deletedAt, deletedBy: user.uid } }));
         deletedCount += 1;
       }
     });
@@ -259,13 +294,25 @@ export async function updateTransactionStatus(id: string, status: string) {
   const validStatus = validation.data;
 
   try {
-    await adminDb.collection("workspaces").doc(workspaceId).collection("transactions").doc(id).update({
+    const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
+    const transactionRef = workspaceRef.collection("transactions").doc(id);
+    const current = await transactionRef.get();
+    if (!current.exists) return { success: false, error: "Transação não encontrada." };
+    if (current.data()?.deletedAt) {
+      return { success: false, error: "Restaure a transação antes de alterar o status." };
+    }
+    const changes = {
       status: validStatus,
       paidAt: validStatus === "paid" ? new Date() : null,
-    });
+    };
+    const batch = adminDb.batch();
+    batch.update(transactionRef, changes);
+    batch.set(workspaceRef.collection("auditLogs").doc(), buildAuditRecord({ action: "status_changed", user, transactionId: id, before: current.data() || null, after: { ...current.data(), ...changes } }));
+    await batch.commit();
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/transactions");
+    revalidatePath("/dashboard/reports");
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error?.code === 8 ? "Cota do banco temporariamente esgotada." : "Não foi possível atualizar o status." };
@@ -289,7 +336,13 @@ export async function editTransaction(id: string, rawData: any) {
     const collection = adminDb.collection("workspaces").doc(workspaceId).collection("transactions");
     const docRef = collection.doc(id);
     const currentDoc = await docRef.get();
+    if (!currentDoc.exists) {
+      return { success: false, error: "Transação não encontrada." };
+    }
     const currentData = currentDoc.data();
+    if (currentData?.deletedAt) {
+      return { success: false, error: "Restaure a transação antes de editá-la." };
+    }
     const shouldCreateRecurrence =
       data.isRecurrent &&
       data.type === "expense" &&
@@ -300,7 +353,7 @@ export async function editTransaction(id: string, rawData: any) {
       const recurrenceGroupId = collection.doc().id;
       const batch = adminDb.batch();
 
-      batch.update(docRef, {
+      const firstChanges = {
         ...buildEditableTransactionFields(
           data,
           currentData?.linkedInvestmentId
@@ -311,16 +364,21 @@ export async function editTransaction(id: string, rawData: any) {
         recurrenceIndex: 1,
         recurrenceTotal: recurrenceCount,
         paidAt: data.status === "paid" ? new Date() : null,
-      });
+      };
+      batch.update(docRef, firstChanges);
+      batch.set(collection.parent!.collection("auditLogs").doc(), buildAuditRecord({ action: "updated", user, transactionId: id, before: currentData || null, after: { ...currentData, ...firstChanges } }));
 
       Array.from({ length: Math.max(0, recurrenceCount - 1) }).forEach((_, index) => {
-        batch.set(collection.doc(), {
+        const transactionRef = collection.doc();
+        const record = {
           ...buildBaseTransaction(data, user),
           dueDate: addMonthsToDateKey(data.dueDate, index + 1),
           recurrenceGroupId,
           recurrenceIndex: index + 2,
           recurrenceTotal: recurrenceCount,
-        });
+        };
+        batch.set(transactionRef, record);
+        batch.set(collection.parent!.collection("auditLogs").doc(), buildAuditRecord({ action: "created", user, transactionId: transactionRef.id, after: record }));
       });
 
       await batch.commit();
@@ -331,9 +389,11 @@ export async function editTransaction(id: string, rawData: any) {
       return { success: true, count: recurrenceCount };
     }
 
-    await docRef.update(
-      buildEditableTransactionFields(data, currentData?.linkedInvestmentId)
-    );
+    const changes = buildEditableTransactionFields(data, currentData?.linkedInvestmentId);
+    const batch = adminDb.batch();
+    batch.update(docRef, changes);
+    batch.set(collection.parent!.collection("auditLogs").doc(), buildAuditRecord({ action: "updated", user, transactionId: id, before: currentData || null, after: { ...currentData, ...changes } }));
+    await batch.commit();
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/transactions");
