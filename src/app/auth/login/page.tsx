@@ -8,7 +8,8 @@ import { createClientSession } from "@/lib/auth/client-session";
 import { ensurePersonalWorkspace } from "@/actions/workspace-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Lock, Mail, AlertCircle, ArrowRight, Building2, Eye, EyeOff, X, CheckCircle2 } from "lucide-react";
+import { Loader2, Lock, Mail, AlertCircle, ArrowRight, Eye, EyeOff, X, CheckCircle2 } from "lucide-react";
+import { ControleADoisMark } from "@/components/controle-adois-logo";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -105,7 +106,7 @@ export default function LoginPage() {
             <div className="space-y-2 text-center lg:text-left">
                 <div className="inline-flex items-center gap-2 text-slate-900 mb-2 justify-center lg:justify-start">
                     <div className="p-2 bg-slate-900 rounded-lg text-white">
-                        <Building2 size={24} />
+                        <ControleADoisMark className="h-6 w-6" />
                     </div>
                     <span className="font-bold text-xl tracking-tight">Controle A Dois</span>
                 </div>

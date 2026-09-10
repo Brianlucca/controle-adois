@@ -14,7 +14,6 @@ import {
   ChevronDown,
   Check,
   PlusCircle,
-  Building2,
   X,
   Loader2,
   Menu,
@@ -25,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { logout } from "@/actions/auth-actions";
 import { useWorkspace } from "@/contexts/workspace-context";
+import { ControleADoisMark } from "@/components/controle-adois-logo";
 
 export function DashboardSidebar() {
   const pathname = usePathname();
@@ -109,16 +109,16 @@ export function DashboardSidebar() {
             : "-translate-x-full md:translate-x-0"
         )}
       >
-        <div className="flex h-full flex-col py-4">
+        <div className="flex h-full flex-col pb-4 pt-3">
           <div
             className={cn(
-              "mb-5 flex items-center px-3 transition-all duration-300",
+              "mb-5 flex min-h-12 items-center px-3 transition-all duration-300",
               isCollapsed ? "justify-center" : "justify-between"
             )}
           >
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="shrink-0 rounded-lg border border-indigo-500/30 bg-indigo-600 p-2 shadow-lg shadow-indigo-500/20">
-                <Building2 size={20} className="text-white" />
+            <div className={cn("flex items-center overflow-hidden", !isCollapsed && "gap-3")}>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-indigo-400/30 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-lg shadow-indigo-950/50">
+                <ControleADoisMark className="h-7 w-7" />
               </div>
 
               <span

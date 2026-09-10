@@ -421,7 +421,6 @@ export default function TransactionsPage() {
     income,
     expense,
     pendingExpense,
-    balance: filteredBalance,
   } = overview;
   const {
     netInvestments,
@@ -518,7 +517,6 @@ export default function TransactionsPage() {
         pendingExpense={pendingExpense}
         projectedBalance={financialPosition.projectedBalance}
         balance={financialPosition.availableBalance}
-        filteredBalance={filteredBalance}
         netInvestments={netInvestments}
         totalAssets={totalAssets}
         hideValues={hideValues}

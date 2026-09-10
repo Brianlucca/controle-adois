@@ -5,7 +5,8 @@ import { auth } from "@/lib/firebase-client";
 import { sendEmailVerification } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { createClientSession } from "@/lib/auth/client-session";
-import { Mail, CheckCircle2, Loader2, RefreshCw, Building2, ArrowRight, ShieldCheck } from "lucide-react";
+import { Mail, CheckCircle2, Loader2, RefreshCw, ArrowRight, ShieldCheck } from "lucide-react";
+import { ControleADoisMark } from "@/components/controle-adois-logo";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -53,7 +54,7 @@ export default function VerifyEmailPage() {
             
             <div className="inline-flex items-center gap-2 text-slate-900 mb-8 justify-center lg:justify-start">
                 <div className="p-2 bg-slate-900 rounded-lg text-white">
-                    <Building2 size={24} />
+                    <ControleADoisMark className="h-6 w-6" />
                 </div>
                 <span className="font-bold text-xl tracking-tight">Controle A Dois</span>
             </div>
