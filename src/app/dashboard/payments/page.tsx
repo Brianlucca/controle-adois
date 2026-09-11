@@ -32,7 +32,7 @@ export default function PaymentsPage() {
       return isExpense && isPending && (hasPix || hasBarCode);
     })
     .sort(
-      (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+      (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
     );
 
   const totalToPay = bills.reduce((acc, curr) => acc + Number(curr.amount), 0);
@@ -95,19 +95,15 @@ export default function PaymentsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 pb-24 animate-in fade-in duration-500">
-      <div className="flex flex-col items-start justify-between gap-4 rounded-lg border border-white/10 bg-[#121722] p-4 shadow-xl shadow-black/10 md:flex-row md:items-center">
+      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <h2 className="flex items-center gap-2 text-xl font-bold text-white">
-            <div className="rounded-lg bg-indigo-600 p-2">
-              <Receipt size={20} className="text-white" />
-            </div>
-            Pagamentos Pendentes
-          </h2>
+          <p className="app-kicker">Contas & Pix</p>
+          <h2 className="app-title mt-1">Pagamentos pendentes</h2>
           <p className="mt-1 text-sm text-slate-400">
             Mostrando todos os boletos e pix pendentes, independente da data.
           </p>
         </div>
-        <div className="w-full rounded-lg border border-white/10 bg-white/[0.04] p-4 text-left md:w-auto md:min-w-[200px] md:text-right">
+        <div className="w-full rounded-2xl border border-[#dedbe9] bg-[#f0efff] p-4 text-left md:w-auto md:min-w-[200px] md:text-right">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">
             Total a Pagar
           </p>
