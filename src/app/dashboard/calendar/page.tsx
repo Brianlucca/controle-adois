@@ -7,13 +7,18 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import ptBrLocale from "@fullcalendar/core/locales/pt-br";
+import type {
+  DatesSetArg,
+  EventClickArg,
+  MoreLinkArg,
+} from "@fullcalendar/core";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { BrandIcon } from "@/components/brand-icon";
+import type { Transaction } from "@/lib/types";
 import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Calendar as CalendarIcon,
   X,
   CheckCircle2,
   Clock,
@@ -24,8 +29,8 @@ export default function CalendarPage() {
   const { transactions, loading, setDateRange } = useFinance();
   const calendarRef = useRef<FullCalendar>(null);
   const [currentTitle, setCurrentTitle] = useState("");
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
-  const [selectedDayEvents, setSelectedDayEvents] = useState<any[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<Transaction | null>(null);
+  const [selectedDayEvents, setSelectedDayEvents] = useState<Transaction[]>([]);
   const [selectedDayTitle, setSelectedDayTitle] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
@@ -33,8 +38,9 @@ export default function CalendarPage() {
   const [isMobileCalendar, setIsMobileCalendar] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const frame = requestAnimationFrame(() => setMounted(true));
     setDateRange({ from: "2023-01-01", to: "2030-12-31" });
+    return () => cancelAnimationFrame(frame);
   }, [setDateRange]);
 
   useEffect(() => {
@@ -47,22 +53,22 @@ export default function CalendarPage() {
     return () => mediaQuery.removeEventListener("change", updateViewportMode);
   }, []);
 
-  const handleDatesSet = (arg: any) => {
+  const handleDatesSet = (arg: DatesSetArg) => {
     const title = arg.view.title.replace(/^\w/, (c: string) => c.toUpperCase());
     setCurrentTitle(title);
   };
 
-  const handleEventClick = (info: any) => {
-    const txData = info.event.extendedProps.originalData;
+  const handleEventClick = (info: EventClickArg) => {
+    const txData = info.event.extendedProps.originalData as Transaction;
     setSelectedEvent(txData);
     setIsModalOpen(true);
   };
 
-  const handleMoreLinkClick = (arg: any) => {
+  const handleMoreLinkClick = (arg: MoreLinkArg) => {
     const dayEvents = arg.allSegs
-      .map((seg: any) => seg.event.extendedProps.originalData)
-      .filter(Boolean)
-      .sort((a: any, b: any) => Number(b.amount) - Number(a.amount));
+      .map((segment) => segment.event.extendedProps.originalData as Transaction)
+      .filter((transaction): transaction is Transaction => Boolean(transaction))
+      .sort((a, b) => Number(b.amount) - Number(a.amount));
 
     setSelectedDayEvents(dayEvents);
     setSelectedDayTitle(formatDate(arg.date.toISOString().split("T")[0]));
@@ -76,15 +82,15 @@ export default function CalendarPage() {
     let borderColor = "";
 
     if (t.type === "income") {
-      bgColor = "#064e3b";
-      borderColor = "#10b981";
+      bgColor = "#e5f6ef";
+      borderColor = "#54ae91";
     } else if (t.status === "paid") {
-      bgColor = "#1e293b";
-      borderColor = "#475569";
+      bgColor = "#efedf3";
+      borderColor = "#aaa6b2";
     } else {
       const isLate = new Date(t.dueDate) < new Date();
-      bgColor = isLate ? "#450a0a" : "#451a03";
-      borderColor = isLate ? "#ef4444" : "#f59e0b";
+      bgColor = isLate ? "#ffebe8" : "#fff1e5";
+      borderColor = isLate ? "#df796d" : "#df9a63";
     }
 
     return {
@@ -112,17 +118,17 @@ export default function CalendarPage() {
 
   return (
     <div className="mx-auto h-full max-w-[1920px] space-y-5 pb-24 animate-in fade-in duration-500 lg:pb-12">
-      <div className="flex flex-col items-start justify-between gap-4 rounded-lg border border-white/10 bg-[#121722] p-4 shadow-xl shadow-black/10 md:flex-row md:items-center">
+      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div className="flex items-center gap-4">
-          <div className="hidden rounded-lg bg-indigo-600 p-2.5 md:block">
-            <CalendarIcon size={24} className="text-white" />
+          <div>
+            <p className="app-kicker">Agenda financeira</p>
+            <h1 className="app-title mt-1 capitalize">
+              {currentTitle || "Carregando..."}
+            </h1>
           </div>
-          <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight capitalize">
-            {currentTitle || "Carregando..."}
-          </h1>
         </div>
 
-        <div className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-black/20 p-1 md:w-auto">
+        <div className="flex w-full items-center justify-between rounded-xl border border-[#dedce1] bg-white p-1 md:w-auto">
           <button
             onClick={() => calendarRef.current?.getApi().prev()}
             className="p-2 hover:bg-white/10 rounded-md text-slate-300 hover:text-white transition-colors"
@@ -144,7 +150,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      <div className="relative z-0 rounded-lg border border-white/10 bg-[#121722] p-1 shadow-xl shadow-black/10 md:h-[75vh]">
+      <div className="relative z-0 rounded-2xl border border-[#e5e3e4] bg-white p-1 shadow-[0_12px_35px_-30px_rgba(31,29,43,.4)] md:h-[75vh]">
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, interactionPlugin]}
@@ -170,8 +176,8 @@ export default function CalendarPage() {
                       arg.event.backgroundColor === "#064e3b"
                         ? "bg-emerald-400"
                         : isPaid
-                        ? "bg-slate-400"
-                        : "bg-white"
+                          ? "bg-slate-400"
+                          : "bg-white"
                     }`}
                   ></div>
                   <span
@@ -241,8 +247,8 @@ export default function CalendarPage() {
                       tx.type === "income"
                         ? "border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/15"
                         : tx.status === "paid"
-                        ? "border-white/10 bg-white/5 hover:bg-white/10"
-                        : "border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/15"
+                          ? "border-white/10 bg-white/5 hover:bg-white/10"
+                          : "border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/15"
                     }`}
                   >
                     <div className="flex min-w-0 items-center gap-3">
@@ -253,7 +259,9 @@ export default function CalendarPage() {
                         className="h-9 w-9 rounded-lg bg-white/10"
                       />
                       <div className="min-w-0">
-                        <p className={`truncate text-sm font-bold ${tx.status === "paid" && tx.type === "expense" ? "text-slate-400 line-through" : "text-white"}`}>
+                        <p
+                          className={`truncate text-sm font-bold ${tx.status === "paid" && tx.type === "expense" ? "text-slate-400 line-through" : "text-white"}`}
+                        >
                           {tx.description}
                         </p>
                         <p className="truncate text-xs text-slate-500">
@@ -261,7 +269,9 @@ export default function CalendarPage() {
                         </p>
                       </div>
                     </div>
-                    <span className={`shrink-0 text-sm font-bold ${tx.type === "income" ? "text-emerald-400" : "text-slate-200"}`}>
+                    <span
+                      className={`shrink-0 text-sm font-bold ${tx.type === "income" ? "text-emerald-400" : "text-slate-200"}`}
+                    >
                       {tx.type === "expense" ? "- " : "+ "}
                       {formatCurrency(tx.amount)}
                     </span>
@@ -270,7 +280,7 @@ export default function CalendarPage() {
               </div>
             </div>
           </div>,
-          document.body
+          document.body,
         )}
 
       {mounted &&
@@ -290,8 +300,8 @@ export default function CalendarPage() {
                   selectedEvent.type === "income"
                     ? "bg-emerald-500/20"
                     : selectedEvent.status === "paid"
-                    ? "bg-slate-700/20"
-                    : "bg-red-500/20"
+                      ? "bg-slate-700/20"
+                      : "bg-red-500/20"
                 }`}
               >
                 <button
@@ -348,7 +358,7 @@ export default function CalendarPage() {
               </div>
             </div>
           </div>,
-          document.body
+          document.body,
         )}
     </div>
   );
