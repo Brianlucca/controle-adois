@@ -36,8 +36,8 @@ export function TransactionFormModalContent({
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 pb-2">
-      <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-[#0B0E14] p-1.5">
+    <form onSubmit={onSubmit} className="space-y-4 pb-2 text-[#2b2c31]">
+      <div className="grid grid-cols-2 gap-2 rounded-xl border border-[#e2e0e3] bg-[#f5f4f6] p-1.5">
         <button
           type="button"
           onClick={() =>
@@ -50,8 +50,8 @@ export function TransactionFormModalContent({
           }
           className={`inline-flex h-12 items-center justify-center gap-2 rounded-md text-sm font-bold transition-all ${
             formData.type === "income"
-              ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/20"
-              : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
+              ? "bg-white text-[#168267] shadow-sm ring-1 ring-[#cdebe0]"
+              : "text-[#92949b] hover:bg-white/60 hover:text-[#4b4d54]"
           }`}
         >
           <ArrowUpCircle size={17} />
@@ -62,8 +62,8 @@ export function TransactionFormModalContent({
           onClick={() => updateForm({ type: "expense" })}
           className={`inline-flex h-12 items-center justify-center gap-2 rounded-md text-sm font-bold transition-all ${
             formData.type === "expense"
-              ? "bg-red-600 text-white shadow-lg shadow-red-900/20"
-              : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
+              ? "bg-white text-[#cb554a] shadow-sm ring-1 ring-[#f2d0cb]"
+              : "text-[#92949b] hover:bg-white/60 hover:text-[#4b4d54]"
           }`}
         >
           <ArrowDownCircle size={17} />
@@ -74,8 +74,8 @@ export function TransactionFormModalContent({
       <div
         className={`rounded-lg border p-4 ${
           formData.type === "income"
-            ? "border-emerald-500/20 bg-emerald-500/[0.06]"
-            : "border-red-500/20 bg-red-500/[0.05]"
+            ? "border-[#cce9de] bg-[#f2faf7]"
+            : "border-[#f0d3cf] bg-[#fff8f6]"
         }`}
       >
         <div className="grid gap-3 sm:grid-cols-[1.2fr_0.8fr]">
@@ -90,7 +90,7 @@ export function TransactionFormModalContent({
                 updateForm({ description: event.target.value })
               }
               required
-              className="input-dark h-12 rounded-lg border-white/10 bg-black/25 text-base focus:border-indigo-500/50"
+              className="h-12 rounded-xl border-[#dedce1] bg-white text-base text-[#292a30]"
             />
           </label>
 
@@ -104,7 +104,7 @@ export function TransactionFormModalContent({
               value={formData.amount}
               onChange={(event) => updateForm({ amount: event.target.value })}
               required
-              className="input-dark h-12 rounded-lg border-white/10 bg-black/25 font-mono text-lg font-bold focus:border-indigo-500/50"
+              className="h-12 rounded-xl border-[#dedce1] bg-white font-mono text-lg font-bold text-[#292a30]"
             />
           </label>
         </div>
@@ -119,7 +119,7 @@ export function TransactionFormModalContent({
               value={formData.dueDate}
               onChange={(event) => updateForm({ dueDate: event.target.value })}
               required
-              className="input-dark h-12 rounded-lg border-white/10 bg-black/25 focus:border-indigo-500/50"
+              className="h-12 rounded-xl border-[#dedce1] bg-white text-[#292a30]"
             />
           </label>
 
@@ -128,14 +128,12 @@ export function TransactionFormModalContent({
               Categoria
             </span>
             <select
-              className="h-12 w-full rounded-lg border border-white/10 bg-black/25 px-3 text-sm text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="h-12 w-full rounded-xl border border-[#dedce1] bg-white px-3 text-sm text-[#292a30] outline-none focus:border-[#8c86ec] focus:ring-2 focus:ring-[#635bff]/15"
               value={formData.category}
               onChange={(event) => updateForm({ category: event.target.value })}
             >
               {categories.slice(1).map((category) => (
-                <option key={category} className="bg-slate-900">
-                  {category}
-                </option>
+                <option key={category}>{category}</option>
               ))}
             </select>
           </label>
@@ -146,7 +144,7 @@ export function TransactionFormModalContent({
                 Status
               </span>
               <select
-                className="h-12 w-full rounded-lg border border-white/10 bg-black/25 px-3 text-sm text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                className="h-12 w-full rounded-xl border border-[#dedce1] bg-white px-3 text-sm text-[#292a30] outline-none focus:border-[#8c86ec] focus:ring-2 focus:ring-[#635bff]/15"
                 value={formData.status}
                 onChange={(event) =>
                   updateForm({
@@ -154,12 +152,8 @@ export function TransactionFormModalContent({
                   })
                 }
               >
-                <option value="paid" className="bg-slate-900">
-                  Ja Pago
-                </option>
-                <option value="pending" className="bg-slate-900">
-                  Pendente
-                </option>
+                <option value="paid">Ja Pago</option>
+                <option value="pending">Pendente</option>
               </select>
             </label>
           ) : (
@@ -167,7 +161,7 @@ export function TransactionFormModalContent({
               <span className="block pl-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Status
               </span>
-              <div className="flex h-12 items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 text-sm font-bold text-emerald-300">
+              <div className="flex h-12 items-center gap-2 rounded-xl border border-[#cce9de] bg-white px-3 text-sm font-bold text-[#168267]">
                 <CheckCircle2 size={16} />
                 Recebido
               </div>
@@ -177,14 +171,14 @@ export function TransactionFormModalContent({
       </div>
 
       {formData.type === "expense" && (
-        <div className="space-y-4 rounded-lg border border-white/10 bg-[#0B0E14]/70 p-4">
+        <div className="space-y-4 rounded-xl border border-[#e3e1e4] bg-[#faf9fb] p-4">
           <button
             type="button"
             onClick={() => updateForm({ isRecurrent: !formData.isRecurrent })}
             className={`flex w-full flex-col gap-3 rounded-lg border p-3 text-left transition-all sm:flex-row sm:items-center sm:justify-between ${
               formData.isRecurrent
-                ? "border-indigo-500/50 bg-indigo-500/15 shadow-lg shadow-indigo-950/20"
-                : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
+                ? "border-[#c9c5ff] bg-[#f1efff]"
+                : "border-[#e3e1e4] bg-white hover:border-[#cbc8d0]"
             }`}
           >
             <span className="flex min-w-0 items-center gap-3">
@@ -192,16 +186,16 @@ export function TransactionFormModalContent({
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
                   formData.isRecurrent
                     ? "bg-indigo-500 text-white"
-                    : "bg-black/20 text-slate-500"
+                    : "bg-[#f2f1f4] text-[#888a92]"
                 }`}
               >
                 <Repeat2 size={18} />
               </span>
               <span className="min-w-0">
-                <span className="block text-sm font-bold text-white">
+                <span className="block text-sm font-bold text-[#292a30]">
                   Repetir mensalmente
                 </span>
-                <span className="block text-xs text-slate-400">
+                <span className="block text-xs text-[#858891]">
                   Cria lancamentos mensais a partir desta data.
                 </span>
               </span>
@@ -211,7 +205,7 @@ export function TransactionFormModalContent({
               className={`w-fit rounded-md px-3 py-1 text-xs font-bold ${
                 formData.isRecurrent
                   ? "bg-indigo-500 text-white"
-                  : "bg-white/5 text-slate-500"
+                  : "bg-[#f2f1f4] text-[#858891]"
               }`}
             >
               {formData.isRecurrent ? "Ativado" : "Desativado"}
@@ -232,7 +226,7 @@ export function TransactionFormModalContent({
                         recurrenceMonths: Number(event.target.value),
                       })
                     }
-                    className="mt-1 h-11 w-full rounded-lg border border-indigo-500/30 bg-[#0B0E14] px-3 text-sm text-white outline-none focus:ring-1 focus:ring-indigo-500 sm:w-44"
+                    className="mt-1 h-11 w-full rounded-xl border border-[#cbc7fa] bg-white px-3 text-sm text-[#292a30] outline-none focus:ring-2 focus:ring-[#635bff]/15 sm:w-44"
                   >
                     <option value={3}>3 meses</option>
                     <option value={6}>6 meses</option>
@@ -250,13 +244,13 @@ export function TransactionFormModalContent({
                 }).map((_, index) => (
                   <span
                     key={index}
-                    className="rounded-md bg-black/20 px-2.5 py-1 text-[11px] font-bold text-indigo-100"
+                    className="rounded-md bg-white px-2.5 py-1 text-[11px] font-bold text-[#635bff]"
                   >
                     {formatDate(addMonthsToDateKey(formData.dueDate, index))}
                   </span>
                 ))}
                 {formData.recurrenceMonths > 4 && (
-                  <span className="rounded-md bg-black/20 px-2.5 py-1 text-[11px] font-bold text-indigo-100">
+                  <span className="rounded-md bg-white px-2.5 py-1 text-[11px] font-bold text-[#635bff]">
                     +{formData.recurrenceMonths - 4}
                   </span>
                 )}
@@ -269,13 +263,13 @@ export function TransactionFormModalContent({
               placeholder="Codigo Pix (Copia e Cola)"
               value={formData.pixCode}
               onChange={(event) => updateForm({ pixCode: event.target.value })}
-              className="input-dark h-12 rounded-lg border-white/10 bg-black/25 font-mono text-xs"
+              className="h-12 rounded-xl border-[#dedce1] bg-white font-mono text-xs text-[#292a30]"
             />
             <Input
               placeholder="Codigo de Barras (Boleto)"
               value={formData.barCode}
               onChange={(event) => updateForm({ barCode: event.target.value })}
-              className="input-dark h-12 rounded-lg border-white/10 bg-black/25 font-mono text-xs"
+              className="h-12 rounded-xl border-[#dedce1] bg-white font-mono text-xs text-[#292a30]"
             />
           </div>
           <Textarea
@@ -284,16 +278,16 @@ export function TransactionFormModalContent({
             onChange={(event) =>
               updateForm({ observation: event.target.value })
             }
-            className="input-dark min-h-[96px] rounded-lg border-white/10 bg-black/25"
+            className="min-h-[96px] rounded-xl border-[#dedce1] bg-white text-[#292a30]"
           />
         </div>
       )}
 
-      <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col-reverse gap-2 border-t border-white/10 bg-[#10141D]/95 p-4 backdrop-blur sm:-mx-5 sm:-mb-5 sm:flex-row sm:justify-end">
+      <div className="flex flex-col-reverse gap-2 border-t border-[#e6e3e7] pt-4 sm:flex-row sm:justify-end">
         {isEditing && (
           <Button
             type="button"
-            className="h-12 rounded-lg border border-white/10 bg-slate-800 px-5 font-bold text-white hover:bg-slate-700 sm:min-w-32"
+            className="h-12 rounded-xl border border-[#dedce1] bg-white px-5 font-bold text-[#4b4d54] hover:bg-[#f5f4f6] sm:min-w-32"
             onClick={onCancelEdit}
           >
             Cancelar
