@@ -26,7 +26,7 @@ export function WorkspaceCreateJoin({
   return (
     <section className="border-t border-white/5 pt-2">
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-lg border border-dashed border-white/10 bg-[#121722] p-4 transition-colors hover:bg-[#1A1D24]">
+        <div className="rounded-2xl border border-dashed border-[#dcd9de] bg-white p-5 transition-colors hover:border-[#c8c4d0]">
           <div className="mb-2 flex items-center gap-2 font-bold text-white">
             <Plus size={20} className="text-indigo-500" />
             Criar Novo Grupo
@@ -39,19 +39,23 @@ export function WorkspaceCreateJoin({
               placeholder="Nome do grupo..."
               value={newWorkspaceName}
               onChange={(event) => onNewWorkspaceNameChange(event.target.value)}
-              className="h-11 border-white/10 bg-slate-950 text-white"
+              className="h-11 border-[#dedce1] bg-white text-[#292a30]"
             />
             <Button
               className="h-11 rounded-lg bg-indigo-600 hover:bg-indigo-700 sm:w-14"
               onClick={onCreate}
               disabled={loading}
             >
-              {loading ? <Loader2 className="animate-spin" /> : <Plus size={20} />}
+              {loading ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <Plus size={20} />
+              )}
             </Button>
           </div>
         </div>
 
-        <div className="rounded-lg border border-dashed border-white/10 bg-[#121722] p-4 transition-colors hover:bg-[#1A1D24]">
+        <div className="rounded-2xl border border-dashed border-[#dcd9de] bg-white p-5 transition-colors hover:border-[#c8c4d0]">
           <div className="mb-2 flex items-center gap-2 font-bold text-white">
             <Users size={20} className="text-emerald-500" />
             Entrar com Código
@@ -62,10 +66,12 @@ export function WorkspaceCreateJoin({
           <div className="flex flex-col gap-3 sm:flex-row">
             <Input
               placeholder="XY99ZZ"
-              className="h-11 border-white/10 bg-slate-950 font-mono uppercase tracking-widest text-white"
+              className="h-11 border-[#dedce1] bg-white font-mono uppercase tracking-widest text-[#292a30]"
               maxLength={6}
               value={inviteCode}
-              onChange={(event) => onInviteCodeChange(event.target.value.toUpperCase())}
+              onChange={(event) =>
+                onInviteCodeChange(event.target.value.toUpperCase())
+              }
             />
             <Button
               variant="outline"

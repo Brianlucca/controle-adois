@@ -13,7 +13,7 @@ export function TransactionStatusBadge({
 }: TransactionStatusBadgeProps) {
   if (isOverduePendingExpense(transaction, todayKey)) {
     return (
-      <span className="inline-flex items-center rounded-md bg-red-500/15 px-2.5 py-1 text-[10px] font-bold text-red-400 ring-1 ring-red-500/35">
+      <span className="inline-flex items-center rounded-md bg-[#fff0ee] px-2.5 py-1 text-[10px] font-bold text-[#c94f44] ring-1 ring-[#ffc5bf]">
         <CalendarIcon size={12} className="mr-1.5" /> VENCIDA
       </span>
     );
@@ -21,7 +21,7 @@ export function TransactionStatusBadge({
 
   if (transaction.status === "pending") {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20">
+      <span className="inline-flex items-center rounded-md bg-[#fff8e8] px-2.5 py-1 text-[10px] font-bold text-[#9a6710] ring-1 ring-[#f1d9a5]">
         <CalendarIcon size={12} className="mr-1.5" /> PENDENTE
       </span>
     );
@@ -29,14 +29,14 @@ export function TransactionStatusBadge({
 
   if (transaction.type === "expense") {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-red-500/10 text-red-400 ring-1 ring-red-500/20">
+      <span className="inline-flex items-center rounded-md bg-[#fff1ef] px-2.5 py-1 text-[10px] font-bold text-[#b9564d] ring-1 ring-[#ffd1cc]">
         <CheckCircle2 size={12} className="mr-1.5" /> PAGO
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
+    <span className="inline-flex items-center rounded-md bg-[#edf9f5] px-2.5 py-1 text-[10px] font-bold text-[#168267] ring-1 ring-[#bfe8d9]">
       <CheckCircle2 size={12} className="mr-1.5" /> RECEBIDO
     </span>
   );

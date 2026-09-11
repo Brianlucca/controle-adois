@@ -113,14 +113,14 @@ export function DateRangeFilter({
         className="flex h-11 w-full min-w-[220px] items-center justify-between gap-3 rounded-xl border border-[#dedce1] bg-white px-3 text-left text-sm text-[#4b4d54] transition-colors hover:border-[#aaa5e8] sm:w-[260px]"
       >
         <span className="flex min-w-0 items-center gap-2">
-          <Calendar size={16} className="shrink-0 text-slate-500" />
+          <Calendar size={16} className="shrink-0 text-[#7e818a]" />
           <span className="truncate font-medium">
             {formatLabelDate(from)} - {formatLabelDate(to)}
           </span>
         </span>
         <ChevronDown
           size={16}
-          className={`shrink-0 text-slate-500 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          className={`shrink-0 text-[#7e818a] transition-transform ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 
@@ -132,7 +132,7 @@ export function DateRangeFilter({
                 type="button"
                 variant="ghost"
                 onClick={() => applyPreset("cycle")}
-                className={`h-10 px-2 text-[11px] ${activeMode === "cycle" ? "bg-indigo-500/20 text-indigo-200" : "bg-white/[0.03] text-slate-300"} hover:bg-indigo-500/25`}
+                className={`h-10 px-2 text-[11px] ${activeMode === "cycle" ? "bg-[#eeecff] text-[#635bff]" : "bg-transparent text-[#71747d]"} hover:bg-[#f1efff] hover:text-[#635bff]`}
               >
                 Meu ciclo
               </Button>
@@ -141,15 +141,15 @@ export function DateRangeFilter({
               type="button"
               variant="ghost"
               onClick={() => applyPreset("month")}
-              className="h-10 bg-white/[0.03] px-2 text-[11px] text-slate-300 hover:bg-white/10"
+              className="h-10 bg-transparent px-2 text-[11px] text-[#71747d] hover:bg-[#f1efff] hover:text-[#635bff]"
             >
-              Mes
+              Mês
             </Button>
             <Button
               type="button"
               variant="ghost"
               onClick={() => applyPreset("year")}
-              className="h-10 bg-white/[0.03] px-2 text-[11px] text-slate-300 hover:bg-white/10"
+              className="h-10 bg-transparent px-2 text-[11px] text-[#71747d] hover:bg-[#f1efff] hover:text-[#635bff]"
             >
               Ano
             </Button>
@@ -157,7 +157,7 @@ export function DateRangeFilter({
               type="button"
               variant="ghost"
               onClick={() => applyPreset("all")}
-              className="h-10 bg-white/[0.03] px-2 text-[11px] text-slate-300 hover:bg-white/10"
+              className="h-10 bg-transparent px-2 text-[11px] text-[#71747d] hover:bg-[#f1efff] hover:text-[#635bff]"
             >
               Tudo
             </Button>
@@ -165,7 +165,7 @@ export function DateRangeFilter({
               type="button"
               variant="ghost"
               onClick={() => setActiveMode("custom")}
-              className={`h-10 px-1 text-[10px] ${activeMode === "custom" ? "bg-indigo-500/20 text-indigo-200" : "bg-white/[0.03] text-slate-300"} hover:bg-indigo-500/25`}
+              className={`h-10 px-1 text-[10px] ${activeMode === "custom" ? "bg-[#eeecff] text-[#635bff]" : "bg-transparent text-[#71747d]"} hover:bg-[#f1efff] hover:text-[#635bff]`}
             >
               Personalizado
             </Button>
@@ -174,17 +174,17 @@ export function DateRangeFilter({
           {onSaveCycle && activeMode === "cycle" && (
             <div className="mt-4 rounded-xl border border-[#dedaff] bg-[#f5f3ff] p-3">
               <div className="mb-3">
-                <p className="text-xs font-bold text-indigo-200">
+                <p className="text-xs font-bold text-[#5148e5]">
                   Configurar meu ciclo
                 </p>
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="mt-1 text-[11px] text-[#71747d]">
                   Informe apenas os dias. As datas e os meses são atualizados
                   automaticamente.
                 </p>
               </div>
               <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
                 <label>
-                  <span className="mb-1 block text-[10px] uppercase text-slate-500">
+                  <span className="mb-1 block text-[10px] uppercase text-[#7e818a]">
                     Começa dia
                   </span>
                   <Input
@@ -195,11 +195,11 @@ export function DateRangeFilter({
                     onChange={(event) =>
                       setLocalCycleStart(Number(event.target.value))
                     }
-                    className="h-10 border-white/10 bg-black/20"
+                    className="h-10 border-[#dedce1] bg-white text-[#292a30]"
                   />
                 </label>
                 <label>
-                  <span className="mb-1 block text-[10px] uppercase text-slate-500">
+                  <span className="mb-1 block text-[10px] uppercase text-[#7e818a]">
                     Termina dia
                   </span>
                   <Input
@@ -210,7 +210,7 @@ export function DateRangeFilter({
                     onChange={(event) =>
                       setLocalCycleEnd(Number(event.target.value))
                     }
-                    className="h-10 border-white/10 bg-black/20"
+                    className="h-10 border-[#dedce1] bg-white text-[#292a30]"
                   />
                 </label>
                 <Button
@@ -222,7 +222,7 @@ export function DateRangeFilter({
                     setSavingCycle(false);
                     setIsOpen(false);
                   }}
-                  className="h-10 bg-indigo-600 px-3 text-xs text-white"
+                  className="h-10 bg-[#635bff] px-3 text-xs text-[#fff] hover:bg-[#554cf0]"
                 >
                   Salvar
                 </Button>
@@ -233,44 +233,44 @@ export function DateRangeFilter({
           {activeMode === "custom" && (
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="space-y-1.5">
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Inicio
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-[#7e818a]">
+                  Início
                 </span>
                 <Input
                   type="date"
                   value={localFrom}
                   onChange={(e) => setLocalFrom(e.target.value)}
-                  className="h-11 border-white/10 bg-black/20 text-sm text-white focus-visible:ring-indigo-500"
+                  className="h-11 border-[#dedce1] bg-white text-sm text-[#292a30] focus-visible:ring-[#635bff]"
                 />
               </label>
               <label className="space-y-1.5">
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-[#7e818a]">
                   Fim
                 </span>
                 <Input
                   type="date"
                   value={localTo}
                   onChange={(e) => setLocalTo(e.target.value)}
-                  className="h-11 border-white/10 bg-black/20 text-sm text-white focus-visible:ring-indigo-500"
+                  className="h-11 border-[#dedce1] bg-white text-sm text-[#292a30] focus-visible:ring-[#635bff]"
                 />
               </label>
             </div>
           )}
 
           {activeMode === "custom" && (
-            <div className="mt-4 flex justify-end gap-2 border-t border-white/5 pt-4">
+            <div className="mt-4 flex justify-end gap-2 border-t border-[#efedf0] pt-4">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => setIsOpen(false)}
-                className="h-10 text-slate-400 hover:bg-white/10 hover:text-white"
+                className="h-10 text-[#71747d] hover:bg-[#f5f4f6] hover:text-[#292a30]"
               >
                 Cancelar
               </Button>
               <Button
                 type="button"
                 onClick={handleApply}
-                className="h-10 bg-indigo-600 px-4 text-white hover:bg-indigo-700"
+                className="h-10 bg-[#635bff] px-4 text-[#fff] hover:bg-[#554cf0]"
               >
                 Aplicar
               </Button>

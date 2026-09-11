@@ -131,19 +131,19 @@ export default function CalendarPage() {
         <div className="flex w-full items-center justify-between rounded-xl border border-[#dedce1] bg-white p-1 md:w-auto">
           <button
             onClick={() => calendarRef.current?.getApi().prev()}
-            className="p-2 hover:bg-white/10 rounded-md text-slate-300 hover:text-white transition-colors"
+            className="rounded-lg p-2 text-[#686a72] transition-colors hover:bg-[#f1f0f3] hover:text-[#292a30]"
           >
             <ChevronLeft size={18} />
           </button>
           <button
             onClick={() => calendarRef.current?.getApi().today()}
-            className="px-4 py-1.5 text-xs font-bold text-white uppercase tracking-wider hover:bg-white/5 rounded-md transition-colors"
+            className="rounded-lg px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-[#55575f] transition-colors hover:bg-[#f1f0f3]"
           >
             Hoje
           </button>
           <button
             onClick={() => calendarRef.current?.getApi().next()}
-            className="p-2 hover:bg-white/10 rounded-md text-slate-300 hover:text-white transition-colors"
+            className="rounded-lg p-2 text-[#686a72] transition-colors hover:bg-[#f1f0f3] hover:text-[#292a30]"
           >
             <ChevronRight size={18} />
           </button>
@@ -209,25 +209,25 @@ export default function CalendarPage() {
         isDayModalOpen &&
         createPortal(
           <div
-            className="fixed inset-0 z-[99998] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+            className="fixed inset-0 z-[99998] flex items-center justify-center bg-[#25222e]/15 p-4 animate-in fade-in duration-200"
             onClick={() => setIsDayModalOpen(false)}
           >
             <div
-              className="w-full max-w-lg overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-2xl animate-in zoom-in-95 duration-200"
+              className="w-full max-w-lg overflow-hidden rounded-2xl border border-[#e2dfe3] bg-white shadow-[0_24px_70px_-25px_rgba(30,27,48,.42)] animate-in zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between border-b border-white/10 bg-[#13161C] px-5 py-4">
+              <div className="flex items-center justify-between border-b border-[#e8e6e9] bg-[#faf9fb] px-5 py-4">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
                     Transações do dia
                   </p>
-                  <h3 className="text-lg font-bold text-white">
+                  <h3 className="text-lg font-bold text-[#292a30]">
                     {selectedDayTitle}
                   </h3>
                 </div>
                 <button
                   onClick={() => setIsDayModalOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                  className="rounded-full p-1.5 text-[#8b8d95] transition-colors hover:bg-[#eeecf0] hover:text-[#292a30]"
                 >
                   <X size={18} />
                 </button>
@@ -247,7 +247,7 @@ export default function CalendarPage() {
                       tx.type === "income"
                         ? "border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/15"
                         : tx.status === "paid"
-                          ? "border-white/10 bg-white/5 hover:bg-white/10"
+                          ? "border-[#e3e1e4] bg-[#faf9fb] hover:bg-[#f5f4f6]"
                           : "border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/15"
                     }`}
                   >
@@ -256,11 +256,11 @@ export default function CalendarPage() {
                         description={tx.description}
                         category={tx.category}
                         type={tx.type}
-                        className="h-9 w-9 rounded-lg bg-white/10"
+                        className="h-9 w-9 rounded-lg bg-white ring-1 ring-[#e8e5e9]"
                       />
                       <div className="min-w-0">
                         <p
-                          className={`truncate text-sm font-bold ${tx.status === "paid" && tx.type === "expense" ? "text-slate-400 line-through" : "text-white"}`}
+                          className={`truncate text-sm font-bold ${tx.status === "paid" && tx.type === "expense" ? "text-[#9a9ca3] line-through" : "text-[#292a30]"}`}
                         >
                           {tx.description}
                         </p>
@@ -288,11 +288,11 @@ export default function CalendarPage() {
         selectedEvent &&
         createPortal(
           <div
-            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#25222e]/15 p-4 animate-in fade-in duration-200"
             onClick={() => setIsModalOpen(false)}
           >
             <div
-              className="w-full max-w-sm overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-2xl animate-in zoom-in-95 duration-200"
+              className="w-full max-w-sm overflow-hidden rounded-2xl border border-[#e2dfe3] bg-white shadow-[0_24px_70px_-25px_rgba(30,27,48,.42)] animate-in zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
               <div
@@ -300,13 +300,13 @@ export default function CalendarPage() {
                   selectedEvent.type === "income"
                     ? "bg-emerald-500/20"
                     : selectedEvent.status === "paid"
-                      ? "bg-slate-700/20"
+                      ? "bg-[#f1f0f3]"
                       : "bg-red-500/20"
                 }`}
               >
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="absolute top-3 right-3 p-1.5 bg-black/20 text-white rounded-full hover:bg-black/40 transition-colors"
+                  className="absolute right-3 top-3 rounded-full bg-white/80 p-1.5 text-[#55575f] transition-colors hover:bg-white"
                 >
                   <X size={16} />
                 </button>
@@ -316,28 +316,28 @@ export default function CalendarPage() {
                     description={selectedEvent.description}
                     category={selectedEvent.category}
                     type={selectedEvent.type}
-                    className="mb-[-28px] h-14 w-14 rounded-lg border-4 border-[#121722] shadow-lg"
+                    className="mb-[-28px] h-14 w-14 rounded-xl border-4 border-white shadow-lg"
                   />
                 </div>
               </div>
 
               <div className="pt-10 pb-8 px-6 text-center">
-                <h3 className="text-lg font-bold text-white leading-tight mb-1">
+                <h3 className="mb-1 text-lg font-bold leading-tight text-[#292a30]">
                   {selectedEvent.description}
                 </h3>
                 <p className="text-sm text-slate-400 mb-4">
                   {selectedEvent.category}
                 </p>
 
-                <div className="text-3xl font-bold text-white mb-6 tracking-tight">
+                <div className="mb-6 text-3xl font-bold tracking-tight text-[#292a30]">
                   {selectedEvent.type === "expense" ? "- " : "+ "}
                   {formatCurrency(selectedEvent.amount)}
                 </div>
 
-                <div className="space-y-3 rounded-lg border border-white/10 bg-[#0B0E14] p-4">
+                <div className="space-y-3 rounded-xl border border-[#e3e1e4] bg-[#faf9fb] p-4">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-slate-500">Vencimento</span>
-                    <span className="text-slate-300 font-medium">
+                    <span className="font-medium text-[#45474e]">
                       {formatDate(selectedEvent.dueDate)}
                     </span>
                   </div>

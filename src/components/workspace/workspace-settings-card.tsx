@@ -39,7 +39,7 @@ export function WorkspaceSettingsCard({
             <Input
               value={name}
               onChange={(event) => onNameChange(event.target.value)}
-              className="h-11 border-white/10 bg-slate-950 text-white"
+              className="h-11 border-[#dedce1] bg-white text-[#292a30]"
             />
           </div>
 
@@ -52,7 +52,7 @@ export function WorkspaceSettingsCard({
               type="number"
               value={budget}
               onChange={(event) => onBudgetChange(event.target.value)}
-              className="h-11 border-white/10 bg-slate-950 font-mono text-white"
+              className="h-11 border-[#dedce1] bg-white font-mono text-[#292a30]"
             />
           </div>
 

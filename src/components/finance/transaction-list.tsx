@@ -46,22 +46,22 @@ export function TransactionList({
     <>
       <div className="mt-5 flex items-center justify-between">
         <div>
-          <h2 className="text-base font-bold text-white">Lançamentos</h2>
-          <p className="text-xs text-slate-500">
+          <h2 className="text-base font-bold text-[#27282e]">Lançamentos</h2>
+          <p className="text-xs text-[#8a8c94]">
             {totalCount} registros encontrados
           </p>
         </div>
         <button
           type="button"
           onClick={onSortToggle}
-          className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#121722] px-3 text-xs font-bold text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+          className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#dedce1] bg-white px-3 text-xs font-bold text-[#4b4d54] transition-colors hover:border-[#c7c3d9] hover:bg-[#f8f7fa]"
         >
           {sortMode === "priority" ? (
-            <AlertTriangle size={14} className="text-amber-300" />
+            <AlertTriangle size={14} className="text-[#b37a15]" />
           ) : sortMode === "desc" ? (
-            <ArrowDownWideNarrow size={14} className="text-indigo-300" />
+            <ArrowDownWideNarrow size={14} className="text-[#635bff]" />
           ) : (
-            <ArrowUpWideNarrow size={14} className="text-indigo-300" />
+            <ArrowUpWideNarrow size={14} className="text-[#635bff]" />
           )}
           {sortMode === "priority"
             ? "Prioridade"
@@ -71,18 +71,18 @@ export function TransactionList({
         </button>
       </div>
 
-      <div className="mt-3 overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-xl shadow-black/10">
+      <div className="mt-3 overflow-hidden rounded-xl border border-[#e3e1e4] bg-white shadow-[0_16px_35px_-30px_rgba(31,29,43,0.5)]">
         {loading ? (
           <div className="flex min-h-[220px] items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#635bff]" />
           </div>
         ) : transactions.length === 0 ? (
-          <div className="p-10 text-center text-sm text-slate-500">
+          <div className="p-10 text-center text-sm text-[#71747d]">
             Nenhuma transação encontrada neste período.
           </div>
         ) : (
-          <div className="divide-y divide-white/5">
-            <div className="hidden grid-cols-[minmax(0,1fr)_140px_140px_160px] gap-4 border-b border-white/5 bg-white/[0.02] px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 lg:grid">
+          <div className="divide-y divide-[#efedf0]">
+            <div className="hidden grid-cols-[minmax(0,1fr)_140px_140px_160px] gap-4 border-b border-[#efedf0] bg-[#faf9fb] px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-[#8a8c94] lg:grid">
               <span>Descrição</span>
               <span>Status</span>
               <span>Data</span>
@@ -106,15 +106,15 @@ export function TransactionList({
                     description={transaction.description}
                     category={transaction.category}
                     type={transaction.type}
-                    className="h-11 w-11 shrink-0 rounded-lg bg-black/20 ring-1 ring-white/5 lg:h-10 lg:w-10"
+                    className="h-11 w-11 shrink-0 rounded-lg bg-[#f7f6f8] ring-1 ring-[#e3e1e4] lg:h-10 lg:w-10"
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-white transition-colors group-hover:text-indigo-200">
+                    <p className="truncate text-sm font-bold text-[#292a30] transition-colors group-hover:text-[#635bff]">
                       {transaction.description}
                     </p>
-                    <div className="mt-1 flex min-w-0 items-center gap-2 text-xs text-slate-500">
+                    <div className="mt-1 flex min-w-0 items-center gap-2 text-xs text-[#8a8c94]">
                       <span className="truncate">{transaction.category}</span>
-                      <span className="h-1 w-1 rounded-full bg-slate-700" />
+                      <span className="h-1 w-1 rounded-full bg-[#c6c4ca]" />
                       <span className="lg:hidden">
                         {formatDate(transaction.dueDate)}
                       </span>
@@ -127,7 +127,7 @@ export function TransactionList({
                 <div className="hidden lg:block">
                   <TransactionStatusBadge transaction={transaction} todayKey={todayKey} />
                 </div>
-                <div className={`hidden font-mono text-xs font-semibold lg:block ${isOverdue ? "text-red-400" : "text-slate-400"}`}>
+                <div className={`hidden font-mono text-xs font-semibold lg:block ${isOverdue ? "text-[#c94f44]" : "text-[#71747d]"}`}>
                   {formatDate(transaction.dueDate)}
                 </div>
                 <div className="col-span-2 mt-1 flex items-center justify-between gap-3 lg:col-span-1 lg:mt-0 lg:block lg:text-right">
@@ -137,10 +137,10 @@ export function TransactionList({
                   <p
                     className={`font-mono text-sm font-bold ${
                       isOverdue
-                        ? "text-red-400"
+                        ? "text-[#c94f44]"
                         : transaction.type === "income"
-                        ? "text-emerald-300"
-                        : "text-slate-100"
+                        ? "text-[#168267]"
+                        : "text-[#292a30]"
                     }`}
                   >
                     {transaction.type === "expense" ? "- " : "+ "}
@@ -155,15 +155,15 @@ export function TransactionList({
       </div>
 
       {!loading && totalCount > itemsPerPage && (
-        <div className="mt-3 flex flex-col items-stretch justify-between gap-3 rounded-lg border border-white/10 bg-[#121722] p-3 sm:flex-row sm:items-center">
-          <div className="order-2 text-center text-xs font-medium text-slate-500 sm:order-1 sm:text-left">
+        <div className="mt-3 flex flex-col items-stretch justify-between gap-3 rounded-xl border border-[#e3e1e4] bg-white p-3 sm:flex-row sm:items-center">
+          <div className="order-2 text-center text-xs font-medium text-[#71747d] sm:order-1 sm:text-left">
             Página {currentPage} de {totalPages} - {transactions.length} itens
           </div>
           <div className="order-1 flex gap-2 sm:order-2">
             <Button
               variant="outline"
               size="sm"
-              className="h-10 flex-1 rounded-lg border-white/10 bg-[#121722] text-slate-300 hover:bg-white/5 disabled:opacity-30"
+              className="h-10 flex-1 rounded-lg border-[#dedce1] bg-white text-[#4b4d54] hover:bg-[#f8f7fa] disabled:opacity-30"
               onClick={() => onPageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
             >
@@ -172,7 +172,7 @@ export function TransactionList({
             <Button
               variant="outline"
               size="sm"
-              className="h-10 flex-1 rounded-lg border-white/10 bg-[#121722] text-slate-300 hover:bg-white/5 disabled:opacity-30"
+              className="h-10 flex-1 rounded-lg border-[#dedce1] bg-white text-[#4b4d54] hover:bg-[#f8f7fa] disabled:opacity-30"
               onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
             >

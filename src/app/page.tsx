@@ -1,131 +1,260 @@
 import Link from "next/link";
 import {
+  ArrowDownRight,
   ArrowRight,
+  ArrowUpRight,
   Bell,
+  Briefcase,
   CalendarDays,
   Check,
   CircleDollarSign,
+  CreditCard,
   Eye,
   Fingerprint,
   Landmark,
+  LayoutDashboard,
   LockKeyhole,
   Menu,
   PieChart,
   Plus,
   ReceiptText,
+  Settings,
   ShieldCheck,
   Sparkles,
   TrendingUp,
   Users,
+  Wallet,
   WalletCards,
 } from "lucide-react";
-import { ControleADoisLogo } from "@/components/controle-adois-logo";
+import {
+  ControleADoisLogo,
+  ControleADoisMark,
+} from "@/components/controle-adois-logo";
 
 function ProductPreview() {
   const nav = [
-    [PieChart, "Dashboard"],
-    [ReceiptText, "Transações"],
+    [LayoutDashboard, "Visão geral"],
+    [Wallet, "Transações"],
+    [CreditCard, "Contas & Pix"],
     [CalendarDays, "Calendário"],
-    [WalletCards, "Pagamentos"],
-    [TrendingUp, "Relatórios"],
+    [PieChart, "Relatórios"],
   ] as const;
   return (
     <div className="landing-dashboard mx-auto max-w-[1080px] rounded-[30px] border border-[#dfe1e7] bg-[#f5f6f8] p-3 shadow-[0_45px_100px_-32px_rgba(21,26,46,.3)]">
-      <div className="overflow-hidden rounded-[22px] border border-[#e4e7ed] bg-white">
-        <div className="flex h-16 items-center justify-between border-b border-[#edf0f3] px-6">
-          <div className="flex items-center gap-3">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#635bff] text-xs font-black text-white">
-              2
-            </span>
-            <b className="text-sm">Nossa casa</b>
-            <span className="hidden rounded-full bg-[#efedff] px-2 py-1 text-[9px] font-bold text-[#635bff] sm:block">
-              COMPARTILHADO
-            </span>
-          </div>
-          <Bell size={17} />
-        </div>
-        <div className="grid min-h-[420px] md:grid-cols-[205px_1fr]">
-          <aside className="hidden border-r border-[#edf0f3] p-4 md:block">
+      <div className="overflow-hidden rounded-[22px] border border-[#e4e7ed] bg-[#f7f6f3]">
+        <div className="grid min-h-[520px] md:grid-cols-[218px_1fr]">
+          <aside className="hidden border-r border-[#ebe9e8] bg-[#fbfaf7] md:block">
+            <div className="flex h-16 items-center gap-3 border-b border-[#ebe9e8] px-4">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#635bff]">
+                <ControleADoisMark className="h-5 w-5" />
+              </span>
+              <b className="text-sm tracking-tight">Controle A Dois</b>
+            </div>
+            <div className="m-3 flex items-center gap-2 rounded-xl border border-[#e5e3e4] bg-white p-2">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#f0efff] text-[10px] font-black text-[#635bff]">
+                WN
+              </span>
+              <span className="min-w-0">
+                <small className="block text-[7px] font-bold uppercase tracking-wider text-[#9a9ca3]">
+                  Espaço atual
+                </small>
+                <b className="block truncate text-[10px]">Workspace Novo</b>
+              </span>
+            </div>
+            <p className="mb-2 mt-5 px-6 text-[7px] font-bold uppercase tracking-[.16em] text-[#aaa9ae]">
+              Principal
+            </p>
             {nav.map(([Icon, label], i) => (
               <div
                 key={label}
-                className={`mb-1 flex gap-3 rounded-xl px-3 py-3 text-xs font-semibold ${i === 0 ? "bg-[#f0efff] text-[#635bff]" : "text-[#797e89]"}`}
+                className={`mx-3 mb-1 flex gap-3 rounded-xl px-3 py-2.5 text-[11px] font-semibold ${i === 0 ? "bg-[#eeecff] text-[#5e56dc]" : "text-[#70737b]"}`}
               >
                 <Icon size={15} />
                 {label}
               </div>
             ))}
+            <p className="mb-2 mt-5 px-6 text-[7px] font-bold uppercase tracking-[.16em] text-[#aaa9ae]">
+              Conta
+            </p>
+            <div className="mx-3 mb-1 flex gap-3 rounded-xl px-3 py-2.5 text-[11px] font-semibold text-[#70737b]">
+              <Briefcase size={15} /> Espaços e pessoas
+            </div>
+            <div className="mx-3 mb-1 flex gap-3 rounded-xl px-3 py-2.5 text-[11px] font-semibold text-[#70737b]">
+              <Settings size={15} /> Configurações
+            </div>
           </aside>
-          <div className="p-4 sm:p-7">
-            <div className="flex items-end justify-between">
+          <div className="min-w-0">
+            <div className="flex h-16 items-center justify-between border-b border-[#ebe9e8] bg-[#fbfaf7]/90 px-4 sm:px-6">
+              <b className="text-xs">Visão Geral</b>
+              <div className="flex items-center gap-3">
+                <span className="hidden text-right sm:block">
+                  <b className="block text-[9px] leading-none">Conta de demonstração</b>
+                  <small className="mt-1 block text-[7px] text-[#8a8d96]">
+                    controle@adois.app
+                  </small>
+                </span>
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-[#ebe9ff] text-[9px] font-bold text-[#5d55dd] ring-1 ring-[#dad6ff]">
+                  CA
+                </span>
+              </div>
+            </div>
+            <div className="p-4 sm:p-6">
+            <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#9ca1ab]">
-                  Saldo disponível
+                <p className="text-[8px] font-bold uppercase tracking-[.16em] text-[#635bff]">
+                  Visão geral
                 </p>
-                <p className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">
-                  R$ 8.740,50
+                <p className="mt-1 text-lg font-black tracking-[-.04em] sm:text-xl">
+                  Olá, vamos organizar o mês?
+                </p>
+                <p className="mt-1 hidden text-[9px] text-[#777a83] sm:block">
+                  O essencial do espaço Workspace Novo.
                 </p>
               </div>
-              <button className="flex gap-2 rounded-xl bg-[#171923] px-3 py-2.5 text-xs font-bold text-white">
+              <button className="flex shrink-0 gap-2 rounded-xl bg-[#635bff] px-3 py-2.5 text-[10px] font-bold text-white">
                 <Plus size={14} />
                 <span className="hidden sm:block">Nova transação</span>
               </button>
             </div>
-            <div className="mt-7 grid grid-cols-3 gap-2">
+
+            <div className="mt-4 grid gap-3 rounded-2xl border border-[#dedbe9] bg-gradient-to-br from-[#f1efff] to-[#fbfaff] p-4 sm:grid-cols-[1fr_190px] sm:items-end">
+              <div>
+                <p className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[.13em] text-[#7771dd]">
+                  <Wallet size={12} /> Saldo disponível hoje
+                </p>
+                <p className="mt-2 text-2xl font-black tracking-[-.05em] sm:text-3xl">
+                  R$ 8.740,50
+                </p>
+                <div className="mt-3 h-1.5 max-w-[270px] overflow-hidden rounded-full bg-[#e8e7ed]">
+                  <div className="h-full w-[42%] rounded-full bg-[#635bff]" />
+                </div>
+                <p className="mt-1.5 text-[8px] text-[#8b8d95]">
+                  42% do limite mensal utilizado
+                </p>
+              </div>
+              <div className="rounded-xl border border-[#e7e5ee] bg-white/80 p-3">
+                <p className="text-[8px] font-semibold text-[#81838c]">
+                  Saldo previsto
+                </p>
+                <p className="mt-1 text-base font-extrabold">R$ 9.250,00</p>
+                <p className="mt-1 text-[7px] leading-3 text-[#92949b]">
+                  Considera valores a receber e a pagar.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-2">
               {[
-                ["Receitas", "R$ 12.850", "+8,4%"],
-                ["Despesas", "R$ 4.109", "−2,1%"],
-                ["Economia", "R$ 3.420", "+12,7%"],
-              ].map(([a, b, c]) => (
+                {
+                  icon: ArrowUpRight,
+                  label: "Receitas no período",
+                  value: "R$ 12.850",
+                  color: "#168267",
+                  background: "#eaf8f3",
+                },
+                {
+                  icon: ArrowDownRight,
+                  label: "Despesas no período",
+                  value: "R$ 4.109",
+                  color: "#d45f51",
+                  background: "#fff0ed",
+                },
+                {
+                  icon: Sparkles,
+                  label: "Média livre por mês",
+                  value: "R$ 3.420",
+                  color: "#635bff",
+                  background: "#efedff",
+                },
+              ].map(({ icon: Icon, label, value, color, background }) => (
                 <div
-                  key={a}
-                  className="rounded-2xl border border-[#eaecf0] p-3 sm:p-4"
+                  key={label}
+                  className="flex min-w-0 items-center gap-2 rounded-xl border border-[#eaecf0] bg-white p-2.5 sm:p-3"
                 >
-                  <div className="flex justify-between text-[8px] text-[#8a8f99] sm:text-[10px]">
-                    <span>{a}</span>
-                    <span className="text-[#158467]">{c}</span>
-                  </div>
-                  <p className="mt-2 text-sm font-extrabold sm:text-lg">{b}</p>
+                  <span
+                    className="hidden h-8 w-8 shrink-0 place-items-center rounded-lg sm:grid"
+                    style={{ color, background }}
+                  >
+                    <Icon size={14} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[7px] font-semibold text-[#81838c] sm:text-[8px]">
+                      {label}
+                    </span>
+                    <b className="mt-1 block truncate text-[11px] sm:text-sm">
+                      {value}
+                    </b>
+                  </span>
                 </div>
               ))}
             </div>
             <div className="mt-3 grid gap-3 lg:grid-cols-[1.45fr_1fr]">
-              <div className="rounded-2xl border border-[#eaecf0] p-5">
-                <b className="text-xs">Fluxo mensal</b>
-                <div className="mt-6 flex h-32 items-end gap-2 border-b border-[#e9ebef]">
-                  {[45, 60, 52, 76, 66, 88, 70, 94, 76, 100, 82, 92].map(
-                    (h, i) => (
-                      <span
-                        key={i}
-                        style={{ height: `${h}%` }}
-                        className={`flex-1 rounded-t ${i % 2 ? "bg-[#c4c0ff]" : "bg-[#635bff]"}`}
-                      />
-                    ),
-                  )}
+              <div className="overflow-hidden rounded-2xl border border-[#eaecf0] bg-white">
+                <div className="flex items-center justify-between border-b border-[#efedf0] px-4 py-3">
+                  <span>
+                    <b className="block text-[10px]">Movimentações recentes</b>
+                    <small className="text-[7px] text-[#92949b]">
+                      O que aconteceu por último neste espaço.
+                    </small>
+                  </span>
+                  <span className="text-[8px] font-bold text-[#635bff]">
+                    Ver todas
+                  </span>
+                </div>
+                <div className="divide-y divide-[#efedf0] px-3">
+                  {[
+                    ["Mercado do bairro", "Hoje · Mercado", "− R$ 186,40"],
+                    ["Salário", "05 set · Receita", "+ R$ 6.800,00"],
+                  ].map(([description, detail, value], index) => (
+                    <div key={description} className="flex items-center gap-2 py-2.5">
+                      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${index ? "bg-[#eaf8f3] text-[#168267]" : "bg-[#fff1ed] text-[#d45f51]"}`}>
+                        {index ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <b className="block truncate text-[9px]">{description}</b>
+                        <small className="block truncate text-[7px] text-[#92949b]">
+                          {detail}
+                        </small>
+                      </span>
+                      <b className={`text-[8px] ${index ? "text-[#168267]" : "text-[#44464e]"}`}>
+                        {value}
+                      </b>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="rounded-2xl border border-[#eaecf0] p-5">
-                <b className="text-xs">Por categoria</b>
-                {[
-                  ["Moradia", "100%"],
-                  ["Mercado", "62%"],
-                  ["Lazer", "36%"],
-                ].map(([a, w]) => (
-                  <div className="mt-5" key={a}>
-                    <div className="mb-2 text-[9px] text-[#747984]">{a}</div>
-                    <div className="h-1.5 rounded-full bg-[#f0f1f4]">
-                      <div
-                        className="h-full rounded-full bg-[#635bff]"
-                        style={{ width: w }}
-                      />
+              <div className="overflow-hidden rounded-2xl border border-[#eaecf0] bg-white">
+                <div className="border-b border-[#efedf0] px-4 py-3">
+                  <b className="block text-[10px]">Próximos compromissos</b>
+                  <small className="text-[7px] text-[#92949b]">
+                    Contas que merecem atenção.
+                  </small>
+                </div>
+                <div className="divide-y divide-[#efedf0] px-3">
+                  {[
+                    ["Internet", "Vence em 12/09", "R$ 119,90"],
+                    ["Energia", "Vence em 15/09", "R$ 164,30"],
+                  ].map(([description, detail, value]) => (
+                    <div key={description} className="flex items-center gap-2 py-2.5">
+                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#fff1e9] text-[#d76e43]">
+                        <CalendarDays size={12} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <b className="block truncate text-[9px]">{description}</b>
+                        <small className="block truncate text-[7px] text-[#92949b]">
+                          {detail}
+                        </small>
+                      </span>
+                      <b className="text-[8px]">{value}</b>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
@@ -177,7 +306,7 @@ export default function LandingPage() {
               href="/auth/register"
               className="flex items-center gap-2 rounded-full bg-[#17181d] px-5 py-2.5 text-sm font-bold text-white"
             >
-              Começar grátis <ArrowRight size={15} />
+              Criar conta <ArrowRight size={15} />
             </Link>
             <Menu className="md:hidden" />
           </div>
@@ -216,8 +345,8 @@ export default function LandingPage() {
               </a>
             </div>
             <p className="mt-5 text-xs text-[#8b8d94]">
-              <Check className="mr-1 inline text-[#21a77d]" size={13} /> Grátis
-              para começar · Sem cartão de crédito
+              <Check className="mr-1 inline text-[#21a77d]" size={13} />
+              Registre receitas e despesas · Acompanhe contas e Pix
             </p>
           </div>
           <div className="relative mx-auto mt-16 max-w-[1180px]">

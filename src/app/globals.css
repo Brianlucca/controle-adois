@@ -174,7 +174,7 @@
     linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.95), transparent),
     repeating-linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.95) 0 10px,
+      rgba(255, 255, 255, 0.55) 0 10px,
       transparent 10px 18px
     );
   box-shadow: 0 0 22px rgba(16, 185, 129, 0.45);
@@ -189,18 +189,18 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  border: 2px solid rgba(52, 211, 153, 0.75);
+  border: 2px solid rgba(22, 130, 103, 0.5);
   border-radius: 0.5rem;
   padding: 0.55rem 0.85rem;
   transform: translateY(-50%) rotate(-8deg) scale(0.84);
-  background: rgba(6, 78, 59, 0.92);
-  color: #d1fae5;
+  background: rgba(237, 249, 245, 0.98);
+  color: #168267;
   font-size: 0.78rem;
   font-weight: 900;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   opacity: 0;
-  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 14px 35px rgba(31, 29, 43, 0.14);
   animation: invoice-stamp 0.5s ease 0.32s forwards;
 }
 
@@ -231,7 +231,7 @@
       ),
       repeating-linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0.95) 0 10px,
+        rgba(255, 255, 255, 0.55) 0 10px,
         transparent 10px 18px
       );
     animation-name: invoice-cut-vertical;
@@ -289,7 +289,7 @@
     filter: saturate(1.15) brightness(1.05);
   }
   100% {
-    filter: saturate(0.75) brightness(0.82);
+    filter: saturate(0.9) brightness(0.97);
   }
 }
 
