@@ -3,13 +3,7 @@
 import { useMemo } from "react";
 import { useFinance } from "@/hooks/use-finance";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -20,17 +14,11 @@ import {
   Download,
   Calendar,
   ExternalLink,
-  TrendingUp,
   Wallet,
-  Target,
-  PieChart as PieIcon,
-  BarChart3,
   ArrowUpRight,
   ArrowDownRight,
   CheckCircle2,
-  Clock,
   PiggyBank,
-  Sparkles,
   Layers,
   Activity,
 } from "lucide-react";
@@ -40,7 +28,6 @@ import {
   Cell,
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
-  BarChart,
   Bar,
   XAxis,
   YAxis,
@@ -48,11 +35,6 @@ import {
   Legend,
   ComposedChart,
   Line,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
 } from "recharts";
 
 const COLORS = {
@@ -77,8 +59,58 @@ const CHART_COLORS = [
   COLORS.slate,
 ];
 
+type ChartTooltipEntry = {
+  color?: string;
+  name?: string;
+  value?: number | string;
+};
+
+function ChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: ChartTooltipEntry[];
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="z-50 rounded-xl border border-[#e4e1e5] bg-white/95 p-4 shadow-xl backdrop-blur-md">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#858790]">
+        {label}
+      </p>
+      {payload.map((entry, index) => (
+        <div key={index} className="mb-1 flex items-center gap-2 last:mb-0">
+          <div
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: entry.color }}
+          />
+          <span className="text-xs font-medium text-[#70727a]">
+            {entry.name}:
+          </span>
+          <span className="font-mono text-xs font-bold text-[#292a30]">
+            {formatCurrency(Number(entry.value) || 0)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ReportsPage() {
-  const { transactions, dateRange, setDateRange, loading, cycleRange, cycleStartDay, cycleEndDay, resetToFinancialCycle, saveFinancialCycle } = useFinance();
+  const {
+    transactions,
+    dateRange,
+    setDateRange,
+    loading,
+    cycleRange,
+    cycleStartDay,
+    cycleEndDay,
+    resetToFinancialCycle,
+    saveFinancialCycle,
+  } = useFinance();
 
   const handleExportExcel = async () => {
     await exportTransactionsReport(transactions, dateRange);
@@ -86,7 +118,7 @@ export default function ReportsPage() {
 
   const reportData = useMemo(
     () => calculateReportsData(transactions),
-    [transactions]
+    [transactions],
   );
   const {
     totalIncome,
@@ -95,48 +127,19 @@ export default function ReportsPage() {
     balance,
     savingsRate,
     expensesByCategory,
-    radarData,
     cumulativeData,
     topExpenses,
     pendingBills,
   } = reportData;
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-[#1A1D24]/95 backdrop-blur-md border border-white/10 p-4 rounded-xl shadow-2xl z-50">
-          <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">
-            {label}
-          </p>
-          {payload.map((entry: any, index: number) => (
-            <div key={index} className="flex items-center gap-2 mb-1 last:mb-0">
-              <div
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: entry.color }}
-              />
-              <span className="text-xs text-slate-300 font-medium">
-                {entry.name}:
-              </span>
-              <span className="text-xs font-bold text-white font-mono">
-                {formatCurrency(entry.value)}
-              </span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
   if (loading) return null;
 
   return (
     <div className="space-y-5 pb-24 animate-in fade-in duration-700 lg:pb-16">
-      <div className="flex flex-col items-start justify-between gap-4 rounded-lg border border-white/10 bg-[#121722] p-4 shadow-xl shadow-black/10 xl:flex-row xl:items-end">
+      <div className="flex flex-col items-start justify-between gap-4 xl:flex-row xl:items-end">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-white tracking-tight">
-            Inteligência Financeira
-          </h1>
+          <p className="app-kicker">Análise financeira</p>
+          <h1 className="app-title mt-1">Inteligência Financeira</h1>
           <p className="text-slate-400 text-sm max-w-lg">
             Analise métricas avançadas, entenda padrões de consumo.
           </p>
@@ -305,7 +308,7 @@ export default function ReportsPage() {
                   tickFormatter={(val) => `${val / 1000}k`}
                 />
                 <RechartsTooltip
-                  content={<CustomTooltip />}
+                  content={<ChartTooltip />}
                   cursor={{ fill: "rgba(255,255,255,0.02)" }}
                 />
                 <Legend
@@ -351,46 +354,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-6">
-          <div className="flex min-h-[280px] flex-1 flex-col overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-xl shadow-black/10">
-            <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.01] p-4">
-              <h3 className="font-bold text-white flex items-center gap-2">
-                <Sparkles size={16} className="text-amber-400" /> Padrão de
-                Consumo
-              </h3>
-            </div>
-            <div className="flex-1 w-full h-full relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart
-                  cx="50%"
-                  cy="50%"
-                  outerRadius="70%"
-                  data={radarData}
-                >
-                  <PolarGrid stroke="#334155" opacity={0.3} />
-                  <PolarAngleAxis
-                    dataKey="subject"
-                    tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: "bold" }}
-                  />
-                  <PolarRadiusAxis
-                    angle={30}
-                    domain={[0, "auto"]}
-                    tick={false}
-                    axisLine={false}
-                  />
-                  <Radar
-                    name="Gastos"
-                    dataKey="A"
-                    stroke={COLORS.warning}
-                    fill={COLORS.warning}
-                    fillOpacity={0.3}
-                  />
-                  <RechartsTooltip content={<CustomTooltip />} />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
+        <div className="flex flex-col">
           <div className="flex min-h-[280px] flex-1 flex-col overflow-hidden rounded-lg border border-white/10 bg-[#121722] shadow-xl shadow-black/10">
             <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.01] p-4">
               <h3 className="font-bold text-white flex items-center gap-2">
@@ -417,7 +381,7 @@ export default function ReportsPage() {
                       />
                     ))}
                   </Pie>
-                  <RechartsTooltip content={<CustomTooltip />} />
+                  <RechartsTooltip content={<ChartTooltip />} />
                   <Legend
                     verticalAlign="middle"
                     align="right"
@@ -499,11 +463,11 @@ export default function ReportsPage() {
                         className="h-9 w-9 text-slate-500 hover:text-white hover:bg-indigo-600 rounded-lg transition-all shrink-0"
                         onClick={() => {
                           const title = encodeURIComponent(
-                            `Pagar: ${t.description}`
+                            `Pagar: ${t.description}`,
                           );
                           window.open(
                             `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}`,
-                            "_blank"
+                            "_blank",
                           );
                         }}
                       >
