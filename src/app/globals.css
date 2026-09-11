@@ -25,7 +25,7 @@
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
   }
- 
+
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -58,8 +58,16 @@
 @layer utilities {
   .app-shell {
     background:
-      radial-gradient(circle at 75% -15%, rgba(99, 102, 241, 0.16), transparent 34%),
-      radial-gradient(circle at 15% 105%, rgba(6, 182, 212, 0.08), transparent 28%),
+      radial-gradient(
+        circle at 75% -15%,
+        rgba(99, 102, 241, 0.16),
+        transparent 34%
+      ),
+      radial-gradient(
+        circle at 15% 105%,
+        rgba(6, 182, 212, 0.08),
+        transparent 28%
+      ),
       #080b12;
   }
 
@@ -71,7 +79,7 @@
   .glass {
     @apply bg-slate-900/60 backdrop-blur-xl border border-white/10;
   }
-  
+
   .glass-card {
     @apply bg-white/5 border border-white/5 hover:border-white/10 transition-all duration-300;
   }
@@ -86,27 +94,41 @@
     height: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: #020617; 
+    background: #020617;
   }
   ::-webkit-scrollbar-thumb {
-    background: #334155; 
+    background: #334155;
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #475569; 
+    background: #475569;
   }
 }
 
 @keyframes assistant-nudge {
-  0%, 82%, 100% { transform: translateY(0) rotate(0); }
-  86% { transform: translateY(-7px) rotate(-7deg); }
-  90% { transform: translateY(0) rotate(6deg); }
-  94% { transform: translateY(-3px) rotate(-3deg); }
-  97% { transform: translateY(0) rotate(0); }
+  0%,
+  82%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  86% {
+    transform: translateY(-7px) rotate(-7deg);
+  }
+  90% {
+    transform: translateY(0) rotate(6deg);
+  }
+  94% {
+    transform: translateY(-3px) rotate(-3deg);
+  }
+  97% {
+    transform: translateY(0) rotate(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .assistant-nudge { animation: none; }
+  .assistant-nudge {
+    animation: none;
+  }
 }
 
 @layer base {

@@ -1,23 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useFinance } from "@/hooks/use-finance";
 import { Button } from "@/components/ui/button";
-import {
-  Plus,
-  Loader2,
-  X,
-  Trash2,
-  AlertTriangle,
-  TrendingUp,
-  Upload,
-  History,
-} from "lucide-react";
-import {
-  formatCurrency,
-  formatDate,
-} from "@/lib/utils";
+import { Plus, Loader2, X, TrendingUp, Upload, History } from "lucide-react";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { TransactionsFilters } from "@/components/finance/transactions-filters";
 import { InvestmentRedemptionModalContent } from "@/components/finance/investment-redemption-modal-content";
 import { TransactionDetailsModalContent } from "@/components/finance/transaction-details-modal-content";
@@ -62,6 +50,7 @@ const ITEMS_PER_PAGE = 15;
 
 export default function TransactionsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     transactions,
     snapshotTransactions,
@@ -83,7 +72,9 @@ export default function TransactionsPage() {
   } = useFinance();
   const { hideValues, toggleHideValues } = usePreferences();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(
+    () => searchParams.get("new") === "1",
+  );
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isRedeemModalOpen, setIsRedeemModalOpen] = useState(false);
@@ -99,8 +90,7 @@ export default function TransactionsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isImporting, setIsImporting] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [sortMode, setSortMode] =
-    useState<TransactionSortMode>("priority");
+  const [sortMode, setSortMode] = useState<TransactionSortMode>("priority");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const todayKey = getLocalDateKey(new Date());
@@ -115,8 +105,13 @@ export default function TransactionsPage() {
     setCurrentPage(1);
   }, [filterTerm, selectedCategory, statusFilter, uiDateRange]);
 
-  const handleAuthError = (response: any) => {
-    if (response?.error === "unauthenticated") {
+  const handleAuthError = (response: unknown) => {
+    if (
+      typeof response === "object" &&
+      response !== null &&
+      "error" in response &&
+      response.error === "unauthenticated"
+    ) {
       router.push("/");
       return true;
     }
@@ -198,7 +193,12 @@ export default function TransactionsPage() {
 
     if (handleAuthError(result)) return;
 
-    if (!isEditing && result?.success && "count" in result && Number(result.count) > 1) {
+    if (
+      !isEditing &&
+      result?.success &&
+      "count" in result &&
+      Number(result.count) > 1
+    ) {
       alert(`${Number(result.count)} lançamentos recorrentes foram criados.`);
     }
 
@@ -209,7 +209,12 @@ export default function TransactionsPage() {
 
   const handleDeleteWrapper = async (id: string) => {
     const transaction = snapshotTransactions.find((item) => item.id === id);
-    if (!window.confirm(`Mover "${transaction?.description || "esta transação"}" (${transaction ? formatCurrency(transaction.amount) : id}) para a lixeira? Você poderá restaurá-la pelo histórico.`)) return;
+    if (
+      !window.confirm(
+        `Mover "${transaction?.description || "esta transação"}" (${transaction ? formatCurrency(transaction.amount) : id}) para a lixeira? Você poderá restaurá-la pelo histórico.`,
+      )
+    )
+      return;
     const result = await deleteTransaction(id);
     if (handleAuthError(result)) return;
     setSelectedTx(null);
@@ -217,13 +222,20 @@ export default function TransactionsPage() {
   };
 
   const handleDeleteRecurrenceWrapper = async (id: string) => {
-    if (!confirm("Excluir apenas as parcelas pendentes desta recorrencia? As parcelas ja pagas serão preservadas.")) return;
+    if (
+      !confirm(
+        "Excluir apenas as parcelas pendentes desta recorrencia? As parcelas ja pagas serão preservadas.",
+      )
+    )
+      return;
 
     const result = await deleteRecurrence(id);
     if (handleAuthError(result)) return;
 
     if (result?.success && "count" in result) {
-      alert(`${Number(result.count)} parcelas pendentes da recorrencia foram excluidas.`);
+      alert(
+        `${Number(result.count)} parcelas pendentes da recorrencia foram excluidas.`,
+      );
     }
 
     setSelectedTx(null);
@@ -232,7 +244,7 @@ export default function TransactionsPage() {
 
   const handleStatusWrapper = async (
     id: string,
-    newStatus: "paid" | "pending"
+    newStatus: "paid" | "pending",
   ) => {
     const result = await updateTransactionStatus(id, newStatus);
     if (handleAuthError(result)) return;
@@ -241,14 +253,17 @@ export default function TransactionsPage() {
     }
   };
 
-  const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportExcel = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setIsImporting(true);
     try {
       const buffer = await file.arrayBuffer();
-      const { items: imported, hasSheets } = await parseTransactionsWorkbook(buffer);
+      const { items: imported, hasSheets } =
+        await parseTransactionsWorkbook(buffer);
 
       if (!hasSheets) {
         alert("Esse arquivo nao tem nenhuma aba para importar.");
@@ -263,18 +278,21 @@ export default function TransactionsPage() {
       const result = await importTransactions(imported);
       if (handleAuthError(result)) return;
       if (result?.success) {
-        const importedCount = "count" in result ? result.count : imported.length;
+        const importedCount =
+          "count" in result ? result.count : imported.length;
         alert(`${importedCount} transações importadas.`);
       }
-    } catch (error) {
-      alert("Não foi possível ler esse arquivo. Confira se ele tem colunas como Data, Descrição, Categoria, Tipo, Valor e Status.");
+    } catch {
+      alert(
+        "Não foi possível ler esse arquivo. Confira se ele tem colunas como Data, Descrição, Categoria, Tipo, Valor e Status.",
+      );
     } finally {
       setIsImporting(false);
       event.target.value = "";
     }
   };
 
-  const openRedeemInvestmentModal = (tx?: any) => {
+  const openRedeemInvestmentModal = (tx?: Transaction) => {
     const investment = tx
       ? investmentOptions.find((item) => item.id === tx.id)
       : investmentOptions[0];
@@ -284,7 +302,7 @@ export default function TransactionsPage() {
     setIsModalOpen(false);
     setSelectedInvestmentId(investment?.id || "");
     setRedeemAmount(
-      investment?.remainingAmount ? String(investment.remainingAmount) : ""
+      investment?.remainingAmount ? String(investment.remainingAmount) : "",
     );
     setIsRedeemModalOpen(true);
   };
@@ -313,10 +331,10 @@ export default function TransactionsPage() {
     if (amount > investedAmount) {
       const confirmed = window.confirm(
         `O valor de resgate (${formatCurrency(
-          amount
+          amount,
         )}) é maior que o saldo disponível desse investimento (${formatCurrency(
-          investedAmount
-        )}). Houve ganho nesse investimento?`
+          investedAmount,
+        )}). Houve ganho nesse investimento?`,
       );
 
       if (!confirmed) return;
@@ -337,7 +355,7 @@ export default function TransactionsPage() {
       pixCode: "",
       barCode: "",
       observation: `Resgate referente ao investimento de ${formatDate(
-        investment.dueDate
+        investment.dueDate,
       )}.`,
       linkedInvestmentId: investment.id,
       isRecurrent: false,
@@ -365,7 +383,7 @@ export default function TransactionsPage() {
         pixCode: "",
         barCode: "",
         observation: `Ganho registrado automaticamente no resgate de ${formatCurrency(
-          amount
+          amount,
         )}.`,
         isRecurrent: false,
         recurrenceMonths: 12,
@@ -407,35 +425,22 @@ export default function TransactionsPage() {
       uiDateRange,
       sortMode,
       todayKey,
-    ]
+    ],
   );
   const overview = useMemo(
     () => calculateFinanceOverview(filteredTransactions, todayKey),
-    [filteredTransactions, todayKey]
+    [filteredTransactions, todayKey],
   );
   const assetOverview = useMemo(
     () => calculateFinanceOverview(snapshotTransactions, todayKey),
-    [snapshotTransactions, todayKey]
+    [snapshotTransactions, todayKey],
   );
-  const {
-    income,
-    expense,
-    pendingExpense,
-    balance: filteredBalance,
-  } = overview;
-  const {
-    netInvestments,
-    totalAssets,
-    investmentOptions,
-  } = assetOverview;
+  const { income, expense, pendingExpense } = overview;
+  const { netInvestments, totalAssets, investmentOptions } = assetOverview;
   const financialPosition = useMemo(
     () =>
-      calculateFinancialPosition(
-        snapshotTransactions,
-        todayKey,
-        dateRange.to
-      ),
-    [snapshotTransactions, todayKey, dateRange.to]
+      calculateFinancialPosition(snapshotTransactions, todayKey, dateRange.to),
+    [snapshotTransactions, todayKey, dateRange.to],
   );
   const selectedInvestment =
     investmentOptions.find((item) => item.id === selectedInvestmentId) ||
@@ -460,25 +465,28 @@ export default function TransactionsPage() {
     () =>
       filteredTransactions.slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
+        currentPage * ITEMS_PER_PAGE,
       ),
-    [currentPage, filteredTransactions]
+    [currentPage, filteredTransactions],
   );
 
   return (
     <div className="animate-in fade-in duration-500 pb-28 lg:pb-10">
       <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
-            Transações
-          </p>
-          <h1 className="mt-1 text-2xl font-bold text-white lg:text-3xl">
-            Movimento financeiro
-          </h1>
+          <p className="app-kicker">Transações</p>
+          <h1 className="app-title mt-1">Movimento financeiro</h1>
         </div>
 
         <div className="hidden gap-2 lg:flex">
-          <Button type="button" variant="outline" onClick={() => setIsHistoryOpen(true)} className="h-10 rounded-lg border-indigo-500/20 bg-indigo-500/10 px-3 text-indigo-200 hover:bg-indigo-500/20"><History size={16} className="mr-2" /> Histórico</Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsHistoryOpen(true)}
+            className="h-10 rounded-lg border-indigo-500/20 bg-indigo-500/10 px-3 text-indigo-200 hover:bg-indigo-500/20"
+          >
+            <History size={16} className="mr-2" /> Histórico
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -506,7 +514,7 @@ export default function TransactionsPage() {
 
           <Button
             onClick={openNewTransactionModal}
-            className="h-10 rounded-lg bg-white px-4 font-bold text-slate-950 hover:bg-slate-200"
+            className="h-10 rounded-xl bg-[#635bff] px-4 font-bold text-white hover:bg-[#544ce0]"
           >
             <Plus size={18} className="mr-2" /> Nova
           </Button>
@@ -518,7 +526,6 @@ export default function TransactionsPage() {
         pendingExpense={pendingExpense}
         projectedBalance={financialPosition.projectedBalance}
         balance={financialPosition.availableBalance}
-        filteredBalance={filteredBalance}
         netInvestments={netInvestments}
         totalAssets={totalAssets}
         hideValues={hideValues}
@@ -562,9 +569,17 @@ export default function TransactionsPage() {
         onPageChange={setCurrentPage}
       />
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#0B0E14]/95 p-3 backdrop-blur lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e5e3e4] bg-white/95 p-3 backdrop-blur lg:hidden">
         <div className="grid grid-cols-4 gap-2">
-          <Button type="button" variant="outline" onClick={() => setIsHistoryOpen(true)} className="h-11 rounded-lg border-indigo-500/20 bg-indigo-500/10 px-1 text-xs text-indigo-200"><History size={15} className="mr-1" />Histórico</Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsHistoryOpen(true)}
+            className="h-11 rounded-lg border-indigo-500/20 bg-indigo-500/10 px-1 text-xs text-indigo-200"
+          >
+            <History size={15} className="mr-1" />
+            Histórico
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -591,7 +606,7 @@ export default function TransactionsPage() {
           </Button>
           <Button
             onClick={openNewTransactionModal}
-            className="h-11 rounded-lg bg-white px-2 text-sm font-bold text-slate-950 hover:bg-slate-200"
+            className="h-11 rounded-xl bg-[#635bff] px-2 text-sm font-bold text-white hover:bg-[#544ce0]"
           >
             <Plus size={18} className="mr-1" /> Nova
           </Button>
@@ -608,41 +623,41 @@ export default function TransactionsPage() {
             <div className="relative border-b border-white/10 bg-[#151A24] px-4 pb-4 pt-5 sm:px-5">
               <div className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-full bg-white/15 sm:hidden" />
               <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  {isRedeemModalOpen
-                    ? "Investimentos"
-                    : isEditing
-                    ? "Edição"
-                    : selectedTx
-                    ? "Lançamento"
-                    : "Novo registro"}
-                </p>
-                <h3 className="mt-1 truncate text-xl font-bold tracking-tight text-white">
-                  {isRedeemModalOpen
-                    ? "Resgatar investimento"
-                    : isEditing
-                    ? "Editar transação"
-                    : selectedTx
-                    ? "Detalhes da transação"
-                    : "Adicionar movimentação"}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (isRedeemModalOpen) {
-                    closeRedeemInvestmentModal();
-                  } else {
-                    setIsModalOpen(false);
-                    setSelectedTx(null);
-                    setIsEditing(false);
-                  }
-                }}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <X size={18} />
-              </button>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    {isRedeemModalOpen
+                      ? "Investimentos"
+                      : isEditing
+                        ? "Edição"
+                        : selectedTx
+                          ? "Lançamento"
+                          : "Novo registro"}
+                  </p>
+                  <h3 className="mt-1 truncate text-xl font-bold tracking-tight text-white">
+                    {isRedeemModalOpen
+                      ? "Resgatar investimento"
+                      : isEditing
+                        ? "Editar transação"
+                        : selectedTx
+                          ? "Detalhes da transação"
+                          : "Adicionar movimentação"}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isRedeemModalOpen) {
+                      closeRedeemInvestmentModal();
+                    } else {
+                      setIsModalOpen(false);
+                      setSelectedTx(null);
+                      setIsEditing(false);
+                    }
+                  }}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  <X size={18} />
+                </button>
               </div>
             </div>
 
@@ -671,7 +686,7 @@ export default function TransactionsPage() {
                     selectedTx.category === "Investimento" &&
                     selectedTx.type === "expense" &&
                     investmentOptions.some(
-                      (investment) => investment.id === selectedTx.id
+                      (investment) => investment.id === selectedTx.id,
                     )
                   }
                   displayValue={displayValue}
@@ -696,7 +711,12 @@ export default function TransactionsPage() {
           </div>
         </div>
       )}
-      {isHistoryOpen && <AuditHistoryModal onClose={() => setIsHistoryOpen(false)} onRestored={refresh} />}
+      {isHistoryOpen && (
+        <AuditHistoryModal
+          onClose={() => setIsHistoryOpen(false)}
+          onRestored={refresh}
+        />
+      )}
     </div>
   );
 }

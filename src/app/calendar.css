@@ -1,131 +1,106 @@
 .fc {
-  --fc-border-color: rgba(255, 255, 255, 0.05);
+  --fc-border-color: #ebe9eb;
   --fc-page-bg-color: transparent;
-  --fc-neutral-bg-color: transparent;
-  --fc-list-event-hover-bg-color: rgba(255, 255, 255, 0.05);
-  --fc-today-bg-color: rgba(99, 102, 241, 0.05) !important;
+  --fc-neutral-bg-color: #faf9fa;
+  --fc-list-event-hover-bg-color: #f6f5f8;
+  --fc-today-bg-color: #f2f0ff !important;
+  color: #33343a;
   font-family: inherit;
 }
-
 .fc-col-header-cell {
+  border-bottom: 1px solid #ebe9eb;
+  background: #faf9fa;
   padding: 10px 0;
-  background-color: rgba(19, 22, 28, 0.5);
-  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
-
 .fc-col-header-cell-cushion {
-  color: #94a3b8;
+  color: #858790;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-decoration: none !important;
   text-transform: uppercase;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-decoration: none !important;
 }
-
 .fc-daygrid-day-number {
-  color: #cbd5e1;
-  font-size: 0.8rem;
-  font-weight: 500;
-  text-decoration: none !important;
-  margin: 4px;
-  width: 26px;
-  height: 26px;
   display: flex;
+  width: 28px;
+  height: 28px;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  margin: 5px;
+  border-radius: 8px;
+  color: #55575f;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none !important;
 }
-
 .fc-day-today .fc-daygrid-day-number {
-  background-color: #4f46e5;
-  color: white;
-  font-weight: 700;
-  box-shadow: 0 0 10px rgba(79, 70, 229, 0.4);
+  background: #635bff;
+  color: #fff;
+  font-weight: 750;
+  box-shadow: 0 7px 18px -9px #635bff;
 }
-
+.fc-daygrid-event {
+  border-radius: 6px !important;
+  padding: 1px 3px;
+}
+.fc-event {
+  cursor: pointer;
+  transition:
+    opacity 0.2s,
+    transform 0.15s;
+}
+.fc-event:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
 .fc-popover {
-  background-color: #1A1D24 !important;
-  border: 1px solid rgba(255,255,255,0.15) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 20px 50px -10px rgba(0,0,0,0.9) !important;
   z-index: 1000 !important;
+  border: 1px solid #e1dfe3 !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: 0 20px 55px -22px rgba(35, 30, 55, 0.32) !important;
 }
-
 .fc-popover-header {
-  background-color: #13161C !important;
+  border-bottom: 1px solid #efedf0 !important;
+  border-radius: 14px 14px 0 0;
+  background: #faf9fb !important;
   padding: 12px 16px !important;
-  border-bottom: 1px solid rgba(255,255,255,0.05) !important;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
 }
-
 .fc-popover-title {
-  color: white !important;
-  font-weight: 700 !important;
-  font-size: 0.9rem !important;
-  letter-spacing: 0.5px;
+  color: #292a30 !important;
+  font-size: 0.85rem !important;
+  font-weight: 750 !important;
 }
-
 .fc-popover-body {
   padding: 8px !important;
 }
-
-.fc-popover-body .fc-daygrid-event {
-  margin-bottom: 6px !important;
-}
-
-.fc-event {
-  cursor: pointer;
-  transition: transform 0.1s, opacity 0.2s;
-}
-.fc-event:hover {
-  transform: scale(1.01);
-  filter: brightness(1.1);
-}
-
 @media (max-width: 640px) {
   .fc {
     font-size: 12px;
   }
-
   .fc-col-header-cell {
-    padding: 9px 0;
-    background-color: rgba(18, 23, 34, 0.9);
+    padding: 8px 0;
   }
-
   .fc-col-header-cell-cushion {
-    font-size: 0.64rem;
+    font-size: 0.6rem;
   }
-
   .fc-daygrid-day-number {
-    height: 26px;
-    width: 26px;
-    font-size: 0.72rem;
+    width: 25px;
+    height: 25px;
     margin: 3px;
+    font-size: 0.7rem;
   }
-
   .fc-daygrid-day-frame {
-    min-height: 84px;
+    min-height: 82px;
   }
-
-  .fc-daygrid-day-events {
-    min-height: 28px;
-    margin: 0 2px 2px !important;
-  }
-
-  .fc-daygrid-event {
-    margin-top: 2px !important;
-    border-radius: 6px !important;
-  }
-
   .fc-daygrid-more-link {
     display: block;
     margin: 2px;
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.06);
+    background: #f0eff3;
     padding: 2px 4px;
-    color: #cbd5e1 !important;
-    font-size: 0.62rem;
+    color: #696b74 !important;
+    font-size: 0.6rem;
     font-weight: 700;
     text-decoration: none !important;
   }

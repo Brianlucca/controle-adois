@@ -45,37 +45,39 @@ export default function DashboardLayout({
   };
 
   return (
-    <FinanceProvider><div className="app-shell flex h-screen w-full text-slate-50 overflow-hidden font-sans">
-      <DashboardSidebar />
+    <FinanceProvider>
+      <div className="app-shell flex h-screen w-full overflow-hidden bg-[#f7f6f3] font-sans text-[#23242a]">
+        <DashboardSidebar />
 
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative z-0">
-        <header className="z-20 flex h-16 shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#090c13]/70 px-4 pl-16 backdrop-blur-xl md:h-20 md:px-8">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold text-white tracking-tight">
-              {getPageTitle()}
-            </h2>
-          </div>
+        <main className="flex-1 flex flex-col h-full overflow-hidden relative z-0">
+          <header className="z-20 flex h-16 shrink-0 items-center justify-between border-b border-black/[0.06] bg-[#fbfaf7]/90 px-4 pl-16 backdrop-blur-xl md:h-[72px] md:px-8">
+            <div className="flex items-center gap-4">
+              <h2 className="text-base font-bold tracking-tight text-[#2b2c31]">
+                {getPageTitle()}
+              </h2>
+            </div>
 
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3 pl-6">
-              <div className="text-right hidden md:block">
-                <p className="text-sm font-bold text-white leading-none">
-                  {userName}
-                </p>
-                <p className="text-xs text-slate-400 mt-1">{userEmail}</p>
-              </div>
-              <div className="h-9 w-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-indigo-500/20 ring-2 ring-indigo-600/20">
-                {userInitials}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="text-right hidden md:block">
+                  <p className="text-sm font-bold leading-none text-[#292a30]">
+                    {userName}
+                  </p>
+                  <p className="mt-1 text-xs text-[#8a8d96]">{userEmail}</p>
+                </div>
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ebe9ff] text-xs font-bold text-[#5d55dd] ring-1 ring-[#dad6ff]">
+                  {userInitials}
+                </div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        <div className="custom-scrollbar flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto space-y-8">{children}</div>
-        </div>
-      </main>
-      <GlobalFinancialAssistant />
-    </div></FinanceProvider>
+          <div className="custom-scrollbar flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+            <div className="mx-auto max-w-[1280px]">{children}</div>
+          </div>
+        </main>
+        <GlobalFinancialAssistant />
+      </div>
+    </FinanceProvider>
   );
 }

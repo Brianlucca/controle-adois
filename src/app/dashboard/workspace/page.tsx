@@ -24,12 +24,11 @@ export default function WorkspacePage() {
 
   return (
     <div className="mx-auto max-w-5xl animate-in space-y-6 pb-24 duration-500 fade-in">
-      <div className="flex flex-col items-start justify-between gap-4 rounded-lg border border-white/10 bg-[#121722] p-4 shadow-xl shadow-black/10 md:flex-row md:items-center">
+      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">
-            Meus Espaços
-          </h1>
-          <p className="mt-2 text-slate-400">
+          <p className="app-kicker">Organização compartilhada</p>
+          <h1 className="app-title mt-1">Meus Espaços</h1>
+          <p className="mt-2 text-sm text-[#7e818a]">
             Gerencie seus grupos financeiros e membros.
           </p>
         </div>
