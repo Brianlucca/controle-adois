@@ -44,12 +44,12 @@ export function TransactionDetailsModalContent({
   const todayKey = getLocalDateKey(new Date());
   const isOverdue = isOverduePendingExpense(transaction, todayKey);
   return (
-    <div className="space-y-4 pb-2">
+    <div className="space-y-4 pb-2 text-[#292a30]">
       <div
         className={`overflow-hidden rounded-lg border p-4 ${
           transaction.type === "income"
-            ? "border-emerald-500/20 bg-emerald-500/[0.08]"
-            : "border-red-500/20 bg-red-500/[0.07]"
+            ? "border-[#cce9de] bg-[#f2faf7]"
+            : "border-[#f0d3cf] bg-[#fff5f3]"
         }`}
       >
         <div className="flex items-start gap-3">
@@ -57,10 +57,10 @@ export function TransactionDetailsModalContent({
             description={transaction.description}
             category={transaction.category}
             type={transaction.type}
-            className="h-12 w-12 shrink-0 rounded-lg bg-black/20 ring-1 ring-white/10"
+            className="h-12 w-12 shrink-0 rounded-xl bg-white ring-1 ring-[#e8e5e9]"
           />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-bold text-white">
+            <p className="truncate text-base font-bold text-[#292a30]">
               {transaction.description}
             </p>
             <p className="mt-1 text-xs font-medium text-slate-500">
@@ -69,13 +69,18 @@ export function TransactionDetailsModalContent({
             </p>
           </div>
         </div>
-        <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mt-4 flex flex-col gap-3 border-t border-[#eadfe0] pt-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <TransactionStatusBadge transaction={transaction} todayKey={todayKey} />
+            <TransactionStatusBadge
+              transaction={transaction}
+              todayKey={todayKey}
+            />
           </div>
           <p
             className={`font-mono text-3xl font-bold tracking-tight sm:text-right ${
-              transaction.type === "income" ? "text-emerald-300" : "text-white"
+              transaction.type === "income"
+                ? "text-[#168267]"
+                : "text-[#292a30]"
             }`}
           >
             {transaction.type === "expense" ? "- " : "+ "}
@@ -91,7 +96,7 @@ export function TransactionDetailsModalContent({
           label="Responsavel"
           value={transaction.userName?.split(" ")[0] || "Eu"}
         />
-        <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-3">
+        <div className="min-w-0 rounded-xl border border-[#e3e1e4] bg-[#faf9fb] p-3">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
             Status
           </p>
@@ -100,31 +105,38 @@ export function TransactionDetailsModalContent({
               isOverdue
                 ? "text-red-400"
                 : transaction.status === "pending"
-                ? "text-amber-400"
-                : transaction.type === "income"
-                ? "text-emerald-400"
-                : "text-red-400"
+                  ? "text-amber-400"
+                  : transaction.type === "income"
+                    ? "text-emerald-400"
+                    : "text-red-400"
             }`}
           >
             {transaction.status === "pending"
               ? "Pendente"
               : transaction.type === "income"
-              ? "Recebido"
-              : "Pago"}
+                ? "Recebido"
+                : "Pago"}
           </p>
         </div>
       </div>
-      <CopyableCode label="ID da transação" value={transaction.id} field="transactionId" copiedField={copiedField} color="slate" onCopy={onCopy} />
+      <CopyableCode
+        label="ID da transação"
+        value={transaction.id}
+        field="transactionId"
+        copiedField={copiedField}
+        color="slate"
+        onCopy={onCopy}
+      />
 
       {transaction.observation && (
-        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
+        <div className="rounded-xl border border-[#e3e1e4] bg-[#faf9fb] p-4">
           <div className="mb-2 flex items-center gap-2 text-slate-500">
             <FileText size={14} />
             <span className="text-[10px] font-bold uppercase tracking-wider">
               Observacoes
             </span>
           </div>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#55575f]">
             {transaction.observation}
           </p>
         </div>
@@ -138,7 +150,7 @@ export function TransactionDetailsModalContent({
                 <Repeat2 size={18} />
               </div>
               <div>
-                <p className="text-sm font-bold text-white">
+                <p className="text-sm font-bold text-[#292a30]">
                   Transacao recorrente
                 </p>
                 <p className="text-xs text-indigo-200">
@@ -198,13 +210,13 @@ export function TransactionDetailsModalContent({
       {transaction.type === "expense" && transaction.status === "pending" && (
         <Button
           variant="outline"
-          className="h-11 w-full rounded-lg border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10 hover:text-white"
+          className="h-11 w-full rounded-xl border-[#dedce1] bg-white text-[#55575f] hover:bg-[#f7f6f8]"
           onClick={() => {
             const link = createGoogleCalendarLink(
               transaction.description,
               transaction.dueDate,
               transaction.amount,
-              transaction.observation
+              transaction.observation,
             );
             window.open(link, "_blank");
           }}
@@ -214,12 +226,12 @@ export function TransactionDetailsModalContent({
       )}
 
       <div
-        className={`sticky bottom-0 -mx-4 -mb-4 grid gap-2 border-t border-white/10 bg-[#10141D]/95 p-4 backdrop-blur sm:-mx-5 sm:-mb-5 ${
+        className={`grid gap-2 border-t border-[#e6e3e7] pt-4 ${
           transaction.type === "expense" ? "grid-cols-3" : "grid-cols-2"
         }`}
       >
         <Button
-          className="h-12 rounded-lg border border-white/10 bg-slate-800 text-xs font-bold text-white hover:bg-slate-700 sm:text-sm"
+          className="h-12 rounded-xl border border-[#dedce1] bg-white text-xs font-bold text-[#34363c] hover:bg-[#f5f4f6] sm:text-sm"
           onClick={onStartEdit}
         >
           <Pencil size={16} className="mr-1.5" /> Editar
@@ -227,11 +239,11 @@ export function TransactionDetailsModalContent({
 
         {transaction.type === "expense" && (
           <Button
-            className="h-12 rounded-lg bg-white text-xs font-bold text-slate-950 shadow-md hover:bg-slate-200 sm:text-sm"
+            className="h-12 rounded-xl bg-[#635bff] text-xs font-bold text-white shadow-[0_8px_20px_-12px_#635bff] hover:bg-[#544ce0] sm:text-sm"
             onClick={() =>
               onStatusChange(
                 transaction.id,
-                transaction.status === "paid" ? "pending" : "paid"
+                transaction.status === "paid" ? "pending" : "paid",
               )
             }
           >
@@ -253,11 +265,11 @@ export function TransactionDetailsModalContent({
 
 function InfoBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-3">
+    <div className="min-w-0 rounded-xl border border-[#e3e1e4] bg-[#faf9fb] p-3">
       <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
         {label}
       </p>
-      <p className="truncate font-bold text-white">{value}</p>
+      <p className="truncate font-bold text-[#292a30]">{value}</p>
     </div>
   );
 }
@@ -284,26 +296,26 @@ function CopyableCode({
       className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border p-3 ${
         isIndigo
           ? "border-indigo-500/20 bg-indigo-500/10"
-          : "border-white/10 bg-white/[0.04]"
+          : "border-[#e3e1e4] bg-[#faf9fb]"
       }`}
     >
       <span
         className={`rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
           isIndigo
             ? "bg-indigo-500/20 text-indigo-200"
-            : "bg-white/10 text-slate-300"
+            : "bg-[#eeecf0] text-[#656870]"
         }`}
       >
         {label}
       </span>
-      <p className="truncate font-mono text-xs text-slate-300">{value}</p>
+      <p className="truncate font-mono text-xs text-[#55575f]">{value}</p>
       <Button
         size="sm"
         variant="ghost"
         className={`h-9 px-2 transition-all ${
           isIndigo
             ? "text-indigo-200 hover:bg-indigo-500/20 hover:text-white"
-            : "text-slate-300 hover:bg-white/10 hover:text-white"
+            : "text-[#55575f] hover:bg-[#eeecf0] hover:text-[#292a30]"
         }`}
         onClick={() => onCopy(value, field)}
       >
