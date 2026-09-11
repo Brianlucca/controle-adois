@@ -59,7 +59,7 @@ export function InvestmentRedemptionModalContent({
               placeholder="0,00"
               value={redeemAmount}
               onChange={(event) => onRedeemAmountChange(event.target.value)}
-              className="mt-2 h-12 border-emerald-500/20 bg-black/20 text-lg font-bold text-white focus:border-emerald-500/50"
+              className="mt-2 h-12 border-[#cce9de] bg-white text-lg font-bold text-[#292a30] focus:border-[#54ae91]"
               autoFocus
             />
             {selectedInvestment &&
@@ -122,7 +122,7 @@ export function InvestmentRedemptionModalContent({
                         {displayValue(investment.investedAmount)}
                         {investment.redeemedAmount > 0
                           ? ` - Ja resgatado ${displayValue(
-                              investment.redeemedAmount
+                              investment.redeemedAmount,
                             )}`
                           : ""}
                       </p>
@@ -144,7 +144,7 @@ export function InvestmentRedemptionModalContent({
           <div className="flex gap-3 pt-2">
             <Button
               type="button"
-              className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold border border-slate-700"
+              className="flex-1 border border-[#dedce1] bg-white font-bold text-[#45474f] hover:bg-[#f5f4f6]"
               onClick={onCancel}
             >
               Cancelar
