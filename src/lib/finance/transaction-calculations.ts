@@ -39,14 +39,14 @@ export function getTransactionRowStateClass(
   todayKey: string
 ) {
   if (transaction.status !== "pending") {
-    return "hover:bg-white/[0.03]";
+    return "hover:bg-[#faf9fb]";
   }
 
   if (isOverduePendingExpense(transaction, todayKey)) {
-    return "bg-red-500/[0.12] hover:bg-red-500/[0.17] border-l-4 border-red-500";
+    return "border-l-4 border-[#ef7b71] bg-[#fff8f7] hover:bg-[#fff2f0]";
   }
 
-  return "bg-amber-500/[0.06] hover:bg-amber-500/[0.1] border-l-2 border-amber-500/70";
+  return "border-l-2 border-[#e4ba60] bg-[#fffcf5] hover:bg-[#fff8e8]";
 }
 
 export function isOverduePendingExpense(
