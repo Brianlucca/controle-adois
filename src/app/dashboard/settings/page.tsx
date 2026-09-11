@@ -139,7 +139,7 @@ export default function SettingsPage() {
               <Input
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="bg-slate-950 border-white/10 text-white h-11"
+                className="h-11 border-[#dedce1] bg-white text-[#292a30]"
               />
             </div>
             <div className="space-y-2">
@@ -149,7 +149,7 @@ export default function SettingsPage() {
               <Input
                 value={user?.email || ""}
                 disabled
-                className="bg-slate-950/50 border-white/5 text-slate-500 cursor-not-allowed h-11"
+                className="h-11 cursor-not-allowed border-[#e6e4e7] bg-[#f3f2f4] text-[#999ba2]"
               />
             </div>
           </div>
