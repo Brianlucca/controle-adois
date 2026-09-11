@@ -614,14 +614,14 @@ export default function TransactionsPage() {
       </div>
 
       {(isModalOpen || selectedTx || isRedeemModalOpen) && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/85 p-0 backdrop-blur-md sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-[#25222e]/15 p-0 sm:items-center sm:p-4">
           <div
-            className={`max-h-[94dvh] w-full overflow-hidden rounded-t-lg border border-white/10 bg-[#10141D] shadow-2xl ring-1 ring-white/10 animate-in slide-in-from-bottom-4 sm:max-h-[92vh] sm:rounded-lg sm:zoom-in-95 ${
+            className={`max-h-[94dvh] w-full overflow-hidden rounded-t-2xl border border-[#e2dfe3] bg-white shadow-[0_28px_80px_-28px_rgba(30,27,48,.5)] animate-in slide-in-from-bottom-4 sm:max-h-[92vh] sm:rounded-2xl sm:zoom-in-95 ${
               isRedeemModalOpen ? "max-w-2xl" : "max-w-xl"
             }`}
           >
-            <div className="relative border-b border-white/10 bg-[#151A24] px-4 pb-4 pt-5 sm:px-5">
-              <div className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-full bg-white/15 sm:hidden" />
+            <div className="relative border-b border-[#e8e6e9] bg-[#faf9fb] px-4 pb-4 pt-5 sm:px-5">
+              <div className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-full bg-[#d8d5db] sm:hidden" />
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -633,7 +633,7 @@ export default function TransactionsPage() {
                           ? "Lançamento"
                           : "Novo registro"}
                   </p>
-                  <h3 className="mt-1 truncate text-xl font-bold tracking-tight text-white">
+                  <h3 className="mt-1 truncate text-xl font-bold tracking-tight text-[#202127]">
                     {isRedeemModalOpen
                       ? "Resgatar investimento"
                       : isEditing
@@ -654,14 +654,14 @@ export default function TransactionsPage() {
                       setIsEditing(false);
                     }
                   }}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e2dfe3] bg-white text-[#777981] transition-colors hover:bg-[#f2f1f4] hover:text-[#292a30]"
                 >
                   <X size={18} />
                 </button>
               </div>
             </div>
 
-            <div className="max-h-[calc(94dvh-92px)] overflow-y-auto p-4 custom-scrollbar sm:max-h-[calc(92vh-93px)] sm:p-5">
+            <div className="max-h-[calc(94dvh-92px)] overflow-y-auto overscroll-contain p-4 custom-scrollbar sm:max-h-[calc(92vh-93px)] sm:p-5">
               {isRedeemModalOpen ? (
                 <InvestmentRedemptionModalContent
                   investmentOptions={investmentOptions}
