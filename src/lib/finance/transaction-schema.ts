@@ -10,6 +10,14 @@ export const TransactionSchema = z.object({
   pixCode: z.string().optional().nullable(),
   barCode: z.string().optional().nullable(),
   observation: z.string().optional().nullable(),
+  accountId: z
+    .string()
+    .trim()
+    .max(128)
+    .refine((value) => !value.includes("/"), "Conta inválida")
+    .optional()
+    .nullable()
+    .transform((value) => value || null),
   linkedInvestmentId: z.string().optional().nullable(),
   isRecurrent: z.boolean().optional().default(false),
   recurrenceMonths: z.coerce.number().int().min(1).max(60).optional().default(12),
