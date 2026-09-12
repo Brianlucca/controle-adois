@@ -8,6 +8,7 @@ import {
   Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { addMonthsToDateKey } from "@/lib/finance/date";
@@ -98,11 +99,10 @@ export function TransactionFormModalContent({
             <span className="block pl-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
               Valor
             </span>
-            <Input
-              type="number"
+            <CurrencyInput
               placeholder="0,00"
               value={formData.amount}
-              onChange={(event) => updateForm({ amount: event.target.value })}
+              onValueChange={(amount) => updateForm({ amount })}
               required
               className="h-12 rounded-xl border-[#dedce1] bg-white font-mono text-lg font-bold text-[#292a30]"
             />
