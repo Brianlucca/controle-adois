@@ -2,7 +2,7 @@ import { FormEvent } from "react";
 import { Loader2, TrendingUp } from "lucide-react";
 import { BrandIcon } from "@/components/brand-icon";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { InvestmentOption } from "@/lib/finance/transaction-calculations";
 import { formatDate } from "@/lib/utils";
 
@@ -52,13 +52,10 @@ export function InvestmentRedemptionModalContent({
             <label className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">
               Valor do resgate
             </label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
+            <CurrencyInput
               placeholder="0,00"
               value={redeemAmount}
-              onChange={(event) => onRedeemAmountChange(event.target.value)}
+              onValueChange={onRedeemAmountChange}
               className="mt-2 h-12 border-[#cce9de] bg-white text-lg font-bold text-[#292a30] focus:border-[#54ae91]"
               autoFocus
             />
