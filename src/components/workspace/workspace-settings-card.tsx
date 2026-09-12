@@ -3,6 +3,7 @@
 import { Loader2, Save, Settings, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 
 type WorkspaceSettingsCardProps = {
@@ -48,10 +49,9 @@ export function WorkspaceSettingsCard({
               <Target size={14} />
               Meta de Gastos (R$)
             </label>
-            <Input
-              type="number"
+            <CurrencyInput
               value={budget}
-              onChange={(event) => onBudgetChange(event.target.value)}
+              onValueChange={onBudgetChange}
               className="h-11 border-[#dedce1] bg-white font-mono text-[#292a30]"
             />
           </div>
