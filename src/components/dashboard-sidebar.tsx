@@ -10,6 +10,7 @@ import {
   ChevronDown,
   CreditCard,
   LayoutDashboard,
+  Landmark,
   LogOut,
   Menu,
   PanelLeftClose,
@@ -33,7 +34,8 @@ const navigation = [
     exact: true,
   },
   { href: "/dashboard/transactions", label: "Transações", icon: Wallet },
-  { href: "/dashboard/payments", label: "Contas & Pix", icon: CreditCard },
+  { href: "/dashboard/accounts", label: "Bancos e contas", icon: Landmark },
+  { href: "/dashboard/payments", label: "Pagamentos & Pix", icon: CreditCard },
   { href: "/dashboard/calendar", label: "Calendário", icon: CalendarDays },
   { href: "/dashboard/reports", label: "Relatórios", icon: PieChart },
 ];
