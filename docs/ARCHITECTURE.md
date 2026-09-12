@@ -1,6 +1,6 @@
 # Arquitetura do Controle A Dois
 
-Este documento descreve apenas a arquitetura que existe hoje. Funcionalidades planejadas ficam no roadmap do [README](../README.md) e no [modelo de domínio](DOMAIN_MODEL.md).
+Este documento descreve apenas a arquitetura que existe hoje. Regras e decisões financeiras ficam no [modelo de domínio](DOMAIN_MODEL.md).
 
 ## Stack
 
@@ -35,6 +35,7 @@ src/
 | `/auth/register` | Criação de conta |
 | `/auth/verify` | Verificação de e-mail |
 | `/dashboard` | Visão geral financeira |
+| `/dashboard/accounts` | Contas financeiras, saldos e transferências internas |
 | `/dashboard/transactions` | Movimentações e importação |
 | `/dashboard/payments` | Contas e Pix pendentes |
 | `/dashboard/calendar` | Calendário financeiro |
@@ -61,12 +62,22 @@ As coleções observadas no código incluem:
 users/{userId}
 workspaces/{workspaceId}
 workspaces/{workspaceId}/transactions/{transactionId}
+workspaces/{workspaceId}/accounts/{accountId}
+workspaces/{workspaceId}/transfers/{transferId}
 workspaces/{workspaceId}/auditLogs/{auditLogId}
 workspaces/{workspaceId}/goals/{goalId}
 terms_acceptances/{acceptanceId}
 ```
 
-Novas coleções para contas, transferências, cartões, divisões e desafios ainda são propostas. Não devem ser tratadas como existentes.
+Novas coleções para cartões, divisões e desafios ainda são propostas. Não devem ser tratadas como existentes.
+
+O saldo de uma conta é derivado no servidor a partir do saldo inicial em centavos,
+das movimentações pagas vinculadas à conta e das transferências não estornadas. A
+transferência possui um único registro e afeta as duas contas durante o cálculo;
+ela nunca é convertida em receita ou despesa.
+
+O vínculo `accountId` das movimentações é opcional para preservar os registros
+anteriores à criação das contas financeiras.
 
 ## Segurança
 
