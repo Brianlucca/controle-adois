@@ -13,6 +13,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { useFinance } from "@/hooks/use-finance";
 import {
   ASSISTANT_QUESTION_GROUPS,
@@ -27,6 +28,8 @@ import {
   saveFinancialGoal,
 } from "@/actions/goal-actions";
 import { formatCurrency } from "@/lib/utils";
+import { getLocalDateKey } from "@/lib/finance/date";
+import { calculateGoalContributionPlan } from "@/lib/finance/goals";
 import {
   completeTransactionCommand,
   parseTransactionCommand,
@@ -77,6 +80,7 @@ export function GlobalFinancialAssistant() {
     currentAmount: "",
     targetDate: "",
   });
+  const todayKey = getLocalDateKey(new Date());
 
   async function loadGoals() {
     try {
@@ -618,17 +622,14 @@ export function GlobalFinancialAssistant() {
                         <span className="mb-1 block text-[11px] font-bold text-slate-300">
                           Quanto custa?
                         </span>
-                        <input
+                        <CurrencyInput
                           required
-                          type="number"
-                          min="1"
-                          step="0.01"
                           placeholder="Ex.: 10.000"
                           value={goalForm.targetAmount}
-                          onChange={(e) =>
+                          onValueChange={(targetAmount) =>
                             setGoalForm({
                               ...goalForm,
-                              targetAmount: e.target.value,
+                              targetAmount,
                             })
                           }
                           className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-sm text-white"
@@ -638,16 +639,13 @@ export function GlobalFinancialAssistant() {
                         <span className="mb-1 block text-[11px] font-bold text-slate-300">
                           Quanto já guardou?
                         </span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
+                        <CurrencyInput
                           placeholder="Deixe vazio se for R$ 0"
                           value={goalForm.currentAmount}
-                          onChange={(e) =>
+                          onValueChange={(currentAmount) =>
                             setGoalForm({
                               ...goalForm,
-                              currentAmount: e.target.value,
+                              currentAmount,
                             })
                           }
                           className="h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-xs text-white"
@@ -692,6 +690,10 @@ export function GlobalFinancialAssistant() {
                     const progress = Math.min(
                       100,
                       (goal.currentAmount / goal.targetAmount) * 100,
+                    );
+                    const contributionPlan = calculateGoalContributionPlan(
+                      goal,
+                      todayKey,
                     );
                     return (
                       <div
@@ -740,6 +742,15 @@ export function GlobalFinancialAssistant() {
                             </button>
                           )}
                         </div>
+                        <p className="mt-2 rounded-xl bg-[#eeebff] px-3 py-2 text-[11px] font-semibold text-[#5148ce]">
+                          {contributionPlan.status === "completed"
+                            ? "Objetivo alcançado."
+                            : contributionPlan.status === "overdue"
+                              ? `Prazo vencido · faltam ${formatCurrency(contributionPlan.remainingAmount)}`
+                              : contributionPlan.monthsRemaining === 1
+                                ? `Para chegar lá: guarde ${formatCurrency(contributionPlan.monthlyAmount)} neste mês.`
+                                : `Para chegar lá: guarde ${formatCurrency(contributionPlan.monthlyAmount)} por mês durante ${contributionPlan.monthsRemaining} meses.`}
+                        </p>
                       </div>
                     );
                   })}
