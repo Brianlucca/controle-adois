@@ -14,6 +14,8 @@ import { TransactionList } from "@/components/finance/transaction-list";
 import { TransactionsSummaryCards } from "@/components/finance/transactions-summary-cards";
 import { AuditHistoryModal } from "@/components/finance/audit-history-modal";
 import { usePreferences } from "@/contexts/preferences-context";
+import { useWorkspace } from "@/contexts/workspace-context";
+import { getFinancialAccountOptions } from "@/actions/account-actions";
 import { getLocalDateKey } from "@/lib/finance/date";
 import { parseTransactionsWorkbook } from "@/lib/finance/import-transactions";
 import {
@@ -71,6 +73,10 @@ export default function TransactionsPage() {
     refresh,
   } = useFinance();
   const { hideValues, toggleHideValues } = usePreferences();
+  const { activeWorkspace } = useWorkspace();
+  const [accountOptions, setAccountOptions] = useState<
+    Array<{ id: string; name: string; institutionName: string }>
+  >([]);
 
   const [isModalOpen, setIsModalOpen] = useState(
     () => searchParams.get("new") === "1",
@@ -105,6 +111,16 @@ export default function TransactionsPage() {
     setCurrentPage(1);
   }, [filterTerm, selectedCategory, statusFilter, uiDateRange]);
 
+  useEffect(() => {
+    let active = true;
+    void getFinancialAccountOptions().then((options) => {
+      if (active) setAccountOptions(options);
+    });
+    return () => {
+      active = false;
+    };
+  }, [activeWorkspace?.id]);
+
   const handleAuthError = (response: unknown) => {
     if (
       typeof response === "object" &&
@@ -131,6 +147,7 @@ export default function TransactionsPage() {
       pixCode: "",
       barCode: "",
       observation: "",
+      accountId: accountOptions.length === 1 ? accountOptions[0].id : "",
       isRecurrent: false,
       recurrenceMonths: 12,
     });
@@ -155,6 +172,7 @@ export default function TransactionsPage() {
       pixCode: selectedTx.pixCode || "",
       barCode: selectedTx.barCode || "",
       observation: selectedTx.observation || "",
+      accountId: selectedTx.accountId || "",
       isRecurrent: selectedTx.isRecurrent || false,
       recurrenceMonths: selectedTx.recurrenceMonths || 12,
     });
@@ -171,6 +189,7 @@ export default function TransactionsPage() {
     pixCode: "",
     barCode: "",
     observation: "",
+    accountId: "",
     isRecurrent: false,
     recurrenceMonths: 12,
   });
@@ -483,7 +502,7 @@ export default function TransactionsPage() {
             type="button"
             variant="outline"
             onClick={() => setIsHistoryOpen(true)}
-            className="h-10 rounded-lg border-indigo-500/20 bg-indigo-500/10 px-3 text-indigo-200 hover:bg-indigo-500/20"
+            className="h-10 rounded-lg border-[#d7d2ff] bg-[#f0efff] px-3 text-[#5d55dd] hover:bg-[#e8e5ff]"
           >
             <History size={16} className="mr-2" /> Histórico
           </Button>
@@ -492,7 +511,7 @@ export default function TransactionsPage() {
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
             disabled={isImporting}
-            className="h-10 rounded-lg border-white/10 bg-[#121722] px-3 text-slate-200 hover:bg-white/10"
+            className="h-10 rounded-lg border-[#dedce1] bg-white px-3 text-[#4b4d54] hover:bg-[#f5f4f6]"
           >
             {isImporting ? (
               <Loader2 size={16} className="mr-2 animate-spin" />
@@ -507,7 +526,7 @@ export default function TransactionsPage() {
             variant="outline"
             onClick={() => openRedeemInvestmentModal()}
             disabled={investmentOptions.length === 0}
-            className="h-10 rounded-lg border-emerald-500/25 bg-emerald-500/10 px-3 text-emerald-200 hover:bg-emerald-500/20"
+            className="h-10 rounded-lg border-[#cce9de] bg-[#f2faf7] px-3 text-[#168267] hover:bg-[#e7f6f0]"
           >
             <TrendingUp size={16} className="mr-2" /> Resgatar
           </Button>
@@ -575,7 +594,7 @@ export default function TransactionsPage() {
             type="button"
             variant="outline"
             onClick={() => setIsHistoryOpen(true)}
-            className="h-11 rounded-lg border-indigo-500/20 bg-indigo-500/10 px-1 text-xs text-indigo-200"
+            className="h-11 rounded-lg border-[#d7d2ff] bg-[#f0efff] px-1 text-xs text-[#5d55dd]"
           >
             <History size={15} className="mr-1" />
             Histórico
@@ -585,7 +604,7 @@ export default function TransactionsPage() {
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
             disabled={isImporting}
-            className="h-11 rounded-lg border-white/10 bg-white/5 px-2 text-xs text-slate-200"
+            className="h-11 rounded-lg border-[#dedce1] bg-white px-2 text-xs text-[#4b4d54]"
           >
             {isImporting ? (
               <Loader2 size={16} className="mr-1 animate-spin" />
@@ -599,7 +618,7 @@ export default function TransactionsPage() {
             variant="outline"
             onClick={() => openRedeemInvestmentModal()}
             disabled={investmentOptions.length === 0}
-            className="h-11 rounded-lg border-emerald-500/25 bg-emerald-500/10 px-2 text-xs text-emerald-200"
+            className="h-11 rounded-lg border-[#cce9de] bg-[#f2faf7] px-2 text-xs text-[#168267]"
           >
             <TrendingUp size={16} className="mr-1" />
             Resgatar
@@ -681,6 +700,13 @@ export default function TransactionsPage() {
               ) : selectedTx && !isEditing ? (
                 <TransactionDetailsModalContent
                   transaction={selectedTx}
+                  accountName={
+                    selectedTx.accountId
+                      ? accountOptions.find(
+                          (account) => account.id === selectedTx.accountId,
+                        )?.name || "Conta arquivada"
+                      : undefined
+                  }
                   copiedField={copiedField}
                   canRedeemInvestment={
                     selectedTx.category === "Investimento" &&
@@ -700,6 +726,7 @@ export default function TransactionsPage() {
               ) : (
                 <TransactionFormModalContent
                   categories={CATEGORIES}
+                  accountOptions={accountOptions}
                   formData={formData}
                   isEditing={isEditing}
                   onFormDataChange={setFormData}
