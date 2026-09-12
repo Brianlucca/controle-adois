@@ -35,21 +35,21 @@ export function InvestmentRedemptionModalContent({
     <form onSubmit={onSubmit} className="space-y-5">
       {investmentOptions.length === 0 ? (
         <div className="py-10 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[#eaf7f2] text-[#168267]">
             <TrendingUp size={22} />
           </div>
-          <p className="text-sm font-bold text-white">
+          <p className="text-sm font-bold text-[#292a30]">
             Nenhum investimento com saldo encontrado.
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            Cadastre uma saida paga na categoria Investimento para fazer um
-            resgate, ou confira se os aportes ja foram resgatados.
+            Cadastre uma saída paga na categoria Investimento para fazer um
+            resgate, ou confira se os aportes já foram resgatados.
           </p>
         </div>
       ) : (
         <>
-          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4">
-            <label className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">
+          <div className="rounded-lg border border-[#cce9de] bg-[#f2faf7] p-4">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-[#168267]">
               Valor do resgate
             </label>
             <CurrencyInput
@@ -62,14 +62,14 @@ export function InvestmentRedemptionModalContent({
             {selectedInvestment &&
               Number(redeemAmount) >
                 Number(selectedInvestment.remainingAmount) && (
-                <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">
-                  O valor acima do saldo disponivel sera confirmado como
-                  rendimento e lancado automaticamente em Rendimento de
+                <p className="mt-3 rounded-lg border border-[#f1dec4] bg-[#fff8ee] p-3 text-xs text-[#946022]">
+                  O valor acima do saldo disponível será confirmado como
+                  rendimento e lançado automaticamente em Rendimento de
                   Investimento.
                 </p>
               )}
             {selectedInvestment && (
-              <p className="mt-3 text-xs text-emerald-100">
+              <p className="mt-3 text-xs text-[#38705f]">
                 Resgatando do investimento de{" "}
                 {formatDate(selectedInvestment.dueDate)}. Restante:{" "}
                 <span className="font-bold">
@@ -84,7 +84,7 @@ export function InvestmentRedemptionModalContent({
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Escolha o investimento
               </p>
-              <span className="text-xs font-bold text-indigo-300">
+              <span className="text-xs font-bold text-[#5d55dd]">
                 {displayValue(netInvestments)} investidos
               </span>
             </div>
@@ -100,32 +100,32 @@ export function InvestmentRedemptionModalContent({
                     onClick={() => onSelectInvestment(investment)}
                     className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-all ${
                       isSelected
-                        ? "border-emerald-500/40 bg-emerald-500/10"
-                        : "border-white/5 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.06]"
+                        ? "border-[#9dd6c4] bg-[#f2faf7]"
+                        : "border-[#e3e1e4] bg-white hover:border-[#cbc8d0] hover:bg-[#faf9fb]"
                     }`}
                   >
                     <BrandIcon
                       description={investment.description}
                       category={investment.category}
                       type={investment.type}
-                      className="h-10 w-10 rounded-lg bg-[#0B0E14] border border-white/5"
+                      className="h-10 w-10 rounded-lg border border-[#e3e1e4] bg-[#faf9fb]"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-bold text-white">
+                      <p className="truncate text-sm font-bold text-[#292a30]">
                         {investment.description}
                       </p>
                       <p className="text-xs text-slate-500">
                         {formatDate(investment.dueDate)} - Original{" "}
                         {displayValue(investment.investedAmount)}
                         {investment.redeemedAmount > 0
-                          ? ` - Ja resgatado ${displayValue(
+                          ? ` - Já resgatado ${displayValue(
                               investment.redeemedAmount,
                             )}`
                           : ""}
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
-                      <span className="block text-sm font-bold font-mono text-emerald-300">
+                      <span className="block font-mono text-sm font-bold text-[#168267]">
                         {displayValue(investment.remainingAmount)}
                       </span>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
