@@ -10,12 +10,18 @@ export const ACCOUNT_OWNERSHIPS = ["mine", "partner", "joint"] as const;
 export type FinancialAccountType = (typeof FINANCIAL_ACCOUNT_TYPES)[number];
 export type AccountOwnership = (typeof ACCOUNT_OWNERSHIPS)[number];
 
+export interface AccountOwnerOption {
+  id: string;
+  label: string;
+}
+
 export interface FinancialAccount {
   id: string;
   name: string;
   institutionName: string;
   type: FinancialAccountType;
   ownership: AccountOwnership;
+  ownerUserId?: string | null;
   openingBalance: number;
   openingBalanceDate: string;
   currentBalance: number;
@@ -41,6 +47,7 @@ export interface AccountFormValues {
   institutionName: string;
   type: FinancialAccountType;
   ownership: AccountOwnership;
+  ownerUserId?: string | null;
   openingBalance: number;
   openingBalanceDate: string;
 }
