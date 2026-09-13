@@ -8,6 +8,7 @@ import {
   AccountTransferSchema,
   FinancialAccountSchema,
 } from "@/lib/finance/account-schema";
+import { calculateOpeningBalanceDeltaCents } from "@/lib/finance/account-balances";
 import {
   AccountOwnerOption,
   AccountTransfer,
@@ -175,6 +176,111 @@ export async function saveFinancialAccount(rawData: unknown) {
   } catch (error) {
     console.error("save_financial_account_failed", error);
     return { success: false, error: "Não foi possível salvar a conta." };
+  }
+}
+
+export async function updateFinancialAccount(
+  rawAccountId: unknown,
+  rawData: unknown,
+) {
+  const context = await getAccountContext();
+  if (!context) return await handleAuthFailure();
+
+  const id = AccountIdSchema.safeParse(rawAccountId);
+  if (!id.success) return { success: false, error: "Conta inválida." };
+  const parsed = FinancialAccountSchema.safeParse(rawData);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const workspaceRef = adminDb.collection("workspaces").doc(context.workspaceId);
+  const accountRef = workspaceRef.collection("accounts").doc(id.data);
+  const ownerUserId = parsed.data.ownerUserId || null;
+
+  try {
+    const workspaceSnapshot = await workspaceRef.get();
+    if (
+      ownerUserId &&
+      ownerUserId !== context.user.uid &&
+      !getWorkspaceMemberIds(workspaceSnapshot.data() || {}).includes(ownerUserId)
+    ) {
+      return { success: false, error: "Escolha uma pessoa do nosso espaço." };
+    }
+
+    await runAccountBalanceTransaction(workspaceRef, async (transaction) => {
+      const current = await transaction.get(accountRef);
+      if (!current.exists) throw new Error("account_not_found");
+      const before = current.data() || {};
+      if (before.archivedAt) throw new Error("account_archived");
+      if (before.openingBalanceDate !== parsed.data.openingBalanceDate) {
+        throw new Error("opening_date_locked");
+      }
+      if (!Object.hasOwn(before, "currentBalanceCents")) {
+        throw new Error("account_balance_not_materialized");
+      }
+
+      const previousOpeningBalanceCents = toStoredCents(
+        before.openingBalanceCents,
+      );
+      const nextOpeningBalanceCents = toCents(parsed.data.openingBalance);
+      const currentBalanceCents = toStoredCents(before.currentBalanceCents);
+      const balanceDeltaCents = calculateOpeningBalanceDeltaCents(
+        previousOpeningBalanceCents,
+        nextOpeningBalanceCents,
+      );
+      const nextCurrentBalanceCents = currentBalanceCents + balanceDeltaCents;
+      if (!Number.isSafeInteger(nextCurrentBalanceCents)) {
+        throw new Error("account_balance_overflow");
+      }
+
+      const changes = {
+        name: parsed.data.name,
+        institutionName: parsed.data.institutionName || null,
+        type: parsed.data.type,
+        ownership: ownerUserId
+          ? ownerUserId === context.user.uid
+            ? "mine"
+            : "partner"
+          : "joint",
+        ownerUserId,
+        openingBalanceCents: nextOpeningBalanceCents,
+        currentBalanceCents: nextCurrentBalanceCents,
+        updatedAt: new Date(),
+        updatedBy: context.user.uid,
+        balanceUpdatedAt: new Date(),
+      };
+      transaction.update(accountRef, changes);
+      transaction.set(
+        workspaceRef.collection("auditLogs").doc(),
+        buildEntityAuditRecord({
+          action: "updated",
+          entityType: "account",
+          entityId: accountRef.id,
+          user: context.user,
+          before,
+          after: { ...before, ...changes },
+        }),
+      );
+    });
+
+    revalidateAccountPaths();
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message === "account_not_found") {
+      return { success: false, error: "Conta não encontrada." };
+    }
+    if (message === "account_archived") {
+      return { success: false, error: "Desarquive a conta antes de editá-la." };
+    }
+    if (message === "opening_date_locked") {
+      return { success: false, error: "A data inicial não pode ser alterada." };
+    }
+    if (message === "account_balance_overflow") {
+      return { success: false, error: "O saldo resultante ultrapassa o limite aceito." };
+    }
+    console.error("update_financial_account_failed", error);
+    return { success: false, error: "Não foi possível atualizar a conta." };
   }
 }
 
@@ -519,6 +625,12 @@ function toIsoString(value: unknown): string | null {
 
 function toCents(value: number) {
   return Math.round(value * 100);
+}
+
+function toStoredCents(value: unknown) {
+  const cents = Number(value);
+  if (!Number.isSafeInteger(cents)) throw new Error("invalid_account_balance");
+  return cents;
 }
 
 function revalidateAccountPaths() {
