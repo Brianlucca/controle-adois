@@ -4,7 +4,7 @@ import {
   FinancialAccount,
 } from "@/lib/finance/account-types";
 
-interface BalanceTransaction {
+export interface BalanceTransaction {
   accountId?: string | null;
   amount: number;
   dueDate: string;
@@ -29,23 +29,15 @@ export function calculateAccountBalances(
   );
 
   for (const transaction of transactions) {
-    const effectiveDate = transaction.paidAt?.slice(0, 10) || transaction.dueDate;
-    if (
-      !transaction.accountId ||
-      transaction.status !== "paid" ||
-      transaction.deletedAt ||
-      !balances.has(transaction.accountId) ||
-      effectiveDate < (openingDates.get(transaction.accountId) || "")
-    ) {
-      continue;
-    }
+    if (!transaction.accountId || !balances.has(transaction.accountId)) continue;
 
-    const direction = transaction.type === "income" ? 1 : -1;
-    const current = balances.get(transaction.accountId) ?? 0;
-    balances.set(
-      transaction.accountId,
-      current + direction * toCents(transaction.amount),
+    const impactCents = getTransactionBalanceImpactCents(
+      transaction,
+      openingDates.get(transaction.accountId) || "",
     );
+    if (!impactCents) continue;
+    const current = balances.get(transaction.accountId) ?? 0;
+    balances.set(transaction.accountId, current + impactCents);
   }
 
   for (const transfer of transfers) {
@@ -80,6 +72,37 @@ export function calculateAccountBalances(
   }));
 }
 
+export function getTransactionBalanceImpactCents(
+  transaction: BalanceTransaction,
+  openingBalanceDate: string,
+) {
+  const effectiveDate = transaction.paidAt?.slice(0, 10) || transaction.dueDate;
+  if (
+    !transaction.accountId ||
+    transaction.status !== "paid" ||
+    transaction.deletedAt ||
+    effectiveDate < openingBalanceDate
+  ) {
+    return 0;
+  }
+
+  const amountCents = toCents(transaction.amount);
+  return transaction.type === "income" ? amountCents : -amountCents;
+}
+
+export function calculateTransactionBalanceChanges(
+  before: BalanceTransaction | null,
+  after: BalanceTransaction | null,
+  openingDates: ReadonlyMap<string, string>,
+) {
+  const changes = new Map<string, number>();
+
+  applyTransactionImpact(changes, before, openingDates, -1);
+  applyTransactionImpact(changes, after, openingDates, 1);
+
+  return changes;
+}
+
 export function projectTransferBalances(
   sourceBalance: number,
   destinationBalance: number,
@@ -92,22 +115,58 @@ export function projectTransferBalances(
   };
 }
 
-export function summarizeAccountBalances(accounts: FinancialAccount[]) {
+export function summarizeAccountBalances(
+  accounts: FinancialAccount[],
+  viewerUserId?: string,
+) {
   const active = accounts.filter((account) => !account.archivedAt);
   const byOwnership: Record<AccountOwnership, number> = {
     mine: 0,
     partner: 0,
     joint: 0,
   };
+  const byOwner = new Map<string, number>();
+  const otherOwnerIds = new Set<string>();
+  let hasLegacyPartner = false;
+  let legacyMine = 0;
+  let legacyPartner = 0;
 
   for (const account of active) {
     byOwnership[account.ownership] += account.currentBalance;
+    if (account.ownerUserId) {
+      byOwner.set(
+        account.ownerUserId,
+        (byOwner.get(account.ownerUserId) || 0) + account.currentBalance,
+      );
+      if (viewerUserId && account.ownerUserId !== viewerUserId) {
+        otherOwnerIds.add(account.ownerUserId);
+      }
+    } else {
+      if (account.ownership === "mine") legacyMine += account.currentBalance;
+      if (account.ownership === "partner") {
+        legacyPartner += account.currentBalance;
+        hasLegacyPartner = true;
+      }
+    }
   }
+
+  const mine = viewerUserId
+    ? (byOwner.get(viewerUserId) || 0) + legacyMine
+    : byOwnership.mine;
+  const others = viewerUserId
+    ? [...byOwner]
+        .filter(([ownerUserId]) => ownerUserId !== viewerUserId)
+        .reduce((sum, [, balance]) => sum + balance, 0) +
+      legacyPartner
+    : byOwnership.partner;
 
   return {
     total: roundMoney(active.reduce((sum, account) => sum + account.currentBalance, 0)),
-    mine: roundMoney(byOwnership.mine),
+    mine: roundMoney(mine),
     partner: roundMoney(byOwnership.partner),
+    others: roundMoney(others),
+    otherParticipantCount:
+      otherOwnerIds.size + (hasLegacyPartner ? 1 : 0),
     joint: roundMoney(byOwnership.joint),
   };
 }
@@ -122,4 +181,22 @@ function fromCents(value: number) {
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function applyTransactionImpact(
+  changes: Map<string, number>,
+  transaction: BalanceTransaction | null,
+  openingDates: ReadonlyMap<string, string>,
+  direction: -1 | 1,
+) {
+  if (!transaction?.accountId) return;
+  const impact = getTransactionBalanceImpactCents(
+    transaction,
+    openingDates.get(transaction.accountId) || "",
+  );
+  if (!impact) return;
+  changes.set(
+    transaction.accountId,
+    (changes.get(transaction.accountId) || 0) + impact * direction,
+  );
 }
