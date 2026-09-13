@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Archive,
+  ArchiveRestore,
   ArrowRight,
   ArrowRightLeft,
   Banknote,
@@ -12,6 +13,7 @@ import {
   Plus,
   RotateCcw,
   TrendingUp,
+  Users,
   WalletCards,
 } from "lucide-react";
 import {
@@ -20,6 +22,7 @@ import {
   getAccountsOverview,
   reverseAccountTransfer,
   saveFinancialAccount,
+  unarchiveFinancialAccount,
 } from "@/actions/account-actions";
 import { AccountFormPanel } from "@/components/accounts/account-form-panel";
 import { TransferFormPanel } from "@/components/accounts/transfer-form-panel";
@@ -28,9 +31,9 @@ import { usePreferences } from "@/contexts/preferences-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { summarizeAccountBalances } from "@/lib/finance/account-balances";
 import {
-  ACCOUNT_OWNERSHIP_LABELS,
   ACCOUNT_TYPE_LABELS,
   AccountFormValues,
+  AccountOwnerOption,
   AccountTransfer,
   FinancialAccount,
   TransferFormValues,
@@ -41,6 +44,8 @@ export default function AccountsPage() {
   const { activeWorkspace } = useWorkspace();
   const { hideValues } = usePreferences();
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
+  const [ownershipOptions, setOwnershipOptions] = useState<AccountOwnerOption[]>([]);
+  const [viewerUserId, setViewerUserId] = useState("");
   const [transfers, setTransfers] = useState<AccountTransfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadedWorkspaceId, setLoadedWorkspaceId] = useState<string | undefined>();
@@ -54,6 +59,8 @@ export default function AccountsPage() {
     if (result.success) {
       setAccounts(result.accounts);
       setTransfers(result.transfers);
+      setOwnershipOptions(result.ownershipOptions);
+      setViewerUserId(result.viewerUserId);
     } else {
       setError(result.error);
     }
@@ -68,6 +75,8 @@ export default function AccountsPage() {
       if (result.success) {
         setAccounts(result.accounts);
         setTransfers(result.transfers);
+        setOwnershipOptions(result.ownershipOptions);
+        setViewerUserId(result.viewerUserId);
         setError("");
       } else {
         setError(result.error);
@@ -88,7 +97,10 @@ export default function AccountsPage() {
     () => accounts.filter((account) => account.archivedAt),
     [accounts],
   );
-  const totals = useMemo(() => summarizeAccountBalances(accounts), [accounts]);
+  const totals = useMemo(
+    () => summarizeAccountBalances(accounts, viewerUserId),
+    [accounts, viewerUserId],
+  );
   const displayValue = (value: number) =>
     hideValues ? "••••••" : formatCurrency(value);
 
@@ -123,6 +135,18 @@ export default function AccountsPage() {
       setError(
         ("error" in result && result.error) ||
           "Não foi possível arquivar a conta.",
+      );
+      return;
+    }
+    await loadOverview();
+  }
+
+  async function handleUnarchive(account: FinancialAccount) {
+    const result = await unarchiveFinancialAccount(account.id);
+    if (!result.success) {
+      setError(
+        ("error" in result && result.error) ||
+          "Não foi possível desarquivar a conta.",
       );
       return;
     }
@@ -170,7 +194,12 @@ export default function AccountsPage() {
       </section>
 
       {panel === "account" && (
-        <AccountFormPanel onCancel={() => setPanel(null)} onSubmit={handleCreateAccount} />
+        <AccountFormPanel
+          ownershipOptions={ownershipOptions}
+          viewerUserId={viewerUserId}
+          onCancel={() => setPanel(null)}
+          onSubmit={handleCreateAccount}
+        />
       )}
       {panel === "transfer" && (
         <TransferFormPanel
@@ -189,9 +218,13 @@ export default function AccountsPage() {
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Summary label="Total nas contas" value={displayValue(totals.total)} featured />
-        <Summary label="Meu dinheiro" value={displayValue(totals.mine)} />
-        <Summary label="Do parceiro" value={displayValue(totals.partner)} />
-        <Summary label="Nosso dinheiro" value={displayValue(totals.joint)} />
+        <Summary label="Seu saldo" value={displayValue(totals.mine)} />
+        <Summary
+          label="Outros participantes"
+          value={displayValue(totals.others)}
+          participantCount={totals.otherParticipantCount}
+        />
+        <Summary label="Compartilhado" value={displayValue(totals.joint)} />
       </section>
 
       <section>
@@ -218,6 +251,11 @@ export default function AccountsPage() {
                 key={account.id}
                 account={account}
                 displayValue={displayValue}
+                ownershipLabel={getAccountOwnerLabel(
+                  account,
+                  ownershipOptions,
+                  viewerUserId,
+                )}
                 onArchive={() => handleArchive(account)}
               />
             ))}
@@ -306,6 +344,12 @@ export default function AccountsPage() {
                 key={account.id}
                 account={account}
                 displayValue={displayValue}
+                ownershipLabel={getAccountOwnerLabel(
+                  account,
+                  ownershipOptions,
+                  viewerUserId,
+                )}
+                onUnarchive={() => handleUnarchive(account)}
               />
             ))}
           </div>
@@ -319,10 +363,12 @@ function Summary({
   label,
   value,
   featured = false,
+  participantCount,
 }: {
   label: string;
   value: string;
   featured?: boolean;
+  participantCount?: number;
 }) {
   return (
     <div
@@ -332,9 +378,19 @@ function Summary({
           : "border-[#e4e2e5] bg-white"
       }`}
     >
-      <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#858790]">
-        {label}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#858790]">
+          {label}
+        </p>
+        {participantCount !== undefined && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-[#f1efff] px-2 py-1 text-[10px] font-bold text-[#5d55dd]"
+            title={`${participantCount} participante${participantCount === 1 ? "" : "s"} além de você`}
+          >
+            <Users size={12} aria-hidden="true" /> {participantCount}
+          </span>
+        )}
+      </div>
       <p className="mt-2 text-xl font-black tracking-tight text-[#25262c]">{value}</p>
     </div>
   );
@@ -343,11 +399,15 @@ function Summary({
 function AccountCard({
   account,
   displayValue,
+  ownershipLabel,
   onArchive,
+  onUnarchive,
 }: {
   account: FinancialAccount;
   displayValue: (value: number) => string;
+  ownershipLabel: string;
   onArchive?: () => void;
+  onUnarchive?: () => void;
 }) {
   return (
     <article className={`app-card p-5 ${account.archivedAt ? "opacity-65" : ""}`}>
@@ -385,10 +445,37 @@ function AccountCard({
           {ACCOUNT_TYPE_LABELS[account.type]}
         </span>
         <span className="rounded-md bg-[#eeebff] px-2 py-1 text-[10px] font-bold text-[#5d55dd]">
-          {ACCOUNT_OWNERSHIP_LABELS[account.ownership]}
+          {ownershipLabel}
         </span>
       </div>
+      {onUnarchive && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onUnarchive}
+          className="mt-4 h-9 w-full border-[#dcd9e4] bg-white text-xs font-bold text-[#5d55dd] hover:bg-[#f5f3ff]"
+        >
+          <ArchiveRestore size={14} className="mr-2" /> Desarquivar
+        </Button>
+      )}
     </article>
+  );
+}
+
+function getAccountOwnerLabel(
+  account: FinancialAccount,
+  ownershipOptions: AccountOwnerOption[],
+  viewerUserId: string,
+) {
+  if (!account.ownerUserId) {
+    if (account.ownership === "mine") return "Você";
+    if (account.ownership === "partner") return "Outro participante";
+    return "Compartilhada";
+  }
+  if (account.ownerUserId === viewerUserId) return "Você";
+  return (
+    ownershipOptions.find((option) => option.id === account.ownerUserId)?.label ||
+    "Participante"
   );
 }
 
