@@ -6,6 +6,7 @@ import { addMonthsToDateKey } from "@/lib/finance/date";
 import {
   buildBaseTransaction,
   buildEditableTransactionFields,
+  getRecurringOccurrenceStatus,
 } from "@/lib/finance/transaction-records";
 import {
   ImportTransactionsSchema,
@@ -46,17 +47,9 @@ export async function getTransactions(uid: string, startDate: string, endDate: s
       .where("dueDate", "<=", endDate)
       .get();
 
-    return snapshot.docs.filter((doc) => !doc.data().deletedAt).map((doc) => {
-      const data = doc.data();
-      return {
-        ...data,
-        id: doc.id,
-        createdAt: data.createdAt?.toDate?.().toISOString() || new Date().toISOString(),
-        dueDate: data.dueDate || "",
-        paidAt: data.paidAt?.toDate?.().toISOString() || data.paidAt,
-        importedAt: data.importedAt?.toDate?.().toISOString() || data.importedAt || null,
-      };
-    }) as any[];
+    return snapshot.docs
+      .filter((document) => !document.data().deletedAt)
+      .map(toClientTransaction);
   } catch (error) {
     console.error("get_transactions_failed", error);
     throw new Error("Não foi possível carregar as transações.");
@@ -81,24 +74,16 @@ export async function getTransactionsThrough(endDate: string) {
       .where("dueDate", "<=", endDate)
       .get();
 
-    return snapshot.docs.filter((doc) => !doc.data().deletedAt).map((doc) => {
-      const data = doc.data();
-      return {
-        ...data,
-        id: doc.id,
-        createdAt: data.createdAt?.toDate?.().toISOString() || new Date().toISOString(),
-        dueDate: data.dueDate || "",
-        paidAt: data.paidAt?.toDate?.().toISOString() || data.paidAt,
-        importedAt: data.importedAt?.toDate?.().toISOString() || data.importedAt || null,
-      };
-    }) as any[];
+    return snapshot.docs
+      .filter((document) => !document.data().deletedAt)
+      .map(toClientTransaction);
   } catch (error) {
     console.error("get_transactions_through_failed", error);
     throw new Error("Não foi possível carregar as transações.");
   }
 }
 
-export async function addTransaction(rawData: any) {
+export async function addTransaction(rawData: unknown) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
 
@@ -130,8 +115,15 @@ export async function addTransaction(rawData: any) {
 
         Array.from({ length: recurrenceCount }).forEach((_, index) => {
           const transactionRef = collection.doc();
+          const occurrenceStatus = getRecurringOccurrenceStatus(
+            data.status,
+            index,
+          );
           const record = {
-            ...buildBaseTransaction(data, user),
+            ...buildBaseTransaction(
+              { ...data, status: occurrenceStatus },
+              user,
+            ),
             dueDate:
               index === 0
                 ? data.dueDate
@@ -186,7 +178,7 @@ export async function addTransaction(rawData: any) {
   }
 }
 
-export async function importTransactions(rawItems: any[]) {
+export async function importTransactions(rawItems: unknown) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
 
@@ -367,7 +359,7 @@ export async function deleteRecurrence(id: string) {
     revalidatePath("/dashboard/transactions");
     revalidatePath("/dashboard/reports");
     return { success: true, count: deletedCount };
-  } catch (error) {
+  } catch {
     return { success: false, error: "Erro ao excluir recorrência." };
   }
 }
@@ -451,7 +443,7 @@ export async function updateTransactionStatus(id: string, status: string) {
   }
 }
 
-export async function editTransaction(id: string, rawData: any) {
+export async function editTransaction(id: string, rawData: unknown) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
 
@@ -533,8 +525,15 @@ export async function editTransaction(id: string, rawData: any) {
         Array.from({ length: Math.max(0, recurrenceCount - 1) }).forEach(
           (_, index) => {
             const transactionRef = collection.doc();
+            const occurrenceStatus = getRecurringOccurrenceStatus(
+              data.status,
+              index + 1,
+            );
             const record = {
-              ...buildBaseTransaction(data, user),
+              ...buildBaseTransaction(
+                { ...data, status: occurrenceStatus },
+                user,
+              ),
               dueDate: addMonthsToDateKey(data.dueDate, index + 1),
               recurrenceGroupId,
               recurrenceIndex: index + 2,
@@ -638,4 +637,60 @@ function getAccountMutationError(error: unknown, fallback: string) {
     return "Restaure a transação antes de editá-la.";
   }
   return fallback;
+}
+
+function toClientTransaction(
+  document: FirebaseFirestore.QueryDocumentSnapshot,
+): Transaction {
+  const data = document.data();
+  const amount = Number(data.amount);
+  return {
+    id: document.id,
+    description:
+      typeof data.description === "string" ? data.description : "Movimentação",
+    amount: Number.isFinite(amount) ? amount : 0,
+    type: data.type === "income" ? "income" : "expense",
+    category: typeof data.category === "string" ? data.category : "Outros",
+    status: data.status === "paid" ? "paid" : "pending",
+    dueDate: typeof data.dueDate === "string" ? data.dueDate : "",
+    paidAt: toOptionalIsoString(data.paidAt),
+    userId: typeof data.userId === "string" ? data.userId : "",
+    userName:
+      typeof data.userName === "string" ? data.userName : "Participante",
+    pixCode: optionalString(data.pixCode),
+    barCode: optionalString(data.barCode),
+    observation: optionalString(data.observation),
+    accountId: optionalString(data.accountId),
+    linkedInvestmentId: optionalString(data.linkedInvestmentId),
+    isRecurrent: Boolean(data.isRecurrent),
+    recurrenceMonths: optionalNumber(data.recurrenceMonths),
+    recurrenceGroupId: optionalString(data.recurrenceGroupId),
+    recurrenceIndex: optionalNumber(data.recurrenceIndex),
+    recurrenceTotal: optionalNumber(data.recurrenceTotal),
+    createdAt: toOptionalIsoString(data.createdAt) || new Date().toISOString(),
+    deletedAt: toOptionalIsoString(data.deletedAt),
+    deletedBy: optionalString(data.deletedBy),
+  };
+}
+
+function optionalString(value: unknown) {
+  return typeof value === "string" && value ? value : undefined;
+}
+
+function optionalNumber(value: unknown) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+}
+
+function toOptionalIsoString(value: unknown) {
+  if (value instanceof Date) return value.toISOString();
+  if (
+    value &&
+    typeof value === "object" &&
+    "toDate" in value &&
+    typeof value.toDate === "function"
+  ) {
+    return value.toDate().toISOString();
+  }
+  return typeof value === "string" && value ? value : undefined;
 }
