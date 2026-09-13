@@ -9,6 +9,7 @@ import {
   Banknote,
   Landmark,
   Loader2,
+  Pencil,
   PiggyBank,
   Plus,
   RotateCcw,
@@ -23,6 +24,7 @@ import {
   reverseAccountTransfer,
   saveFinancialAccount,
   unarchiveFinancialAccount,
+  updateFinancialAccount,
 } from "@/actions/account-actions";
 import { AccountFormPanel } from "@/components/accounts/account-form-panel";
 import { TransferFormPanel } from "@/components/accounts/transfer-form-panel";
@@ -51,6 +53,8 @@ export default function AccountsPage() {
   const [loadedWorkspaceId, setLoadedWorkspaceId] = useState<string | undefined>();
   const [error, setError] = useState("");
   const [panel, setPanel] = useState<"account" | "transfer" | null>(null);
+  const [editingAccount, setEditingAccount] =
+    useState<FinancialAccount | null>(null);
 
   const loadOverview = useCallback(async () => {
     setLoading(true);
@@ -104,13 +108,36 @@ export default function AccountsPage() {
   const displayValue = (value: number) =>
     hideValues ? "••••••" : formatCurrency(value);
 
-  async function handleCreateAccount(values: AccountFormValues) {
-    const result = await saveFinancialAccount(values);
+  async function handleSaveAccount(values: AccountFormValues) {
+    const result = editingAccount
+      ? await updateFinancialAccount(editingAccount.id, values)
+      : await saveFinancialAccount(values);
     if (result.success) {
       setPanel(null);
+      setEditingAccount(null);
       await loadOverview();
     }
     return result;
+  }
+
+  function closeAccountPanel() {
+    setPanel(null);
+    setEditingAccount(null);
+  }
+
+  function openNewAccountPanel() {
+    if (panel === "account" && !editingAccount) {
+      closeAccountPanel();
+      return;
+    }
+    setEditingAccount(null);
+    setPanel("account");
+  }
+
+  function openEditAccountPanel(account: FinancialAccount) {
+    setEditingAccount(account);
+    setPanel("account");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handleCreateTransfer(values: TransferFormValues) {
@@ -179,13 +206,16 @@ export default function AccountsPage() {
           <Button
             variant="outline"
             disabled={activeAccounts.length < 2}
-            onClick={() => setPanel(panel === "transfer" ? null : "transfer")}
+            onClick={() => {
+              setEditingAccount(null);
+              setPanel(panel === "transfer" ? null : "transfer");
+            }}
             className="h-11 border-[#dcd9e4] bg-white"
           >
             <ArrowRightLeft size={17} className="mr-2" /> Transferir
           </Button>
           <Button
-            onClick={() => setPanel(panel === "account" ? null : "account")}
+            onClick={openNewAccountPanel}
             className="h-11 bg-[#635bff] text-white hover:bg-[#544ce0]"
           >
             <Plus size={17} className="mr-2" /> Nova conta
@@ -195,10 +225,24 @@ export default function AccountsPage() {
 
       {panel === "account" && (
         <AccountFormPanel
+          key={editingAccount?.id || "new-account"}
           ownershipOptions={ownershipOptions}
           viewerUserId={viewerUserId}
-          onCancel={() => setPanel(null)}
-          onSubmit={handleCreateAccount}
+          initialValues={
+            editingAccount
+              ? {
+                  name: editingAccount.name,
+                  institutionName: editingAccount.institutionName,
+                  type: editingAccount.type,
+                  ownership: editingAccount.ownership,
+                  ownerUserId: editingAccount.ownerUserId,
+                  openingBalance: editingAccount.openingBalance,
+                  openingBalanceDate: editingAccount.openingBalanceDate,
+                }
+              : undefined
+          }
+          onCancel={closeAccountPanel}
+          onSubmit={handleSaveAccount}
         />
       )}
       {panel === "transfer" && (
@@ -256,6 +300,7 @@ export default function AccountsPage() {
                   ownershipOptions,
                   viewerUserId,
                 )}
+                onEdit={() => openEditAccountPanel(account)}
                 onArchive={() => handleArchive(account)}
               />
             ))}
@@ -270,7 +315,7 @@ export default function AccountsPage() {
               Comece pelo banco mais usado pelo casal e informe o saldo inicial.
             </p>
             <Button
-              onClick={() => setPanel("account")}
+              onClick={openNewAccountPanel}
               className="mt-5 bg-[#635bff] text-white hover:bg-[#544ce0]"
             >
               <Plus size={16} className="mr-2" /> Criar primeira conta
@@ -400,12 +445,14 @@ function AccountCard({
   account,
   displayValue,
   ownershipLabel,
+  onEdit,
   onArchive,
   onUnarchive,
 }: {
   account: FinancialAccount;
   displayValue: (value: number) => string;
   ownershipLabel: string;
+  onEdit?: () => void;
   onArchive?: () => void;
   onUnarchive?: () => void;
 }) {
@@ -421,16 +468,31 @@ function AccountCard({
             {account.institutionName || ACCOUNT_TYPE_LABELS[account.type]}
           </p>
         </div>
-        {onArchive && (
-          <button
-            type="button"
-            aria-label={`Arquivar ${account.name}`}
-            title="Arquivar conta"
-            onClick={onArchive}
-            className="rounded-lg p-2 text-[#a0a2a9] hover:bg-[#f4f2f5] hover:text-[#5b5d65]"
-          >
-            <Archive size={15} />
-          </button>
+        {(onEdit || onArchive) && (
+          <div className="flex shrink-0 items-center gap-1">
+            {onEdit && (
+              <button
+                type="button"
+                aria-label={`Editar ${account.name}`}
+                title="Editar conta"
+                onClick={onEdit}
+                className="rounded-lg p-2 text-[#777a83] hover:bg-[#f4f2f5] hover:text-[#5d55dd]"
+              >
+                <Pencil size={15} />
+              </button>
+            )}
+            {onArchive && (
+              <button
+                type="button"
+                aria-label={`Arquivar ${account.name}`}
+                title="Arquivar conta"
+                onClick={onArchive}
+                className="rounded-lg p-2 text-[#a0a2a9] hover:bg-[#f4f2f5] hover:text-[#5b5d65]"
+              >
+                <Archive size={15} />
+              </button>
+            )}
+          </div>
         )}
       </div>
       <p
