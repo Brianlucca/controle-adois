@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  calculateOpeningBalanceDeltaCents,
   calculateTransactionBalanceChanges,
   calculateAccountBalances,
   getTransactionBalanceImpactCents,
@@ -184,6 +185,11 @@ describe("account balances", () => {
       sourceBalance: 70.05,
       destinationBalance: 50.25,
     });
+  });
+
+  it("adjusts the current balance only by the opening balance difference", () => {
+    expect(calculateOpeningBalanceDeltaCents(10_000, 17_550)).toBe(7_550);
+    expect(calculateOpeningBalanceDeltaCents(10_000, -2_000)).toBe(-12_000);
   });
 
   it("computes the balance impact of a paid transaction", () => {
