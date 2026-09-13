@@ -1,41 +1,50 @@
 # Modelo financeiro e invariantes
 
-Este documento orienta a evolução do domínio. As entidades da seção “Modelo proposto” ainda não existem necessariamente no banco.
+Este documento orienta a evolução do domínio e diferencia o que já está implementado do que continua planejado.
 
 ## Conceitos atuais
 
 - **Usuário:** pessoa autenticada.
 - **Espaço:** limite de dados e permissões usado por uma pessoa ou casal.
 - **Movimentação:** receita, despesa ou movimentação de investimento com valor, data, status e metadados.
+- **Conta financeira:** local em que o dinheiro está, com titularidade, saldo inicial e data de início.
+- **Transferência:** deslocamento interno entre duas contas, sem alterar receita, despesa ou patrimônio conjunto.
 - **Objetivo:** meta financeira associada ao espaço.
 - **Auditoria:** registro de criação, alteração, exclusão, restauração ou mudança de status.
 
-## Modelo proposto
+## Modelo financeiro
 
-### Conta financeira
+### Conta financeira — implementada
 
 Representa onde o dinheiro ou a obrigação está.
 
-Campos esperados:
+Campos atuais:
 
-- `id`, `workspaceId` e `name`.
-- `institutionName` e identificador visual opcional.
-- `type`: checking, savings, cash, investment ou credit-card.
+- `id` e `name`, dentro da coleção do espaço autenticado.
+- `institutionName` opcional.
+- `type`: checking, savings, cash ou investment.
 - `ownership`: mine, partner ou joint.
-- `ownerUserIds`.
-- `openingBalance` e `openingBalanceDate`.
+- `openingBalanceCents` e `openingBalanceDate`.
 - `archivedAt` opcional.
 
-### Transferência
+O saldo inicial representa o início da data informada. Movimentações pagas nessa
+data são consideradas. Para uma movimentação paga, o cálculo usa a data efetiva
+do pagamento e recorre ao vencimento somente em registros antigos sem `paidAt`.
+
+Cartões não são tratados como contas disponíveis; continuam planejados como uma
+entidade de obrigação separada.
+
+### Transferência — implementada
 
 Representa deslocamento de dinheiro entre duas contas.
 
 - `sourceAccountId` e `destinationAccountId` são obrigatórios e diferentes.
-- `amount` deve ser positivo.
+- `amountCents` deve ser positivo.
 - A operação possui um único identificador de transferência.
-- Débito e crédito são persistidos atomicamente.
+- As duas pontas são derivadas atomicamente do mesmo registro.
 - Transferência não entra em receitas, despesas ou economia do casal.
 - Estorno afeta as duas pontas.
+- Data, descrição, responsável e auditoria são preservados.
 
 ### Cartão e fatura
 
@@ -106,13 +115,19 @@ Exemplo com início de R$ 100 e incremento de R$ 100: R$ 100, R$ 200, R$ 300 e R
 9. Contribuição em objetivo ou desafio não pode criar patrimônio fictício.
 10. Previsões devem explicar quais valores foram considerados.
 
-## Decisões pendentes antes da implementação
+## Decisões confirmadas
 
-- Estratégia de armazenamento monetário: centavos inteiros ou decimal validado.
-- Fonte do saldo: calculado desde o saldo inicial, snapshots conciliados ou combinação dos dois.
+- Valores de contas e transferências são persistidos como centavos inteiros.
+- O saldo é calculado desde o saldo inicial, somando movimentações pagas e as duas pontas de transferências não estornadas.
+- Contas arquivadas permanecem no histórico, mas não entram nos totais ativos.
+- Movimentações antigas podem continuar sem uma conta vinculada.
+
+## Decisões pendentes
+
 - Modelo final de cartão, fatura, fechamento e parcelamento.
 - Regras de edição após fechamento ou acerto do ciclo.
 - Níveis de privacidade compatíveis com cálculos compartilhados.
 - Migração das movimentações atuais para contas financeiras.
+- Modelo de conciliação e snapshots posteriores ao saldo inicial.
 
 Essas decisões devem ser registradas antes de alterar o esquema de produção.

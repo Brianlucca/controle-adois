@@ -103,6 +103,13 @@ export async function addTransaction(rawData: any) {
   }
   const data = validation.data;
 
+  if (!(await hasActiveAccount(workspaceId, data.accountId))) {
+    return {
+      success: false,
+      error: "A conta selecionada não existe ou está arquivada.",
+    };
+  }
+
   try {
     const collection = adminDb.collection("workspaces").doc(workspaceId).collection("transactions");
     const recurrenceCount = data.isRecurrent && data.type === "expense" ? data.recurrenceMonths : 1;
@@ -332,6 +339,13 @@ export async function editTransaction(id: string, rawData: any) {
   }
   const data = validation.data;
 
+  if (!(await hasActiveAccount(workspaceId, data.accountId))) {
+    return {
+      success: false,
+      error: "A conta selecionada não existe ou está arquivada.",
+    };
+  }
+
   try {
     const collection = adminDb.collection("workspaces").doc(workspaceId).collection("transactions");
     const docRef = collection.doc(id);
@@ -400,5 +414,23 @@ export async function editTransaction(id: string, rawData: any) {
     return { success: true };
   } catch (error) {
     return { success: false, error: "Erro ao atualizar." };
+  }
+}
+
+async function hasActiveAccount(
+  workspaceId: string,
+  accountId?: string | null,
+) {
+  if (!accountId) return true;
+  try {
+    const account = await adminDb
+      .collection("workspaces")
+      .doc(workspaceId)
+      .collection("accounts")
+      .doc(accountId)
+      .get();
+    return account.exists && !account.data()?.archivedAt;
+  } catch {
+    return false;
   }
 }

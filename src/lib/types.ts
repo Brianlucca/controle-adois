@@ -12,6 +12,7 @@ export interface Transaction {
   pixCode?: string;
   barCode?: string;
   observation?: string;
+  accountId?: string | null;
   linkedInvestmentId?: string;
   isRecurrent?: boolean;
   recurrenceMonths?: number;
@@ -50,6 +51,7 @@ export interface TransactionFormData {
   pixCode: string;
   barCode: string;
   observation: string;
+  accountId?: string;
   isRecurrent: boolean;
   recurrenceMonths: number;
 }
