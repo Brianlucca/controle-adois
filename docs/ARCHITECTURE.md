@@ -71,9 +71,22 @@ terms_acceptances/{acceptanceId}
 
 Novas coleções para cartões, divisões e desafios ainda são propostas. Não devem ser tratadas como existentes.
 
-O saldo de uma conta é derivado no servidor a partir do saldo inicial em centavos,
-das movimentações pagas vinculadas à conta e das transferências não estornadas. A
-transferência possui um único registro e afeta as duas contas durante o cálculo;
+Cada conta mantém `currentBalanceCents` materializado. Criação, edição, pagamento,
+exclusão e restauração de movimentações, além de transferências e estornos,
+atualizam o saldo e a auditoria na mesma transação do Firestore. A regra pura que
+calcula o impacto permanece em `src/lib/finance`.
+
+Contas anteriores a esse campo são materializadas uma única vez: somente as
+movimentações vinculadas às contas legadas e as transferências são consultadas.
+Depois disso, a visão geral lê as contas diretamente e limita o histórico recente
+a 12 transferências; o resumo do dashboard lê somente as contas. Assim, nenhuma
+tela reconstrói o saldo relendo todo o histórico financeiro.
+
+O carregamento financeiro inicial consulta somente o ciclo atual e os próximos
+12 meses. Períodos anteriores são buscados sob demanda e o histórico completo é
+carregado apenas quando a pessoa seleciona explicitamente essa opção.
+
+A transferência possui um único registro e afeta as duas contas atomicamente;
 ela nunca é convertida em receita ou despesa.
 
 O vínculo `accountId` das movimentações é opcional para preservar os registros
