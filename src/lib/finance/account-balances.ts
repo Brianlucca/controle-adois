@@ -115,6 +115,23 @@ export function projectTransferBalances(
   };
 }
 
+export function calculateOpeningBalanceDeltaCents(
+  previousOpeningBalanceCents: number,
+  nextOpeningBalanceCents: number,
+) {
+  if (
+    !Number.isSafeInteger(previousOpeningBalanceCents) ||
+    !Number.isSafeInteger(nextOpeningBalanceCents)
+  ) {
+    throw new Error("invalid_opening_balance");
+  }
+  const delta = nextOpeningBalanceCents - previousOpeningBalanceCents;
+  if (!Number.isSafeInteger(delta)) {
+    throw new Error("account_balance_overflow");
+  }
+  return delta;
+}
+
 export function summarizeAccountBalances(
   accounts: FinancialAccount[],
   viewerUserId?: string,
