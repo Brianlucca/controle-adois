@@ -28,6 +28,11 @@ Campos atuais:
 - `openingBalanceCents`, `openingBalanceDate` e `currentBalanceCents`.
 - `archivedAt` opcional.
 
+Nome, instituição, tipo, titular e saldo inicial podem ser editados. Alterar o
+saldo inicial aplica somente a diferença ao saldo atual, na mesma transação e com
+auditoria. A data inicial fica imutável depois da criação para impedir que uma
+edição comum inclua ou remova silenciosamente movimentações do histórico.
+
 O saldo inicial representa o início da data informada. Movimentações pagas nessa
 data são consideradas. Para uma movimentação paga, o cálculo usa a data efetiva
 do pagamento e recorre ao vencimento somente em registros antigos sem `paidAt`.
