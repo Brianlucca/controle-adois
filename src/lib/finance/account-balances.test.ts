@@ -65,6 +65,31 @@ describe("account balances", () => {
     expect(result.currentBalance).toBe(900);
   });
 
+  it("does not change the bank balance for scheduled income or expenses", () => {
+    const [result] = calculateAccountBalances(
+      [account("a", 1_000)],
+      [
+        {
+          accountId: "a",
+          amount: 500,
+          dueDate: "2026-10-10",
+          type: "income",
+          status: "pending",
+        },
+        {
+          accountId: "a",
+          amount: 250,
+          dueDate: "2026-10-15",
+          type: "expense",
+          status: "pending",
+        },
+      ],
+      [],
+    );
+
+    expect(result.currentBalance).toBe(1_000);
+  });
+
   it("uses the payment date when it is available", () => {
     const [result] = calculateAccountBalances(
       [account("a", 1_000)],
