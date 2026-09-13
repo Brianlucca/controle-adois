@@ -31,6 +31,10 @@ Campos atuais:
 O saldo inicial representa o início da data informada. Movimentações pagas nessa
 data são consideradas. Para uma movimentação paga, o cálculo usa a data efetiva
 do pagamento e recorre ao vencimento somente em registros antigos sem `paidAt`.
+Movimentações pendentes, sejam entradas ou saídas, não alteram o saldo da conta.
+Ao selecionar uma data futura, o formulário assume “a receber” ou “a pagar”; uma
+recorrência concluída mantém somente a primeira ocorrência como paga e cria as
+ocorrências seguintes como pendentes.
 
 Cartões não são tratados como contas disponíveis; continuam planejados como uma
 entidade de obrigação separada.
