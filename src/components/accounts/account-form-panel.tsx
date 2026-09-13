@@ -9,23 +9,30 @@ import {
   ACCOUNT_OWNERSHIP_LABELS,
   ACCOUNT_TYPE_LABELS,
   AccountFormValues,
-  AccountOwnership,
+  AccountOwnerOption,
   FinancialAccountType,
 } from "@/lib/finance/account-types";
 import { getLocalDateKey } from "@/lib/finance/date";
 
 interface AccountFormPanelProps {
+  ownershipOptions: AccountOwnerOption[];
+  viewerUserId: string;
   onCancel: () => void;
   onSubmit: (
     values: AccountFormValues,
   ) => Promise<{ success: boolean; error?: string }>;
 }
 
-export function AccountFormPanel({ onCancel, onSubmit }: AccountFormPanelProps) {
+export function AccountFormPanel({
+  onCancel,
+  onSubmit,
+  ownershipOptions,
+  viewerUserId,
+}: AccountFormPanelProps) {
   const [name, setName] = useState("");
   const [institutionName, setInstitutionName] = useState("");
   const [type, setType] = useState<FinancialAccountType>("checking");
-  const [ownership, setOwnership] = useState<AccountOwnership>("joint");
+  const [ownerUserId, setOwnerUserId] = useState<string | null>(null);
   const [openingBalance, setOpeningBalance] = useState("");
   const [openingBalanceSign, setOpeningBalanceSign] = useState<
     "positive" | "negative"
@@ -44,7 +51,12 @@ export function AccountFormPanel({ onCancel, onSubmit }: AccountFormPanelProps) 
       name,
       institutionName,
       type,
-      ownership,
+      ownership: ownerUserId
+        ? ownerUserId === viewerUserId
+          ? "mine"
+          : "partner"
+        : "joint",
+      ownerUserId,
       openingBalance:
         Number(openingBalance || 0) *
         (openingBalanceSign === "negative" ? -1 : 1),
@@ -97,13 +109,17 @@ export function AccountFormPanel({ onCancel, onSubmit }: AccountFormPanelProps) 
         </Field>
         <Field label="De quem é?">
           <select
-            value={ownership}
-            onChange={(event) => setOwnership(event.target.value as AccountOwnership)}
+            value={ownerUserId || "joint"}
+            onChange={(event) => {
+              const value = event.target.value;
+              setOwnerUserId(value === "joint" ? null : value);
+            }}
             className="h-11 w-full rounded-xl border border-[#dedce1] bg-white px-3 text-sm outline-none focus:border-[#8c86ec] focus:ring-2 focus:ring-[#635bff]/15"
           >
-            {Object.entries(ACCOUNT_OWNERSHIP_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
+            <option value="joint">{ACCOUNT_OWNERSHIP_LABELS.joint}</option>
+            {ownershipOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -131,6 +147,9 @@ export function AccountFormPanel({ onCancel, onSubmit }: AccountFormPanelProps) 
               className="font-mono font-bold"
             />
           </div>
+          <p className="text-xs leading-5 text-[#858790]">
+            Informe o saldo desta conta, não o patrimônio total do Controle A Dois.
+          </p>
         </Field>
         <Field label="Data de início">
           <Input
