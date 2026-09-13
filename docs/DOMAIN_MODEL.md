@@ -23,8 +23,9 @@ Campos atuais:
 - `id` e `name`, dentro da coleção do espaço autenticado.
 - `institutionName` opcional.
 - `type`: checking, savings, cash ou investment.
-- `ownership`: mine, partner ou joint.
-- `openingBalanceCents` e `openingBalanceDate`.
+- `ownerUserId` opcional, apontando para o participante titular da conta.
+- `ownership`: mine, partner ou joint, calculado em relação a quem está acessando quando `ownerUserId` existe.
+- `openingBalanceCents`, `openingBalanceDate` e `currentBalanceCents`.
 - `archivedAt` opcional.
 
 O saldo inicial representa o início da data informada. Movimentações pagas nessa
@@ -118,7 +119,11 @@ Exemplo com início de R$ 100 e incremento de R$ 100: R$ 100, R$ 200, R$ 300 e R
 ## Decisões confirmadas
 
 - Valores de contas e transferências são persistidos como centavos inteiros.
-- O saldo é calculado desde o saldo inicial, somando movimentações pagas e as duas pontas de transferências não estornadas.
+- O saldo atual é materializado e atualizado atomicamente a partir do saldo inicial,
+  das movimentações pagas e das duas pontas de transferências não estornadas.
+- A titularidade aponta para um participante real e permite qualquer quantidade de
+  pessoas no espaço; “mine” e “partner” permanecem apenas como visão relativa e
+  compatibilidade com registros antigos.
 - Contas arquivadas permanecem no histórico, mas não entram nos totais ativos.
 - Movimentações antigas podem continuar sem uma conta vinculada.
 
