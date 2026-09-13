@@ -17,6 +17,7 @@ import { formatDate } from "@/lib/utils";
 
 interface TransactionFormModalContentProps {
   categories: string[];
+  accountOptions: Array<{ id: string; name: string; institutionName: string }>;
   formData: TransactionFormData;
   isEditing: boolean;
   onFormDataChange: Dispatch<SetStateAction<TransactionFormData>>;
@@ -26,6 +27,7 @@ interface TransactionFormModalContentProps {
 
 export function TransactionFormModalContent({
   categories,
+  accountOptions,
   formData,
   isEditing,
   onFormDataChange,
@@ -68,7 +70,7 @@ export function TransactionFormModalContent({
           }`}
         >
           <ArrowDownCircle size={17} />
-          Saida
+          Saída
         </button>
       </div>
 
@@ -82,7 +84,7 @@ export function TransactionFormModalContent({
         <div className="grid gap-3 sm:grid-cols-[1.2fr_0.8fr]">
           <label className="space-y-1.5">
             <span className="block pl-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Descricao
+              Descrição
             </span>
             <Input
               placeholder="Ex: Mercado, Salario..."
@@ -109,7 +111,7 @@ export function TransactionFormModalContent({
           </label>
         </div>
 
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="space-y-1.5">
             <span className="block pl-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
               Data
@@ -138,6 +140,25 @@ export function TransactionFormModalContent({
             </select>
           </label>
 
+          <label className="space-y-1.5">
+            <span className="block pl-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Conta
+            </span>
+            <select
+              className="h-12 w-full rounded-xl border border-[#dedce1] bg-white px-3 text-sm text-[#292a30] outline-none focus:border-[#8c86ec] focus:ring-2 focus:ring-[#635bff]/15"
+              value={formData.accountId || ""}
+              onChange={(event) => updateForm({ accountId: event.target.value })}
+            >
+              <option value="">Sem conta vinculada</option>
+              {accountOptions.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                  {account.institutionName ? ` · ${account.institutionName}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+
           {formData.type === "expense" ? (
             <label className="space-y-1.5">
               <span className="block pl-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -152,7 +173,7 @@ export function TransactionFormModalContent({
                   })
                 }
               >
-                <option value="paid">Ja Pago</option>
+                <option value="paid">Já pago</option>
                 <option value="pending">Pendente</option>
               </select>
             </label>
@@ -196,7 +217,7 @@ export function TransactionFormModalContent({
                   Repetir mensalmente
                 </span>
                 <span className="block text-xs text-[#858891]">
-                  Cria lancamentos mensais a partir desta data.
+                  Cria lançamentos mensais a partir desta data.
                 </span>
               </span>
             </span>
@@ -213,10 +234,10 @@ export function TransactionFormModalContent({
           </button>
 
           {formData.isRecurrent && (
-            <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/10 p-4">
+            <div className="rounded-lg border border-[#d7d2ff] bg-[#f3f1ff] p-4">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
                 <label>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-300">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#5d55dd]">
                     Quantidade de meses
                   </span>
                   <select
@@ -234,8 +255,8 @@ export function TransactionFormModalContent({
                     <option value={24}>24 meses</option>
                   </select>
                 </label>
-                <div className="text-xs text-indigo-200">
-                  Serao criados {formData.recurrenceMonths} lancamentos.
+                <div className="text-xs text-[#716bb8]">
+                  Serão criados {formData.recurrenceMonths} lançamentos.
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -260,20 +281,20 @@ export function TransactionFormModalContent({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Input
-              placeholder="Codigo Pix (Copia e Cola)"
+              placeholder="Código Pix (Copia e Cola)"
               value={formData.pixCode}
               onChange={(event) => updateForm({ pixCode: event.target.value })}
               className="h-12 rounded-xl border-[#dedce1] bg-white font-mono text-xs text-[#292a30]"
             />
             <Input
-              placeholder="Codigo de Barras (Boleto)"
+              placeholder="Código de barras (boleto)"
               value={formData.barCode}
               onChange={(event) => updateForm({ barCode: event.target.value })}
               className="h-12 rounded-xl border-[#dedce1] bg-white font-mono text-xs text-[#292a30]"
             />
           </div>
           <Textarea
-            placeholder="Observacoes opcionais..."
+            placeholder="Observações opcionais..."
             value={formData.observation}
             onChange={(event) =>
               updateForm({ observation: event.target.value })

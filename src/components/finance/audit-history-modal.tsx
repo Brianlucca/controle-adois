@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 type AuditLog = {
   id: string;
   action: string;
+  entityType?: "transaction" | "account" | "transfer";
   entityId: string;
   actorName: string;
   createdAt: string;
@@ -30,15 +31,33 @@ const labels: Record<string, string> = {
   status_changed: "Status alterado",
   deleted: "Enviada para a lixeira",
   restored: "Restaurada",
+  archived: "Arquivada",
+  reversed: "Estornada",
 };
 const fields: Record<string, string> = {
+  name: "Nome",
+  institutionName: "Instituição",
   description: "Descrição",
   amount: "Valor",
+  amountCents: "Valor",
   category: "Categoria",
   type: "Tipo",
+  ownership: "Titularidade",
   status: "Status",
   dueDate: "Data",
+  date: "Data",
+  openingBalanceCents: "Saldo inicial",
+  openingBalanceDate: "Data de início",
+  sourceAccountId: "Conta de origem",
+  destinationAccountId: "Conta de destino",
+  responsibleName: "Responsável",
+  accountId: "Conta",
   observation: "Observação",
+};
+const entityLabels = {
+  transaction: "Movimentação",
+  account: "Conta",
+  transfer: "Transferência",
 };
 
 export function AuditHistoryModal({
@@ -94,24 +113,30 @@ export function AuditHistoryModal({
       2000,
     );
   }
-  const latestByTransaction = new Map<string, string>();
+  const latestByEntity = new Map<string, string>();
   logs.forEach((log) => {
-    if (!latestByTransaction.has(log.entityId))
-      latestByTransaction.set(log.entityId, log.action);
+    const entityKey = `${log.entityType || "transaction"}:${log.entityId}`;
+    if (!latestByEntity.has(entityKey)) latestByEntity.set(entityKey, log.action);
   });
   const filteredLogs = useMemo(() => {
     const term = normalizeSearch(search);
     if (!term) return logs;
     return logs.filter((log) => {
       const transaction = log.after || log.before || {};
-      const amount = Number(transaction.amount || 0);
+      const amount = transaction.amountCents
+        ? Number(transaction.amountCents) / 100
+        : Number(transaction.amount || 0);
       return normalizeSearch(
         [
+          transaction.name,
+          transaction.institutionName,
           transaction.description,
           transaction.category,
+          transaction.responsibleName,
           log.entityId,
           log.actorName,
           labels[log.action] || log.action,
+          entityLabels[log.entityType || "transaction"],
           amount,
           amount.toFixed(2),
           amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
@@ -166,7 +191,7 @@ export function AuditHistoryModal({
         <div className="custom-scrollbar flex-1 overflow-y-auto p-3 sm:p-5">
           {loading ? (
             <div className="flex justify-center py-20">
-              <Loader2 className="animate-spin text-indigo-300" />
+              <Loader2 className="animate-spin text-[#635bff]" />
             </div>
           ) : !logs.length ? (
             <div className="py-20 text-center text-slate-500">
@@ -181,22 +206,18 @@ export function AuditHistoryModal({
               {filteredLogs.map((log) => (
                 <article
                   key={log.id}
-                  className="rounded-xl border border-white/10 bg-white/[0.025] p-4"
+                  className="rounded-xl border border-[#e5e3e7] bg-white p-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <span
-                        className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold ${log.action === "deleted" ? "bg-red-500/15 text-red-300" : log.action === "restored" ? "bg-emerald-500/15 text-emerald-300" : "bg-indigo-500/15 text-indigo-200"}`}
+                        className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold ${log.action === "deleted" ? "bg-[#fff0ef] text-[#b84e45]" : log.action === "restored" ? "bg-[#eaf7f2] text-[#168267]" : "bg-[#eeebff] text-[#5d55dd]"}`}
                       >
                         {log.action === "deleted" && <Trash2 size={12} />}
                         {labels[log.action] || log.action}
                       </span>
-                      <h3 className="mt-2 font-bold text-white">
-                        {String(
-                          log.after?.description ||
-                            log.before?.description ||
-                            "Transação",
-                        )}
+                      <h3 className="mt-2 font-bold text-[#292a30]">
+                        {getEntityTitle(log)}
                       </h3>
                     </div>
                     <time className="text-xs text-slate-500">
@@ -206,20 +227,20 @@ export function AuditHistoryModal({
                   <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <p className="break-all font-mono text-[11px] text-slate-500">
+                        <p className="break-all font-mono text-[11px] text-[#858891]">
                           ID: {log.entityId}
                         </p>
                         <button
                           type="button"
                           onClick={() => void copyId(log.entityId, log.id)}
-                          className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-200"
+                          className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-[#858891] transition-colors hover:bg-[#f1eff3] hover:text-[#292a30]"
                           title="Copiar ID"
-                          aria-label="Copiar ID da transação"
+                          aria-label="Copiar ID do registro"
                         >
                           {copiedLogId === log.id ? (
                             <>
-                              <Check size={13} className="text-emerald-400" />
-                              <span className="text-[10px] text-emerald-400">
+                              <Check size={13} className="text-[#168267]" />
+                              <span className="text-[10px] text-[#168267]">
                                 Copiado
                               </span>
                             </>
@@ -228,12 +249,15 @@ export function AuditHistoryModal({
                           )}
                         </button>
                       </div>
-                      <p className="mt-1 text-xs text-slate-400">
+                      <p className="mt-1 text-xs text-[#858891]">
                         Responsável: {log.actorName}
                       </p>
                     </div>
                     {log.action === "deleted" &&
-                      latestByTransaction.get(log.entityId) === "deleted" && (
+                      (!log.entityType || log.entityType === "transaction") &&
+                      latestByEntity.get(
+                        `${log.entityType || "transaction"}:${log.entityId}`,
+                      ) === "deleted" && (
                         <Button
                           onClick={() => restore(log.entityId)}
                           disabled={restoring === log.entityId}
@@ -248,7 +272,11 @@ export function AuditHistoryModal({
                         </Button>
                       )}
                   </div>
-                  <Changes before={log.before} after={log.after} />
+                  <Changes
+                    entityType={log.entityType || "transaction"}
+                    before={log.before}
+                    after={log.after}
+                  />
                 </article>
               ))}
             </div>
@@ -259,9 +287,11 @@ export function AuditHistoryModal({
   );
 }
 function Changes({
+  entityType,
   before,
   after,
 }: {
+  entityType: "transaction" | "account" | "transfer";
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
 }) {
@@ -278,13 +308,13 @@ function Changes({
           <span className="text-[#858891]">{fields[key]}: </span>
           {before && (
             <span className="text-[#c9564b] line-through">
-              {formatValue(key, before[key])}
+              {formatValue(key, before[key], entityType)}
             </span>
           )}
           {before && after && " → "}
           {after && (
             <span className="text-[#168267]">
-              {formatValue(key, after[key])}
+              {formatValue(key, after[key], entityType)}
             </span>
           )}
         </div>
@@ -292,17 +322,50 @@ function Changes({
     </div>
   );
 }
-function formatValue(key: string, value: unknown) {
-  if (key === "amount")
-    return Number(value || 0).toLocaleString("pt-BR", {
+function formatValue(
+  key: string,
+  value: unknown,
+  entityType: "transaction" | "account" | "transfer",
+) {
+  if (key === "amount" || key === "amountCents" || key === "openingBalanceCents") {
+    const amount = key.endsWith("Cents") ? Number(value || 0) / 100 : Number(value || 0);
+    return amount.toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL",
     });
-  if (key === "type") return value === "income" ? "Entrada" : "Saída";
+  }
+  if (key === "type" && entityType === "transaction") {
+    return value === "income" ? "Entrada" : "Saída";
+  }
+  if (key === "type" && entityType === "account") {
+    return accountTypeLabel(String(value));
+  }
+  if (key === "ownership") return ownershipLabel(String(value));
   if (key === "status") return value === "paid" ? "Pago" : "Pendente";
-  if (key === "dueDate" && value)
+  if (["dueDate", "date", "openingBalanceDate"].includes(key) && value)
     return new Date(`${value}T12:00:00`).toLocaleDateString("pt-BR");
   return String(value ?? "—");
+}
+
+function getEntityTitle(log: AuditLog) {
+  const entity = log.after || log.before || {};
+  const fallback = entityLabels[log.entityType || "transaction"];
+  return String(entity.name || entity.description || fallback);
+}
+
+function accountTypeLabel(value: string) {
+  return (
+    {
+      checking: "Conta-corrente",
+      savings: "Poupança",
+      cash: "Dinheiro em espécie",
+      investment: "Investimento",
+    }[value] || value
+  );
+}
+
+function ownershipLabel(value: string) {
+  return { mine: "Minha", partner: "Do parceiro", joint: "Nossa" }[value] || value;
 }
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("pt-BR", {

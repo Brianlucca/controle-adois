@@ -20,6 +20,7 @@ interface TransactionDetailsModalContentProps {
   transaction: Transaction;
   copiedField: string | null;
   canRedeemInvestment: boolean;
+  accountName?: string;
   displayValue: (value: number) => string;
   onCopy: (text: string, field: string) => void;
   onStartEdit: () => void;
@@ -33,6 +34,7 @@ export function TransactionDetailsModalContent({
   transaction,
   copiedField,
   canRedeemInvestment,
+  accountName,
   displayValue,
   onCopy,
   onStartEdit,
@@ -65,7 +67,7 @@ export function TransactionDetailsModalContent({
             </p>
             <p className="mt-1 text-xs font-medium text-slate-500">
               {transaction.category} -{" "}
-              {transaction.type === "income" ? "Entrada" : "Saida"}
+              {transaction.type === "income" ? "Entrada" : "Saída"}
             </p>
           </div>
         </div>
@@ -93,7 +95,7 @@ export function TransactionDetailsModalContent({
         <InfoBox label="Categoria" value={transaction.category} />
         <InfoBox label="Data" value={formatDate(transaction.dueDate)} />
         <InfoBox
-          label="Responsavel"
+          label="Responsável"
           value={transaction.userName?.split(" ")[0] || "Eu"}
         />
         <div className="min-w-0 rounded-xl border border-[#e3e1e4] bg-[#faf9fb] p-3">
@@ -103,12 +105,12 @@ export function TransactionDetailsModalContent({
           <p
             className={`font-bold ${
               isOverdue
-                ? "text-red-400"
+                ? "text-[#c5554b]"
                 : transaction.status === "pending"
-                  ? "text-amber-400"
+                  ? "text-[#a96924]"
                   : transaction.type === "income"
-                    ? "text-emerald-400"
-                    : "text-red-400"
+                    ? "text-[#168267]"
+                    : "text-[#c5554b]"
             }`}
           >
             {transaction.status === "pending"
@@ -119,6 +121,11 @@ export function TransactionDetailsModalContent({
           </p>
         </div>
       </div>
+      {accountName && (
+        <div className="grid grid-cols-1">
+          <InfoBox label="Conta movimentada" value={accountName} />
+        </div>
+      )}
       <CopyableCode
         label="ID da transação"
         value={transaction.id}
@@ -133,7 +140,7 @@ export function TransactionDetailsModalContent({
           <div className="mb-2 flex items-center gap-2 text-slate-500">
             <FileText size={14} />
             <span className="text-[10px] font-bold uppercase tracking-wider">
-              Observacoes
+              Observações
             </span>
           </div>
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#55575f]">
@@ -143,7 +150,7 @@ export function TransactionDetailsModalContent({
       )}
 
       {transaction.isRecurrent && (
-        <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/10 p-4">
+        <div className="rounded-lg border border-[#d7d2ff] bg-[#f3f1ff] p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500 text-white">
@@ -151,23 +158,23 @@ export function TransactionDetailsModalContent({
               </div>
               <div>
                 <p className="text-sm font-bold text-[#292a30]">
-                  Transacao recorrente
+                  Transação recorrente
                 </p>
-                <p className="text-xs text-indigo-200">
+                <p className="text-xs text-[#716bb8]">
                   {transaction.recurrenceIndex && transaction.recurrenceTotal
                     ? `${transaction.recurrenceIndex} de ${transaction.recurrenceTotal}`
-                    : "Serie mensal ativa"}
+                    : "Série mensal ativa"}
                 </p>
               </div>
             </div>
             <Button
               type="button"
               variant="destructive"
-              className="h-10 border border-red-500/20 bg-red-500/10 px-3 text-red-300 hover:bg-red-500/20"
+              className="h-10 border border-[#f0d3cf] bg-[#fff0ef] px-3 text-[#b84e45] hover:bg-[#ffe7e4]"
               onClick={() => onDeleteRecurrence(transaction.id)}
             >
               <Trash2 size={14} className="mr-2" />
-              Excluir recorrencia
+              Excluir recorrência
             </Button>
           </div>
         </div>
@@ -253,7 +260,7 @@ export function TransactionDetailsModalContent({
 
         <Button
           variant="destructive"
-          className="h-12 rounded-lg border border-red-500/20 bg-red-500/10 px-0 text-red-400 hover:bg-red-500/20"
+          className="h-12 rounded-lg border border-[#f0d3cf] bg-[#fff0ef] px-0 text-[#b84e45] hover:bg-[#ffe7e4]"
           onClick={() => onDelete(transaction.id)}
         >
           <Trash2 size={18} />
@@ -295,14 +302,14 @@ function CopyableCode({
     <div
       className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border p-3 ${
         isIndigo
-          ? "border-indigo-500/20 bg-indigo-500/10"
+          ? "border-[#d7d2ff] bg-[#f3f1ff]"
           : "border-[#e3e1e4] bg-[#faf9fb]"
       }`}
     >
       <span
         className={`rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
           isIndigo
-            ? "bg-indigo-500/20 text-indigo-200"
+            ? "bg-[#e5e1ff] text-[#5d55dd]"
             : "bg-[#eeecf0] text-[#656870]"
         }`}
       >
@@ -314,13 +321,13 @@ function CopyableCode({
         variant="ghost"
         className={`h-9 px-2 transition-all ${
           isIndigo
-            ? "text-indigo-200 hover:bg-indigo-500/20 hover:text-white"
+            ? "text-[#5d55dd] hover:bg-[#e5e1ff] hover:text-[#4840c5]"
             : "text-[#55575f] hover:bg-[#eeecf0] hover:text-[#292a30]"
         }`}
         onClick={() => onCopy(value, field)}
       >
         {copiedField === field ? (
-          <span className="flex items-center gap-1 text-xs font-bold text-emerald-300">
+          <span className="flex items-center gap-1 text-xs font-bold text-[#168267]">
             <Check size={14} /> Copiado
           </span>
         ) : (

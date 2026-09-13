@@ -2,6 +2,7 @@ import "server-only";
 import { Timestamp } from "firebase-admin/firestore";
 
 export type AuditAction = "created" | "updated" | "status_changed" | "deleted" | "restored" | "imported";
+export type EntityAuditAction = AuditAction | "archived" | "reversed";
 
 export function buildAuditRecord({ action, user, transactionId, before = null, after = null }: {
   action: AuditAction;
@@ -10,8 +11,41 @@ export function buildAuditRecord({ action, user, transactionId, before = null, a
   before?: Record<string, unknown> | null;
   after?: Record<string, unknown> | null;
 }) {
-  return { action, entityType: "transaction", entityId: transactionId, actorId: user.uid,
-    actorName: user.name || user.email || "Usuario", before: normalize(before), after: normalize(after), createdAt: new Date() };
+  return buildEntityAuditRecord({
+    action,
+    entityType: "transaction",
+    entityId: transactionId,
+    user,
+    before,
+    after,
+  });
+}
+
+export function buildEntityAuditRecord({
+  action,
+  entityType,
+  entityId,
+  user,
+  before = null,
+  after = null,
+}: {
+  action: EntityAuditAction;
+  entityType: "transaction" | "account" | "transfer";
+  entityId: string;
+  user: { uid: string; name?: string; email?: string };
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+}) {
+  return {
+    action,
+    entityType,
+    entityId,
+    actorId: user.uid,
+    actorName: user.name || user.email || "Usuario",
+    before: normalize(before),
+    after: normalize(after),
+    createdAt: new Date(),
+  };
 }
 
 function normalize(value: unknown): unknown {

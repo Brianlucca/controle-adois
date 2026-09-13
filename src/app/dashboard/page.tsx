@@ -15,6 +15,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { BrandIcon } from "@/components/brand-icon";
+import { AccountBalanceOverview } from "@/components/accounts/account-balance-overview";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { usePreferences } from "@/contexts/preferences-context";
 import { useWorkspace } from "@/contexts/workspace-context";
@@ -174,6 +175,8 @@ export default function DashboardPage() {
           tone="purple"
         />
       </section>
+
+      <AccountBalanceOverview />
 
       <section className="grid gap-5 lg:grid-cols-[1.3fr_.7fr]">
         <div className="app-card overflow-hidden">
