@@ -117,9 +117,9 @@ function useFinanceController() {
     const syncEnd = new Date();
     syncEnd.setFullYear(syncEnd.getFullYear() + 1);
     const syncRange = { from: cycle.from, to: syncEnd.toISOString().slice(0, 10) };
-    const serverData = cached
-      ? await retryOnce(() => getTransactions(uid, syncRange.from, syncRange.to))
-      : await retryOnce(() => getTransactionsThrough("2100-12-31"));
+    const serverData = await retryOnce(() =>
+      getTransactions(uid, syncRange.from, syncRange.to),
+    );
     if (sequence !== requestSequence.current) return;
     const merged = cached
       ? mergeTransactionRange(cached.transactions, serverData, syncRange)
