@@ -17,6 +17,7 @@ import { getLocalDateKey } from "@/lib/finance/date";
 interface AccountFormPanelProps {
   ownershipOptions: AccountOwnerOption[];
   viewerUserId: string;
+  initialValues?: AccountFormValues;
   onCancel: () => void;
   onSubmit: (
     values: AccountFormValues,
@@ -28,17 +29,31 @@ export function AccountFormPanel({
   onSubmit,
   ownershipOptions,
   viewerUserId,
+  initialValues,
 }: AccountFormPanelProps) {
-  const [name, setName] = useState("");
-  const [institutionName, setInstitutionName] = useState("");
-  const [type, setType] = useState<FinancialAccountType>("checking");
-  const [ownerUserId, setOwnerUserId] = useState<string | null>(null);
-  const [openingBalance, setOpeningBalance] = useState("");
+  const initialOwnerUserId = getInitialOwnerUserId(
+    initialValues,
+    ownershipOptions,
+    viewerUserId,
+  );
+  const [name, setName] = useState(initialValues?.name || "");
+  const [institutionName, setInstitutionName] = useState(
+    initialValues?.institutionName || "",
+  );
+  const [type, setType] = useState<FinancialAccountType>(
+    initialValues?.type || "checking",
+  );
+  const [ownerUserId, setOwnerUserId] = useState<string | null>(
+    initialOwnerUserId,
+  );
+  const [openingBalance, setOpeningBalance] = useState(
+    initialValues ? Math.abs(initialValues.openingBalance).toFixed(2) : "",
+  );
   const [openingBalanceSign, setOpeningBalanceSign] = useState<
     "positive" | "negative"
-  >("positive");
-  const [openingBalanceDate, setOpeningBalanceDate] = useState(() =>
-    getLocalDateKey(new Date()),
+  >(initialValues && initialValues.openingBalance < 0 ? "negative" : "positive");
+  const [openingBalanceDate, setOpeningBalanceDate] = useState(
+    () => initialValues?.openingBalanceDate || getLocalDateKey(new Date()),
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -71,9 +86,14 @@ export function AccountFormPanel({
       <div className="app-card-header">
         <div>
           <h2 className="flex items-center gap-2">
-            <Landmark size={17} className="text-[#635bff]" /> Nova conta
+            <Landmark size={17} className="text-[#635bff]" />{" "}
+            {initialValues ? "Editar conta" : "Nova conta"}
           </h2>
-          <p>Cadastre onde o dinheiro do casal está.</p>
+          <p>
+            {initialValues
+              ? "Atualize os dados sem perder o histórico da conta."
+              : "Cadastre onde o dinheiro do casal está."}
+          </p>
         </div>
       </div>
       <div className="grid gap-4 p-5 md:grid-cols-2 lg:grid-cols-3">
@@ -155,9 +175,15 @@ export function AccountFormPanel({
           <Input
             required
             type="date"
+            disabled={Boolean(initialValues)}
             value={openingBalanceDate}
             onChange={(event) => setOpeningBalanceDate(event.target.value)}
           />
+          {initialValues && (
+            <p className="text-xs leading-5 text-[#858790]">
+              A data inicial fica bloqueada para preservar o histórico.
+            </p>
+          )}
         </Field>
       </div>
       {error && (
@@ -175,11 +201,27 @@ export function AccountFormPanel({
           className="bg-[#635bff] text-white hover:bg-[#544ce0]"
         >
           {saving && <Loader2 size={16} className="mr-2 animate-spin" />}
-          Salvar conta
+          {initialValues ? "Salvar alterações" : "Salvar conta"}
         </Button>
       </div>
     </form>
   );
+}
+
+function getInitialOwnerUserId(
+  initialValues: AccountFormValues | undefined,
+  ownershipOptions: AccountOwnerOption[],
+  viewerUserId: string,
+) {
+  if (!initialValues) return null;
+  if (initialValues.ownerUserId) return initialValues.ownerUserId;
+  if (initialValues.ownership === "mine") return viewerUserId;
+  if (initialValues.ownership === "partner") {
+    return (
+      ownershipOptions.find((option) => option.id !== viewerUserId)?.id || null
+    );
+  }
+  return null;
 }
 
 function Field({
