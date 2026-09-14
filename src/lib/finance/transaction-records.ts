@@ -15,6 +15,14 @@ export function getStatusAfterDateChange(
   return nextDate > todayKey ? "pending" : currentStatus;
 }
 
+export function isFutureCompletedTransaction(
+  status: TransactionStatus,
+  dueDate: string,
+  todayKey: string,
+) {
+  return status === "paid" && dueDate > todayKey;
+}
+
 export function getRecurringOccurrenceStatus(
   initialStatus: TransactionStatus,
   occurrenceIndex: number,
@@ -60,6 +68,12 @@ export function buildEditableTransactionFields(
     linkedInvestmentId: data.linkedInvestmentId || linkedInvestmentId || null,
     isRecurrent: data.isRecurrent || false,
     recurrenceMonths: data.isRecurrent ? data.recurrenceMonths : null,
+    scope: data.scope || null,
+    paidByUserId: data.paidByUserId || null,
+    responsibleUserId: data.responsibleUserId || null,
+    beneficiaryUserIds: data.beneficiaryUserIds || [],
+    splitMethod: data.splitMethod || null,
+    shares: data.shares || [],
     paidAt: data.status === "paid" ? new Date() : null,
   };
 }
