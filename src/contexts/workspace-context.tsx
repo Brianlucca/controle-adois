@@ -10,6 +10,14 @@ export type Workspace = {
   ownerId: string;
   currency: string;
   budgetLimit: number;
+  participants: WorkspaceParticipant[];
+};
+
+export type WorkspaceParticipant = {
+  userId: string;
+  displayName: string;
+  email: string;
+  isCurrentUser: boolean;
 };
 
 interface WorkspaceContextType {
@@ -19,7 +27,7 @@ interface WorkspaceContextType {
   loadingWorkspaces: boolean;
 }
 
-const WorkspaceContext = createContext<WorkspaceContextType>({} as any);
+const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
 
 function workspaceCacheKey(userId: string) {
   return `workspace-cache:${userId}`;
@@ -29,9 +37,14 @@ function readWorkspaceCache(userId: string): Workspace[] {
   try {
     const parsed = JSON.parse(localStorage.getItem(workspaceCacheKey(userId)) || "[]");
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item): item is Workspace =>
-      Boolean(item && typeof item.id === "string" && typeof item.name === "string")
-    );
+    return parsed
+      .filter((item) =>
+        Boolean(item && typeof item.id === "string" && typeof item.name === "string")
+      )
+      .map((item) => ({
+        ...item,
+        participants: Array.isArray(item.participants) ? item.participants : [],
+      })) as Workspace[];
   } catch {
     return [];
   }
@@ -52,6 +65,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("lastActiveWorkspaceId", ws.id);
     if (user) writeWorkspaceCache(user.uid, workspaces.some((item) => item.id === ws.id) ? workspaces : [...workspaces, ws]);
     await switchActiveWorkspace(ws.id, user?.uid);
+    if (!user) return;
+
+    const details = await getWorkspaceDetails(user.uid);
+    if (!details || details.id !== ws.id) return;
+
+    const hydratedWorkspace = {
+      ...ws,
+      ownerId: details.ownerId || ws.ownerId,
+      participants: buildWorkspaceParticipants(details.members, user),
+    };
+    setActiveWorkspaceState(hydratedWorkspace);
+    setWorkspaces((current) => {
+      const updated = current.map((item) =>
+        item.id === hydratedWorkspace.id ? hydratedWorkspace : item,
+      );
+      writeWorkspaceCache(user.uid, updated);
+      return updated;
+    });
   };
 
   useEffect(() => {
@@ -82,22 +113,39 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         ]);
         if (!isMounted) return;
 
-        const wsList = data.map((ws: any) => ({
+        const wsList = data.map((ws) => ({
           id: ws.id,
           name: ws.name,
           ownerId: ws.isOwner ? currentUser.uid : "",
           currency: "BRL",
           budgetLimit: Number(ws.budgetLimit) || 3000,
+          participants:
+            cachedWorkspaces.find((cached) => cached.id === ws.id)?.participants || [],
         })) as Workspace[];
 
-        setWorkspaces(wsList);
-        writeWorkspaceCache(currentUser.uid, wsList);
+        const hydratedList = activeDetails
+          ? wsList.map((workspace) =>
+              workspace.id === activeDetails.id
+                ? {
+                    ...workspace,
+                    ownerId: activeDetails.ownerId || workspace.ownerId,
+                    participants: buildWorkspaceParticipants(
+                      activeDetails.members,
+                      currentUser,
+                    ),
+                  }
+                : workspace,
+            )
+          : wsList;
+
+        setWorkspaces(hydratedList);
+        writeWorkspaceCache(currentUser.uid, hydratedList);
 
         const lastId = localStorage.getItem("lastActiveWorkspaceId");
         const nextWorkspace =
-          (activeDetails?.id && wsList.find((workspace) => workspace.id === activeDetails.id)) ||
-          (lastId && wsList.find((workspace) => workspace.id === lastId)) ||
-          wsList[0] ||
+          (activeDetails?.id && hydratedList.find((workspace) => workspace.id === activeDetails.id)) ||
+          (lastId && hydratedList.find((workspace) => workspace.id === lastId)) ||
+          hydratedList[0] ||
           null;
 
         if (nextWorkspace) {
@@ -106,7 +154,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         } else {
           setActiveWorkspaceState(null);
         }
-      } catch (error) {
+      } catch {
         if (isMounted && cachedWorkspaces.length === 0) {
           setWorkspaces([]);
           setActiveWorkspaceState(null);
@@ -130,4 +178,45 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useWorkspace = () => useContext(WorkspaceContext);
+export function useWorkspace() {
+  const context = useContext(WorkspaceContext);
+  if (!context) {
+    throw new Error("useWorkspace precisa estar dentro de WorkspaceProvider.");
+  }
+  return context;
+}
+
+function buildWorkspaceParticipants(
+  members: Array<string | { uid?: string; email?: string }> = [],
+  currentUser: { uid: string; email: string | null; displayName: string | null },
+): WorkspaceParticipant[] {
+  const participants = members
+    .map((member) => {
+      const userId = typeof member === "string" ? member : member.uid || "";
+      const email =
+        typeof member === "string"
+          ? userId === currentUser.uid
+            ? currentUser.email || ""
+            : ""
+          : member.email || "";
+      const isCurrentUser = userId === currentUser.uid;
+      const displayName = isCurrentUser
+        ? currentUser.displayName || email.split("@")[0] || "Você"
+        : email.split("@")[0] || "Participante";
+
+      return { userId, displayName, email, isCurrentUser };
+    })
+    .filter((participant) => participant.userId);
+
+  if (!participants.some((participant) => participant.userId === currentUser.uid)) {
+    participants.unshift({
+      userId: currentUser.uid,
+      displayName: currentUser.displayName || currentUser.email?.split("@")[0] || "Você",
+      email: currentUser.email || "",
+      isCurrentUser: true,
+    });
+  }
+
+  return [...new Map(participants.map((participant) => [participant.userId, participant])).values()]
+    .sort((a, b) => Number(b.isCurrentUser) - Number(a.isCurrentUser));
+}
