@@ -29,6 +29,11 @@ export interface FinancialAccount {
   archivedAt?: string | null;
 }
 
+export type FinancialAccountOption = Pick<
+  FinancialAccount,
+  "id" | "name" | "institutionName" | "ownership" | "ownerUserId"
+>;
+
 export interface AccountTransfer {
   id: string;
   sourceAccountId: string;

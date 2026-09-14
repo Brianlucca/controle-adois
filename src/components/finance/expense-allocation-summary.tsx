@@ -1,18 +1,25 @@
 import { CircleUserRound, ReceiptText, UsersRound, WalletCards } from "lucide-react";
 import type { WorkspaceParticipant } from "@/contexts/workspace-context";
+import type { FinancialAccountOption } from "@/lib/finance/account-types";
 import type { Transaction } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
 export function ExpenseAllocationSummary({
   transaction,
   participants,
+  account,
 }: {
   transaction: Transaction;
   participants: WorkspaceParticipant[];
+  account?: FinancialAccountOption;
 }) {
   if (transaction.type !== "expense") return null;
 
-  if (!transaction.scope || !transaction.paidByUserId) {
+  const isJointFunding = account
+    ? account.ownership === "joint"
+    : transaction.fundingSource === "joint";
+
+  if (!transaction.scope || (!isJointFunding && !transaction.paidByUserId)) {
     return (
       <div className="rounded-xl border border-[#e3e1e4] bg-[#faf9fb] p-4">
         <div className="flex items-start gap-3">
@@ -57,8 +64,12 @@ export function ExpenseAllocationSummary({
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <AllocationFact
           icon={<WalletCards size={14} />}
-          label="Quem pagou"
-          value={participantLabel(transaction.paidByUserId, participants)}
+          label={isJointFunding ? "Origem do dinheiro" : "Quem pagou"}
+          value={
+            isJointFunding
+              ? `Dinheiro do casal${account?.name ? ` · ${account.name}` : ""}`
+              : participantLabel(transaction.paidByUserId, participants)
+          }
         />
         <AllocationFact
           icon={<ReceiptText size={14} />}

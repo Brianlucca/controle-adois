@@ -6,6 +6,7 @@ import {
   calculateTransactionBalanceChanges,
 } from "@/lib/finance/account-balances";
 import {
+  AccountOwnership,
   AccountTransfer,
   FinancialAccount,
 } from "@/lib/finance/account-types";
@@ -15,6 +16,8 @@ export interface AccountBalanceState {
   ref: FirebaseFirestore.DocumentReference;
   openingBalanceDate: string;
   currentBalanceCents: number;
+  ownership: AccountOwnership;
+  ownerUserId: string | null;
   archived: boolean;
   materialized: boolean;
 }
@@ -123,6 +126,13 @@ export async function readAccountBalanceStates(
         const data = snapshot.data() || {};
         const openingBalanceCents = toSafeCents(data.openingBalanceCents);
         const materialized = Object.hasOwn(data, "currentBalanceCents");
+        const ownerUserId =
+          typeof data.ownerUserId === "string" ? data.ownerUserId : null;
+        const ownership = isAccountOwnership(data.ownership)
+          ? data.ownership
+          : ownerUserId
+            ? "mine"
+            : "joint";
         return [
           snapshot.id,
           {
@@ -135,6 +145,8 @@ export async function readAccountBalanceStates(
             currentBalanceCents: materialized
               ? toSafeCents(data.currentBalanceCents)
               : openingBalanceCents,
+            ownership,
+            ownerUserId,
             archived: Boolean(data.archivedAt),
             materialized,
           },
@@ -269,6 +281,10 @@ function toSafeCents(value: unknown) {
   const cents = Number(value) || 0;
   if (!Number.isSafeInteger(cents)) throw new Error("invalid_account_balance");
   return cents;
+}
+
+function isAccountOwnership(value: unknown): value is AccountOwnership {
+  return value === "mine" || value === "partner" || value === "joint";
 }
 
 function toIsoString(value: unknown): string | null {

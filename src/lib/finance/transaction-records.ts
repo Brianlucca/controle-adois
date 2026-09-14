@@ -69,6 +69,7 @@ export function buildEditableTransactionFields(
     isRecurrent: data.isRecurrent || false,
     recurrenceMonths: data.isRecurrent ? data.recurrenceMonths : null,
     scope: data.scope || null,
+    fundingSource: data.fundingSource || null,
     paidByUserId: data.paidByUserId || null,
     responsibleUserId: data.responsibleUserId || null,
     beneficiaryUserIds: data.beneficiaryUserIds || [],

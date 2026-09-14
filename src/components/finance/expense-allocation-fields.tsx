@@ -1,6 +1,7 @@
 import { ShieldCheck, UserRound, UsersRound, WalletCards } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import type { WorkspaceParticipant } from "@/contexts/workspace-context";
+import type { FinancialAccountOption } from "@/lib/finance/account-types";
 import { moneyToCents, splitCentsEqually } from "@/lib/finance/expense-splits";
 import type { TransactionFormData } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
@@ -8,12 +9,14 @@ import { formatCurrency } from "@/lib/utils";
 interface ExpenseAllocationFieldsProps {
   formData: TransactionFormData;
   participants: WorkspaceParticipant[];
+  accountOptions: FinancialAccountOption[];
   onChange: (patch: Partial<TransactionFormData>) => void;
 }
 
 export function ExpenseAllocationFields({
   formData,
   participants,
+  accountOptions,
   onChange,
 }: ExpenseAllocationFieldsProps) {
   const currentUser =
@@ -26,7 +29,18 @@ export function ExpenseAllocationFields({
       : fallbackUserId
         ? [fallbackUserId]
         : [];
-  const paidByUserId = formData.paidByUserId || fallbackUserId;
+  const selectedAccount = accountOptions.find(
+    (account) => account.id === formData.accountId,
+  );
+  const isJointFunding = selectedAccount
+    ? selectedAccount.ownership === "joint"
+    : formData.fundingSource === "joint";
+  const accountOwnerUserId =
+    selectedAccount?.ownerUserId ||
+    (selectedAccount?.ownership === "mine" ? fallbackUserId : "");
+  const paidByUserId = isJointFunding
+    ? ""
+    : accountOwnerUserId || formData.paidByUserId || fallbackUserId;
   const responsibleUserId = formData.responsibleUserId || paidByUserId;
   const splitMethod = formData.splitMethod || "equal";
   const amountCents = moneyToCents(Number(formData.amount));
@@ -46,6 +60,7 @@ export function ExpenseAllocationFields({
         : [fallbackUserId].filter(Boolean);
     onChange({
       scope: nextScope,
+      fundingSource: isJointFunding ? "joint" : "participant",
       paidByUserId,
       responsibleUserId,
       beneficiaryUserIds,
@@ -115,7 +130,7 @@ export function ExpenseAllocationFields({
         <div>
           <h4 className="text-sm font-bold text-[#292a30]">Meu, seu e nosso</h4>
           <p className="mt-0.5 text-xs leading-relaxed text-[#777983]">
-            Informe quem pagou e como essa despesa deve ser dividida.
+            A conta mostra de onde saiu o dinheiro; você informa de quem é a despesa.
           </p>
         </div>
       </div>
@@ -143,12 +158,28 @@ export function ExpenseAllocationFields({
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <ParticipantSelect
-          label="Quem pagou?"
-          value={paidByUserId}
-          participants={participants}
-          onChange={(userId) => onChange({ paidByUserId: userId })}
-        />
+        {isJointFunding ? (
+          <FundingFact
+            label="De onde saiu o dinheiro?"
+            value="Dinheiro do casal"
+            detail={selectedAccount?.name || "Conta conjunta"}
+          />
+        ) : accountOwnerUserId ? (
+          <FundingFact
+            label="Quem pagou?"
+            value={participantLabel(accountOwnerUserId, participants)}
+            detail={selectedAccount?.name || "Conta pessoal"}
+          />
+        ) : (
+          <ParticipantSelect
+            label="Quem pagou?"
+            value={paidByUserId}
+            participants={participants}
+            onChange={(userId) =>
+              onChange({ fundingSource: "participant", paidByUserId: userId })
+            }
+          />
+        )}
         <ParticipantSelect
           label="Responsável pela conta"
           value={responsibleUserId}
@@ -268,9 +299,32 @@ export function ExpenseAllocationFields({
 
       <div className="flex items-start gap-2 rounded-lg border border-[#ddd9ef] bg-white px-3 py-2.5 text-xs leading-relaxed text-[#666872]">
         <ShieldCheck size={15} className="mt-0.5 shrink-0 text-[#635bff]" />
-        O acerto considera apenas despesas compartilhadas que já foram pagas.
+        Conta conjunta não gera reembolso em despesa compartilhada. O acerto é
+        uma transferência e nunca cria outra receita ou despesa.
       </div>
     </section>
+  );
+}
+
+function FundingFact({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="flex items-center gap-1.5 pl-1 text-[10px] font-bold uppercase tracking-wider text-[#777983]">
+        <WalletCards size={12} /> {label}
+      </p>
+      <div className="min-h-11 rounded-xl border border-[#dedce5] bg-white px-3 py-2">
+        <p className="text-sm font-semibold text-[#292a30]">{value}</p>
+        <p className="truncate text-[10px] text-[#858790]">{detail}</p>
+      </div>
+    </div>
   );
 }
 

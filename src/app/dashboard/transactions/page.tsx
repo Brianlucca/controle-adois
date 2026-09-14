@@ -21,6 +21,7 @@ import {
 import { getFinancialAccountOptions } from "@/actions/account-actions";
 import { getLocalDateKey } from "@/lib/finance/date";
 import { moneyToCents } from "@/lib/finance/expense-splits";
+import type { FinancialAccountOption } from "@/lib/finance/account-types";
 import { parseTransactionsWorkbook } from "@/lib/finance/import-transactions";
 import {
   calculateFinanceOverview,
@@ -79,9 +80,7 @@ export default function TransactionsPage() {
   } = useFinance();
   const { hideValues, toggleHideValues } = usePreferences();
   const { activeWorkspace } = useWorkspace();
-  const [accountOptions, setAccountOptions] = useState<
-    Array<{ id: string; name: string; institutionName: string }>
-  >([]);
+  const [accountOptions, setAccountOptions] = useState<FinancialAccountOption[]>([]);
   const participants = useMemo<WorkspaceParticipant[]>(() => {
     if (activeWorkspace?.participants.length) return activeWorkspace.participants;
     if (!user) return [];
@@ -152,6 +151,8 @@ export default function TransactionsPage() {
   };
 
   const openNewTransactionModal = () => {
+    const defaultAccount =
+      accountOptions.length === 1 ? accountOptions[0] : undefined;
     setSelectedTx(null);
     setIsEditing(false);
     setFormData({
@@ -164,10 +165,10 @@ export default function TransactionsPage() {
       pixCode: "",
       barCode: "",
       observation: "",
-      accountId: accountOptions.length === 1 ? accountOptions[0].id : "",
+      accountId: defaultAccount?.id || "",
       isRecurrent: false,
       recurrenceMonths: 12,
-      ...defaultExpenseAllocation(participants, user?.uid),
+      ...defaultExpenseAllocation(participants, user?.uid, defaultAccount),
     });
     setIsModalOpen(true);
   };
@@ -180,6 +181,14 @@ export default function TransactionsPage() {
 
   const handleStartEdit = () => {
     if (!selectedTx) return;
+    const selectedAccount = accountOptions.find(
+      (account) => account.id === selectedTx.accountId,
+    );
+    const fundingSource = selectedAccount
+      ? selectedAccount.ownership === "joint"
+        ? "joint"
+        : "participant"
+      : selectedTx.fundingSource || "participant";
     setFormData({
       description: selectedTx.description,
       amount: selectedTx.amount.toString(),
@@ -194,7 +203,14 @@ export default function TransactionsPage() {
       isRecurrent: selectedTx.isRecurrent || false,
       recurrenceMonths: selectedTx.recurrenceMonths || 12,
       scope: selectedTx.scope || "individual",
-      paidByUserId: selectedTx.paidByUserId || user?.uid || "",
+      fundingSource,
+      paidByUserId:
+        fundingSource === "joint"
+          ? ""
+          : selectedAccount?.ownerUserId ||
+            selectedTx.paidByUserId ||
+            user?.uid ||
+            "",
       responsibleUserId:
         selectedTx.responsibleUserId || selectedTx.paidByUserId || user?.uid || "",
       beneficiaryUserIds:
@@ -224,6 +240,7 @@ export default function TransactionsPage() {
     isRecurrent: false,
     recurrenceMonths: 12,
     scope: "individual",
+    fundingSource: "participant",
     paidByUserId: "",
     responsibleUserId: "",
     beneficiaryUserIds: [],
@@ -235,7 +252,7 @@ export default function TransactionsPage() {
     if (
       selectedTx ||
       formData.type !== "expense" ||
-      formData.paidByUserId ||
+      formData.responsibleUserId ||
       participants.length === 0
     ) {
       return;
@@ -244,7 +261,7 @@ export default function TransactionsPage() {
       ...current,
       ...defaultExpenseAllocation(participants, user?.uid),
     }));
-  }, [formData.paidByUserId, formData.type, participants, selectedTx, user?.uid]);
+  }, [formData.responsibleUserId, formData.type, participants, selectedTx, user?.uid]);
 
   const handleSaveWrapper = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -761,11 +778,20 @@ export default function TransactionsPage() {
               ) : selectedTx && !isEditing ? (
                 <TransactionDetailsModalContent
                   transaction={selectedTx}
-                  accountName={
+                  account={
                     selectedTx.accountId
                       ? accountOptions.find(
                           (account) => account.id === selectedTx.accountId,
-                        )?.name || "Conta arquivada"
+                        ) || {
+                          id: selectedTx.accountId,
+                          name: "Conta arquivada",
+                          institutionName: "",
+                          ownership:
+                            selectedTx.fundingSource === "joint"
+                              ? "joint"
+                              : "mine",
+                          ownerUserId: selectedTx.paidByUserId,
+                        }
                       : undefined
                   }
                   participants={participants}
@@ -814,6 +840,7 @@ export default function TransactionsPage() {
 function defaultExpenseAllocation(
   participants: WorkspaceParticipant[],
   currentUserId?: string,
+  account?: FinancialAccountOption,
 ): Partial<TransactionFormData> {
   const userId =
     participants.find((participant) => participant.userId === currentUserId)
@@ -825,7 +852,9 @@ function defaultExpenseAllocation(
 
   return {
     scope: "individual",
-    paidByUserId: userId,
+    fundingSource: account?.ownership === "joint" ? "joint" : "participant",
+    paidByUserId:
+      account?.ownership === "joint" ? "" : account?.ownerUserId || userId,
     responsibleUserId: userId,
     beneficiaryUserIds: userId ? [userId] : [],
     splitMethod: "equal",
