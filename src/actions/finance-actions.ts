@@ -29,11 +29,13 @@ import {
   readAccountBalanceStates,
   runAccountBalanceTransaction,
   writeAccountBalanceChanges,
+  type AccountBalanceState,
 } from "@/lib/server/account-balance-store";
 import type { Transaction } from "@/lib/types";
 import {
   moneyToCents,
   resolveExpenseAllocation,
+  resolveExpenseFunding,
 } from "@/lib/finance/expense-splits";
 import { getWorkspaceMemberId } from "@/lib/workspace/membership";
 
@@ -156,6 +158,12 @@ export async function addTransaction(rawData: unknown) {
           [data.accountId],
         );
         assertActiveAccount(accounts, data.accountId);
+        const fundedData = resolveTransactionFunding(
+          data,
+          accounts,
+          user.uid,
+          participantIds,
+        );
         const balanceChanges = new Map<string, number>();
         const created: Transaction[] = [];
 
@@ -175,7 +183,7 @@ export async function addTransaction(rawData: unknown) {
           );
           const record = {
             ...buildBaseTransaction(
-              { ...data, status: occurrenceStatus },
+              { ...fundedData, status: occurrenceStatus },
               user,
             ),
             dueDate: occurrenceDueDate,
@@ -279,9 +287,15 @@ export async function importTransactions(rawItems: unknown) {
         const balanceChanges = new Map<string, number>();
 
         for (const item of items) {
+          const fundedItem = resolveTransactionFunding(
+            item,
+            accounts,
+            user.uid,
+            participantIds,
+          );
           const transactionRef = collection.doc();
           const record = {
-            ...buildBaseTransaction(item, user),
+            ...buildBaseTransaction(fundedItem, user),
             importedAt: new Date(),
           };
           mergeBalanceChanges(
@@ -572,18 +586,24 @@ export async function editTransaction(id: string, rawData: unknown) {
         [currentAccountId, data.accountId],
       );
       assertActiveAccount(accounts, data.accountId);
+      const fundedData = resolveTransactionFunding(
+        data,
+        accounts,
+        user.uid,
+        participantIds,
+      );
       const balanceChanges = new Map<string, number>();
       const shouldCreateRecurrence =
-        data.isRecurrent &&
-        data.type === "expense" &&
+        fundedData.isRecurrent &&
+        fundedData.type === "expense" &&
         !currentData.recurrenceGroupId;
 
       if (shouldCreateRecurrence) {
-        const recurrenceCount = data.recurrenceMonths;
+        const recurrenceCount = fundedData.recurrenceMonths;
         const recurrenceGroupId = collection.doc().id;
         const firstChanges = {
           ...buildEditableTransactionFields(
-            data,
+            fundedData,
             typeof currentData.linkedInvestmentId === "string"
               ? currentData.linkedInvestmentId
               : null,
@@ -593,7 +613,7 @@ export async function editTransaction(id: string, rawData: unknown) {
           recurrenceGroupId,
           recurrenceIndex: 1,
           recurrenceTotal: recurrenceCount,
-          paidAt: data.status === "paid" ? new Date() : null,
+          paidAt: fundedData.status === "paid" ? new Date() : null,
         };
         const firstAfter = { ...currentData, ...firstChanges };
         mergeBalanceChanges(
@@ -633,7 +653,7 @@ export async function editTransaction(id: string, rawData: unknown) {
             );
             const record = {
               ...buildBaseTransaction(
-                { ...data, status: occurrenceStatus },
+                { ...fundedData, status: occurrenceStatus },
                 user,
               ),
               dueDate: occurrenceDueDate,
@@ -663,7 +683,7 @@ export async function editTransaction(id: string, rawData: unknown) {
       }
 
       const changes = buildEditableTransactionFields(
-        data,
+        fundedData,
         typeof currentData.linkedInvestmentId === "string"
           ? currentData.linkedInvestmentId
           : null,
@@ -818,6 +838,9 @@ async function repairFutureCompletedTransactions(
 
 function getAccountMutationError(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : "";
+  if (message.startsWith("expense_funding:")) {
+    return message.slice("expense_funding:".length);
+  }
   if (message === "account_not_found") {
     return "A conta vinculada não existe.";
   }
@@ -881,6 +904,10 @@ function toClientTransaction(
     scope:
       data.scope === "individual" || data.scope === "shared"
         ? data.scope
+        : undefined,
+    fundingSource:
+      data.fundingSource === "participant" || data.fundingSource === "joint"
+        ? data.fundingSource
         : undefined,
     paidByUserId: optionalString(data.paidByUserId),
     responsibleUserId: optionalString(data.responsibleUserId),
@@ -951,6 +978,7 @@ function normalizeTransactionAllocation(
       data: {
         ...data,
         scope: null,
+        fundingSource: null,
         paidByUserId: null,
         responsibleUserId: null,
         beneficiaryUserIds: [],
@@ -975,6 +1003,28 @@ function normalizeTransactionAllocation(
       ...result.allocation,
     },
   };
+}
+
+function resolveTransactionFunding(
+  data: TransactionInput,
+  accounts: ReadonlyMap<string, AccountBalanceState>,
+  actorUserId: string,
+  participantIds: string[],
+): TransactionInput {
+  if (data.type !== "expense") return data;
+
+  const result = resolveExpenseFunding({
+    account: data.accountId ? accounts.get(data.accountId) : null,
+    actorUserId,
+    participantIds,
+    requestedFundingSource: data.fundingSource,
+    requestedPaidByUserId: data.paidByUserId,
+  });
+  if (!result.success) {
+    throw new Error(`expense_funding:${result.error}`);
+  }
+
+  return { ...data, ...result.funding };
 }
 
 function optionalStringArray(value: unknown) {
