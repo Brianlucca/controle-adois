@@ -38,6 +38,7 @@ export default function DashboardLayout({
     if (pathname === "/dashboard") return "Visão Geral";
     if (pathname.includes("/transactions")) return "Transações";
     if (pathname.includes("/accounts")) return "Bancos e contas";
+    if (pathname.includes("/settlement")) return "Acerto do ciclo";
     if (pathname.includes("/payments")) return "Pagamentos & Pix";
     if (pathname.includes("/reports")) return "Relatórios";
     if (pathname.includes("/workspace")) return "Workspace";

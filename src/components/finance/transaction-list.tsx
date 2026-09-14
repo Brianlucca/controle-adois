@@ -5,6 +5,7 @@ import {
   ArrowRight,
   ArrowUpWideNarrow,
   Loader2,
+  UsersRound,
 } from "lucide-react";
 import { BrandIcon } from "@/components/brand-icon";
 import { TransactionStatusBadge } from "@/components/finance/transaction-status-badge";
@@ -114,6 +115,11 @@ export function TransactionList({
                     </p>
                     <div className="mt-1 flex min-w-0 items-center gap-2 text-xs text-[#8a8c94]">
                       <span className="truncate">{transaction.category}</span>
+                      {transaction.scope === "shared" && (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#eeecff] px-2 py-0.5 text-[10px] font-bold text-[#635bff]">
+                          <UsersRound size={10} /> Compartilhada
+                        </span>
+                      )}
                       <span className="h-1 w-1 rounded-full bg-[#c6c4ca]" />
                       <span className="lg:hidden">
                         {formatDate(transaction.dueDate)}

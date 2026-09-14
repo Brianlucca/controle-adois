@@ -9,8 +9,10 @@ import {
   Trash2,
 } from "lucide-react";
 import { BrandIcon } from "@/components/brand-icon";
+import { ExpenseAllocationSummary } from "@/components/finance/expense-allocation-summary";
 import { TransactionStatusBadge } from "@/components/finance/transaction-status-badge";
 import { Button } from "@/components/ui/button";
+import type { WorkspaceParticipant } from "@/contexts/workspace-context";
 import { Transaction, TransactionStatus } from "@/lib/types";
 import { getLocalDateKey } from "@/lib/finance/date";
 import { isOverduePendingExpense } from "@/lib/finance/transaction-calculations";
@@ -18,6 +20,7 @@ import { createGoogleCalendarLink, formatDate } from "@/lib/utils";
 
 interface TransactionDetailsModalContentProps {
   transaction: Transaction;
+  participants: WorkspaceParticipant[];
   copiedField: string | null;
   canRedeemInvestment: boolean;
   accountName?: string;
@@ -32,6 +35,7 @@ interface TransactionDetailsModalContentProps {
 
 export function TransactionDetailsModalContent({
   transaction,
+  participants,
   copiedField,
   canRedeemInvestment,
   accountName,
@@ -45,6 +49,7 @@ export function TransactionDetailsModalContent({
 }: TransactionDetailsModalContentProps) {
   const todayKey = getLocalDateKey(new Date());
   const isOverdue = isOverduePendingExpense(transaction, todayKey);
+  const isScheduledForFuture = transaction.dueDate > todayKey;
   return (
     <div className="space-y-4 pb-2 text-[#292a30]">
       <div
@@ -95,7 +100,7 @@ export function TransactionDetailsModalContent({
         <InfoBox label="Categoria" value={transaction.category} />
         <InfoBox label="Data" value={formatDate(transaction.dueDate)} />
         <InfoBox
-          label="Responsável"
+          label="Registrado por"
           value={transaction.userName?.split(" ")[0] || "Eu"}
         />
         <div className="min-w-0 rounded-xl border border-[#e3e1e4] bg-[#faf9fb] p-3">
@@ -126,6 +131,10 @@ export function TransactionDetailsModalContent({
           <InfoBox label="Conta movimentada" value={accountName} />
         </div>
       )}
+      <ExpenseAllocationSummary
+        transaction={transaction}
+        participants={participants}
+      />
       <CopyableCode
         label="ID da transação"
         value={transaction.id}
@@ -232,11 +241,7 @@ export function TransactionDetailsModalContent({
         </Button>
       )}
 
-      <div
-        className={`grid gap-2 border-t border-[#e6e3e7] pt-4 ${
-          transaction.type === "expense" ? "grid-cols-3" : "grid-cols-2"
-        }`}
-      >
+      <div className="grid grid-cols-3 gap-2 border-t border-[#e6e3e7] pt-4">
         <Button
           className="h-12 rounded-xl border border-[#dedce1] bg-white text-xs font-bold text-[#34363c] hover:bg-[#f5f4f6] sm:text-sm"
           onClick={onStartEdit}
@@ -244,19 +249,33 @@ export function TransactionDetailsModalContent({
           <Pencil size={16} className="mr-1.5" /> Editar
         </Button>
 
-        {transaction.type === "expense" && (
-          <Button
-            className="h-12 rounded-xl bg-[#635bff] text-xs font-bold text-white shadow-[0_8px_20px_-12px_#635bff] hover:bg-[#544ce0] sm:text-sm"
-            onClick={() =>
-              onStatusChange(
-                transaction.id,
-                transaction.status === "paid" ? "pending" : "paid",
-              )
-            }
-          >
-            {transaction.status === "paid" ? "Pendente" : "Pagar"}
-          </Button>
-        )}
+        <Button
+          disabled={isScheduledForFuture}
+          title={
+            isScheduledForFuture
+              ? "Na data informada, confirme para atualizar o saldo da conta."
+              : undefined
+          }
+          className={`h-12 rounded-xl text-xs font-bold text-white sm:text-sm ${
+            transaction.type === "income"
+              ? "bg-[#168267] shadow-[0_8px_20px_-12px_#168267] hover:bg-[#126e58]"
+              : "bg-[#635bff] shadow-[0_8px_20px_-12px_#635bff] hover:bg-[#544ce0]"
+          }`}
+          onClick={() =>
+            onStatusChange(
+              transaction.id,
+              transaction.status === "paid" ? "pending" : "paid",
+            )
+          }
+        >
+          {transaction.status === "paid"
+            ? "Pendente"
+            : isScheduledForFuture
+              ? "Agendada"
+              : transaction.type === "income"
+                ? "Receber"
+                : "Pagar"}
+        </Button>
 
         <Button
           variant="destructive"

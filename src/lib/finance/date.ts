@@ -5,6 +5,18 @@ export function getLocalDateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+export function getBahiaDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Bahia",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = new Map(parts.map((part) => [part.type, part.value]));
+
+  return `${values.get("year")}-${values.get("month")}-${values.get("day")}`;
+}
+
 export function addMonthsToDateKey(dateStr: string, months: number) {
   const [year, month, day] = dateStr.split("-").map(Number);
   const target = new Date(Date.UTC(year, month - 1 + months, 1));

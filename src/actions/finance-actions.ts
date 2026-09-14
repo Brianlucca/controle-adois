@@ -2,19 +2,23 @@
 
 import { adminDb } from "@/lib/firebase-admin";
 import { revalidatePath } from "next/cache";
-import { addMonthsToDateKey } from "@/lib/finance/date";
+import { addMonthsToDateKey, getBahiaDateKey } from "@/lib/finance/date";
 import {
   buildBaseTransaction,
   buildEditableTransactionFields,
   getRecurringOccurrenceStatus,
+  getStatusAfterDateChange,
+  isFutureCompletedTransaction,
 } from "@/lib/finance/transaction-records";
 import {
   ImportTransactionsSchema,
   StatusSchema,
   TransactionSchema,
+  type TransactionInput,
 } from "@/lib/finance/transaction-schema";
 import {
   getAuthenticatedUser,
+  getValidatedActiveWorkspace,
   getValidatedActiveWorkspaceId,
   handleAuthFailure,
 } from "@/lib/server/action-context";
@@ -27,29 +31,48 @@ import {
   writeAccountBalanceChanges,
 } from "@/lib/server/account-balance-store";
 import type { Transaction } from "@/lib/types";
+import {
+  moneyToCents,
+  resolveExpenseAllocation,
+} from "@/lib/finance/expense-splits";
+import { getWorkspaceMemberId } from "@/lib/workspace/membership";
 
 export async function getTransactions(uid: string, startDate: string, endDate: string) {
   const user = await getAuthenticatedUser();
   if (!user) {
     await handleAuthFailure();
-    return [];
+    return { transactions: [], repairedAccountBalances: false };
   }
 
-  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
-  if (!workspaceId) return [];
+  const activeWorkspace = await getValidatedActiveWorkspace(user.uid);
+  const workspaceId = activeWorkspace?.id;
+  if (!workspaceId) return { transactions: [], repairedAccountBalances: false };
 
   try {
-    const snapshot = await adminDb
-      .collection("workspaces")
-      .doc(workspaceId)
+    const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
+    const snapshot = await workspaceRef
       .collection("transactions")
       .where("dueDate", ">=", startDate)
       .where("dueDate", "<=", endDate)
       .get();
+    const documents = snapshot.docs.filter(
+      (document) => !document.data().deletedAt,
+    );
+    const todayKey = getBahiaDateKey(new Date());
 
-    return snapshot.docs
-      .filter((document) => !document.data().deletedAt)
-      .map(toClientTransaction);
+    const repairedCount = await repairFutureCompletedTransactions(
+      workspaceRef,
+      documents,
+      user,
+      todayKey,
+    );
+
+    return {
+      transactions: documents.map((document) =>
+        toClientTransaction(document, todayKey),
+      ),
+      repairedAccountBalances: repairedCount > 0,
+    };
   } catch (error) {
     console.error("get_transactions_failed", error);
     throw new Error("Não foi possível carregar as transações.");
@@ -60,23 +83,36 @@ export async function getTransactionsThrough(endDate: string) {
   const user = await getAuthenticatedUser();
   if (!user) {
     await handleAuthFailure();
-    return [];
+    return { transactions: [], repairedAccountBalances: false };
   }
 
   const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
-  if (!workspaceId) return [];
+  if (!workspaceId) return { transactions: [], repairedAccountBalances: false };
 
   try {
-    const snapshot = await adminDb
-      .collection("workspaces")
-      .doc(workspaceId)
+    const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
+    const snapshot = await workspaceRef
       .collection("transactions")
       .where("dueDate", "<=", endDate)
       .get();
+    const documents = snapshot.docs.filter(
+      (document) => !document.data().deletedAt,
+    );
+    const todayKey = getBahiaDateKey(new Date());
 
-    return snapshot.docs
-      .filter((document) => !document.data().deletedAt)
-      .map(toClientTransaction);
+    const repairedCount = await repairFutureCompletedTransactions(
+      workspaceRef,
+      documents,
+      user,
+      todayKey,
+    );
+
+    return {
+      transactions: documents.map((document) =>
+        toClientTransaction(document, todayKey),
+      ),
+      repairedAccountBalances: repairedCount > 0,
+    };
   } catch (error) {
     console.error("get_transactions_through_failed", error);
     throw new Error("Não foi possível carregar as transações.");
@@ -87,16 +123,26 @@ export async function addTransaction(rawData: unknown) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
 
-  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
+  const activeWorkspace = await getValidatedActiveWorkspace(user.uid);
+  const workspaceData = activeWorkspace?.data || {};
+  const workspaceId = activeWorkspace?.id;
   if (!workspaceId) return { success: false, error: "Nenhum workspace selecionado." };
 
   const validation = TransactionSchema.safeParse(rawData);
   if (!validation.success) {
     return { success: false, error: validation.error.issues[0].message };
   }
-  const data = validation.data;
-
   try {
+    const participantIds = getWorkspaceParticipantIds(workspaceData, user.uid);
+    const normalized = normalizeTransactionAllocation(
+      validation.data,
+      user.uid,
+      participantIds,
+    );
+    if (!normalized.success) return normalized;
+    const todayKey = getBahiaDateKey(new Date());
+    const data = normalizeTransactionDateStatus(normalized.data, todayKey);
+
     const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
     const collection = workspaceRef.collection("transactions");
     const recurrenceCount = data.isRecurrent && data.type === "expense" ? data.recurrenceMonths : 1;
@@ -115,8 +161,16 @@ export async function addTransaction(rawData: unknown) {
 
         Array.from({ length: recurrenceCount }).forEach((_, index) => {
           const transactionRef = collection.doc();
+          const occurrenceDueDate =
+            index === 0
+              ? data.dueDate
+              : addMonthsToDateKey(data.dueDate, index);
           const occurrenceStatus = getRecurringOccurrenceStatus(
-            data.status,
+            getStatusAfterDateChange(
+              data.status,
+              occurrenceDueDate,
+              todayKey,
+            ),
             index,
           );
           const record = {
@@ -124,10 +178,7 @@ export async function addTransaction(rawData: unknown) {
               { ...data, status: occurrenceStatus },
               user,
             ),
-            dueDate:
-              index === 0
-                ? data.dueDate
-                : addMonthsToDateKey(data.dueDate, index),
+            dueDate: occurrenceDueDate,
             recurrenceGroupId,
             recurrenceIndex: index + 1,
             recurrenceTotal: recurrenceCount,
@@ -182,7 +233,8 @@ export async function importTransactions(rawItems: unknown) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
 
-  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
+  const activeWorkspace = await getValidatedActiveWorkspace(user.uid);
+  const workspaceId = activeWorkspace?.id;
   if (!workspaceId) return { success: false, error: "Workspace não encontrado." };
 
   const validation = ImportTransactionsSchema.safeParse(rawItems);
@@ -191,11 +243,29 @@ export async function importTransactions(rawItems: unknown) {
   }
 
   try {
+    const participantIds = getWorkspaceParticipantIds(
+      activeWorkspace?.data || {},
+      user.uid,
+    );
+    const todayKey = getBahiaDateKey(new Date());
+    const normalizedItems: TransactionInput[] = [];
+    for (const item of validation.data) {
+      const normalized = normalizeTransactionAllocation(
+        item,
+        user.uid,
+        participantIds,
+      );
+      if (!normalized.success) return normalized;
+      normalizedItems.push(
+        normalizeTransactionDateStatus(normalized.data, todayKey),
+      );
+    }
+
     const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
     const collection = workspaceRef.collection("transactions");
 
-    for (let index = 0; index < validation.data.length; index += 150) {
-      const items = validation.data.slice(index, index + 150);
+    for (let index = 0; index < normalizedItems.length; index += 150) {
+      const items = normalizedItems.slice(index, index + 150);
       await runAccountBalanceTransaction(workspaceRef, async (transaction) => {
         const accountIds = items.map((item) => item.accountId);
         const accounts = await readAccountBalanceStates(
@@ -251,7 +321,8 @@ export async function deleteTransaction(id: string) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
 
-  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
+  const activeWorkspace = await getValidatedActiveWorkspace(user.uid);
+  const workspaceId = activeWorkspace?.id;
   if (!workspaceId) return { success: false, error: "Workspace não encontrado." };
 
   try {
@@ -383,6 +454,17 @@ export async function updateTransactionStatus(id: string, status: string) {
       if (!current.exists) throw new Error("transaction_not_found");
       const before = current.data() || {};
       if (before.deletedAt) throw new Error("transaction_deleted_status");
+      const dueDate =
+        typeof before.dueDate === "string" ? before.dueDate : "";
+      if (
+        isFutureCompletedTransaction(
+          validStatus,
+          dueDate,
+          getBahiaDateKey(new Date()),
+        )
+      ) {
+        throw new Error("future_transaction_cannot_be_completed");
+      }
 
       const accounts = await readAccountBalanceStates(
         transaction,
@@ -447,16 +529,28 @@ export async function editTransaction(id: string, rawData: unknown) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
 
-  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
+  const activeWorkspace = await getValidatedActiveWorkspace(user.uid);
+  const workspaceId = activeWorkspace?.id;
   if (!workspaceId) return { success: false, error: "Workspace não encontrado." };
 
   const validation = TransactionSchema.safeParse(rawData);
   if (!validation.success) {
     return { success: false, error: validation.error.issues[0].message };
   }
-  const data = validation.data;
-
   try {
+    const participantIds = getWorkspaceParticipantIds(
+      activeWorkspace?.data || {},
+      user.uid,
+    );
+    const normalized = normalizeTransactionAllocation(
+      validation.data,
+      user.uid,
+      participantIds,
+    );
+    if (!normalized.success) return normalized;
+    const todayKey = getBahiaDateKey(new Date());
+    const data = normalizeTransactionDateStatus(normalized.data, todayKey);
+
     const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
     const collection = workspaceRef.collection("transactions");
     const docRef = collection.doc(id);
@@ -525,8 +619,16 @@ export async function editTransaction(id: string, rawData: unknown) {
         Array.from({ length: Math.max(0, recurrenceCount - 1) }).forEach(
           (_, index) => {
             const transactionRef = collection.doc();
+            const occurrenceDueDate = addMonthsToDateKey(
+              data.dueDate,
+              index + 1,
+            );
             const occurrenceStatus = getRecurringOccurrenceStatus(
-              data.status,
+              getStatusAfterDateChange(
+                data.status,
+                occurrenceDueDate,
+                todayKey,
+              ),
               index + 1,
             );
             const record = {
@@ -534,7 +636,7 @@ export async function editTransaction(id: string, rawData: unknown) {
                 { ...data, status: occurrenceStatus },
                 user,
               ),
-              dueDate: addMonthsToDateKey(data.dueDate, index + 1),
+              dueDate: occurrenceDueDate,
               recurrenceGroupId,
               recurrenceIndex: index + 2,
               recurrenceTotal: recurrenceCount,
@@ -613,6 +715,107 @@ function mergeBalanceChanges(
   }
 }
 
+function normalizeTransactionDateStatus(
+  data: TransactionInput,
+  todayKey: string,
+): TransactionInput {
+  const status = getStatusAfterDateChange(
+    data.status,
+    data.dueDate,
+    todayKey,
+  );
+  return status === data.status ? data : { ...data, status };
+}
+
+async function repairFutureCompletedTransactions(
+  workspaceRef: FirebaseFirestore.DocumentReference,
+  documents: FirebaseFirestore.QueryDocumentSnapshot[],
+  user: { uid: string; name?: string; email?: string },
+  todayKey: string,
+) {
+  const candidates = documents.filter((document) => {
+    const data = document.data();
+    return (
+      !data.deletedAt &&
+      typeof data.dueDate === "string" &&
+      isFutureCompletedTransaction(
+        data.status === "paid" ? "paid" : "pending",
+        data.dueDate,
+        todayKey,
+      )
+    );
+  });
+
+  // The documents came from the screen's existing query. Only candidates are
+  // re-read transactionally, avoiding a second scan of the collection.
+  let repairedCount = 0;
+  for (let index = 0; index < candidates.length; index += 100) {
+    const chunk = candidates.slice(index, index + 100);
+    repairedCount += await runAccountBalanceTransaction(
+      workspaceRef,
+      async (transaction) => {
+        const currentDocuments = await Promise.all(
+          chunk.map((document) => transaction.get(document.ref)),
+        );
+        const repairableDocuments = currentDocuments.filter((document) => {
+          const data = document.data() || {};
+          return (
+            document.exists &&
+            !data.deletedAt &&
+            typeof data.dueDate === "string" &&
+            isFutureCompletedTransaction(
+              data.status === "paid" ? "paid" : "pending",
+              data.dueDate,
+              todayKey,
+            )
+          );
+        });
+        if (!repairableDocuments.length) return 0;
+
+        const accountIds = repairableDocuments.map((document) => {
+          const accountId = document.data()?.accountId;
+          return typeof accountId === "string" ? accountId : null;
+        });
+        const accounts = await readAccountBalanceStates(
+          transaction,
+          workspaceRef,
+          accountIds,
+        );
+        const balanceChanges = new Map<string, number>();
+
+        for (const document of repairableDocuments) {
+          const before = document.data() || {};
+          const after = { ...before, status: "pending", paidAt: null };
+          const accountId =
+            typeof before.accountId === "string" ? before.accountId : null;
+
+          if (!accountId || accounts.has(accountId)) {
+            mergeBalanceChanges(
+              balanceChanges,
+              calculateStoredTransactionBalanceChanges(before, after, accounts),
+            );
+          }
+          transaction.update(document.ref, { status: "pending", paidAt: null });
+          transaction.set(
+            workspaceRef.collection("auditLogs").doc(),
+            buildAuditRecord({
+              action: "status_changed",
+              user,
+              transactionId: document.id,
+              before,
+              after,
+            }),
+          );
+        }
+
+        writeAccountBalanceChanges(transaction, accounts, balanceChanges);
+        return repairableDocuments.length;
+      },
+    );
+  }
+  return repairedCount;
+}
+
 function getAccountMutationError(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : "";
   if (message === "account_not_found") {
@@ -636,14 +839,21 @@ function getAccountMutationError(error: unknown, fallback: string) {
   if (message === "transaction_deleted_edit") {
     return "Restaure a transação antes de editá-la.";
   }
+  if (message === "future_transaction_cannot_be_completed") {
+    return "Movimentações futuras permanecem pendentes até a data informada.";
+  }
   return fallback;
 }
 
 function toClientTransaction(
   document: FirebaseFirestore.QueryDocumentSnapshot,
+  todayKey: string,
 ): Transaction {
   const data = document.data();
   const amount = Number(data.amount);
+  const dueDate = typeof data.dueDate === "string" ? data.dueDate : "";
+  const storedStatus = data.status === "paid" ? "paid" : "pending";
+  const status = getStatusAfterDateChange(storedStatus, dueDate, todayKey);
   return {
     id: document.id,
     description:
@@ -651,9 +861,10 @@ function toClientTransaction(
     amount: Number.isFinite(amount) ? amount : 0,
     type: data.type === "income" ? "income" : "expense",
     category: typeof data.category === "string" ? data.category : "Outros",
-    status: data.status === "paid" ? "paid" : "pending",
-    dueDate: typeof data.dueDate === "string" ? data.dueDate : "",
-    paidAt: toOptionalIsoString(data.paidAt),
+    status,
+    dueDate,
+    paidAt:
+      status === "paid" ? toOptionalIsoString(data.paidAt) : undefined,
     userId: typeof data.userId === "string" ? data.userId : "",
     userName:
       typeof data.userName === "string" ? data.userName : "Participante",
@@ -667,6 +878,18 @@ function toClientTransaction(
     recurrenceGroupId: optionalString(data.recurrenceGroupId),
     recurrenceIndex: optionalNumber(data.recurrenceIndex),
     recurrenceTotal: optionalNumber(data.recurrenceTotal),
+    scope:
+      data.scope === "individual" || data.scope === "shared"
+        ? data.scope
+        : undefined,
+    paidByUserId: optionalString(data.paidByUserId),
+    responsibleUserId: optionalString(data.responsibleUserId),
+    beneficiaryUserIds: optionalStringArray(data.beneficiaryUserIds),
+    splitMethod:
+      data.splitMethod === "equal" || data.splitMethod === "custom"
+        ? data.splitMethod
+        : undefined,
+    shares: parseExpenseShares(data.shares),
     createdAt: toOptionalIsoString(data.createdAt) || new Date().toISOString(),
     deletedAt: toOptionalIsoString(data.deletedAt),
     deletedBy: optionalString(data.deletedBy),
@@ -693,4 +916,89 @@ function toOptionalIsoString(value: unknown) {
     return value.toDate().toISOString();
   }
   return typeof value === "string" && value ? value : undefined;
+}
+function getWorkspaceParticipantIds(
+  workspace: Record<string, unknown>,
+  actorUserId: string,
+) {
+  const memberIds = Array.isArray(workspace.memberIds)
+    ? workspace.memberIds.filter((value): value is string => typeof value === "string")
+    : [];
+  const legacyMemberIds = Array.isArray(workspace.members)
+    ? workspace.members
+        .map(getWorkspaceMemberId)
+        .filter((value): value is string => typeof value === "string")
+    : [];
+
+  return [...new Set([
+    actorUserId,
+    ...(typeof workspace.ownerId === "string" ? [workspace.ownerId] : []),
+    ...memberIds,
+    ...legacyMemberIds,
+  ])];
+}
+
+function normalizeTransactionAllocation(
+  data: TransactionInput,
+  actorUserId: string,
+  participantIds: string[],
+):
+  | { success: true; data: TransactionInput }
+  | { success: false; error: string } {
+  if (data.type !== "expense") {
+    return {
+      success: true,
+      data: {
+        ...data,
+        scope: null,
+        paidByUserId: null,
+        responsibleUserId: null,
+        beneficiaryUserIds: [],
+        splitMethod: null,
+        shares: [],
+      },
+    };
+  }
+
+  const result = resolveExpenseAllocation({
+    amountCents: moneyToCents(data.amount),
+    actorUserId,
+    participantIds,
+    request: data,
+  });
+  if (!result.success) return result;
+
+  return {
+    success: true,
+    data: {
+      ...data,
+      ...result.allocation,
+    },
+  };
+}
+
+function optionalStringArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (item): item is string => typeof item === "string" && Boolean(item),
+  );
+}
+
+function parseExpenseShares(value: unknown): NonNullable<Transaction["shares"]> {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const userId = "userId" in item ? item.userId : null;
+    const amountCents = "amountCents" in item ? Number(item.amountCents) : 0;
+    if (
+      typeof userId !== "string" ||
+      !userId ||
+      !Number.isInteger(amountCents) ||
+      amountCents <= 0
+    ) {
+      return [];
+    }
+    return [{ userId, amountCents }];
+  });
 }
