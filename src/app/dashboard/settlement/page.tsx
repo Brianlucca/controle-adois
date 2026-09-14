@@ -33,7 +33,8 @@ export default function SettlementPage() {
   } = useFinance();
   const { activeWorkspace } = useWorkspace();
   const { hideValues, toggleHideValues } = usePreferences();
-  const [accounts, setAccounts] = useState<FinancialAccountOption[]>([]);
+  const [accounts, setAccounts] = useState<FinancialAccountOption[] | null>(null);
+  const [accountsWorkspaceId, setAccountsWorkspaceId] = useState<string | null>(null);
 
   const participants = useMemo<WorkspaceParticipant[]>(() => {
     if (activeWorkspace?.participants.length) return activeWorkspace.participants;
@@ -55,7 +56,10 @@ export default function SettlementPage() {
   useEffect(() => {
     let active = true;
     void getFinancialAccountOptions(true).then((options) => {
-      if (active) setAccounts(options);
+      if (active) {
+        setAccounts(options);
+        setAccountsWorkspaceId(activeWorkspace?.id || null);
+      }
     });
     return () => {
       active = false;
@@ -76,10 +80,11 @@ export default function SettlementPage() {
       calculateCycleSettlement(
         cycleTransactions,
         participants.map((participant) => participant.userId),
-        accounts,
+        accountsWorkspaceId === (activeWorkspace?.id || null) ? accounts || [] : [],
       ),
-    [accounts, cycleTransactions, participants],
+    [accounts, accountsWorkspaceId, activeWorkspace?.id, cycleTransactions, participants],
   );
+  const accountsReady = accountsWorkspaceId === (activeWorkspace?.id || null) && accounts !== null;
 
   const displayCents = (amountCents: number) =>
     hideValues ? "••••••" : formatCurrency(amountCents / 100);
@@ -93,7 +98,7 @@ export default function SettlementPage() {
       ? `${participant.displayName} (você)`
       : participant.displayName;
   };
-  const accountById = new Map(accounts.map((account) => [account.id, account]));
+  const accountById = new Map((accountsReady ? accounts : []).map((account) => [account.id, account]));
   const partyName = (party: { kind: "participant" | "jointAccount"; id: string }) =>
     party.kind === "participant"
       ? participantName(party.id)
@@ -154,7 +159,7 @@ export default function SettlementPage() {
         />
       </section>
 
-      {loading && settlement.eligibleTransactionCount === 0 ? (
+      {(loading || !accountsReady) && settlement.eligibleTransactionCount === 0 ? (
         <div className="mt-5 h-64 animate-pulse rounded-2xl border border-[#e3e1e4] bg-white" />
       ) : settlement.eligibleTransactionCount === 0 ? (
         <EmptySettlement participantCount={participants.length} />
