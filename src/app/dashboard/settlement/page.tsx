@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -18,7 +18,9 @@ import {
   type WorkspaceParticipant,
 } from "@/contexts/workspace-context";
 import { useFinance } from "@/hooks/use-finance";
+import { getFinancialAccountOptions } from "@/actions/account-actions";
 import { calculateCycleSettlement } from "@/lib/finance/expense-splits";
+import type { FinancialAccountOption } from "@/lib/finance/account-types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default function SettlementPage() {
@@ -31,6 +33,7 @@ export default function SettlementPage() {
   } = useFinance();
   const { activeWorkspace } = useWorkspace();
   const { hideValues, toggleHideValues } = usePreferences();
+  const [accounts, setAccounts] = useState<FinancialAccountOption[]>([]);
 
   const participants = useMemo<WorkspaceParticipant[]>(() => {
     if (activeWorkspace?.participants.length) return activeWorkspace.participants;
@@ -49,6 +52,16 @@ export default function SettlementPage() {
     void ensureRangeLoaded(cycleRange);
   }, [cycleRange, ensureRangeLoaded]);
 
+  useEffect(() => {
+    let active = true;
+    void getFinancialAccountOptions(true).then((options) => {
+      if (active) setAccounts(options);
+    });
+    return () => {
+      active = false;
+    };
+  }, [activeWorkspace?.id]);
+
   const cycleTransactions = useMemo(
     () =>
       snapshotTransactions.filter(
@@ -63,8 +76,9 @@ export default function SettlementPage() {
       calculateCycleSettlement(
         cycleTransactions,
         participants.map((participant) => participant.userId),
+        accounts,
       ),
-    [cycleTransactions, participants],
+    [accounts, cycleTransactions, participants],
   );
 
   const displayCents = (amountCents: number) =>
@@ -79,6 +93,11 @@ export default function SettlementPage() {
       ? `${participant.displayName} (você)`
       : participant.displayName;
   };
+  const accountById = new Map(accounts.map((account) => [account.id, account]));
+  const partyName = (party: { kind: "participant" | "jointAccount"; id: string }) =>
+    party.kind === "participant"
+      ? participantName(party.id)
+      : `Conta conjunta · ${accountById.get(party.id)?.name || "arquivada"}`;
 
   return (
     <div className="animate-in fade-in pb-10 duration-500">
@@ -115,7 +134,7 @@ export default function SettlementPage() {
           icon={<ReceiptText size={18} />}
           label="Despesas compartilhadas pagas"
           value={displayCents(settlement.totalSharedCents)}
-          detail={`${settlement.eligibleTransactionCount} lançamento${settlement.eligibleTransactionCount === 1 ? "" : "s"}`}
+          detail={`${settlement.sharedTransactionCount} lançamento${settlement.sharedTransactionCount === 1 ? "" : "s"} · ${displayCents(settlement.jointPaidSharedCents)} pelo dinheiro do casal`}
         />
         <SummaryCard
           icon={<Scale size={18} />}
@@ -146,7 +165,7 @@ export default function SettlementPage() {
               <div>
                 <h2 className="text-base font-bold text-[#292a30]">Participação no ciclo</h2>
                 <p className="mt-1 text-xs text-[#858790]">
-                  Pago é o desembolso real. Parte é quanto coube à pessoa nas divisões.
+                  Adiantou é o que saiu de conta pessoal. Parte é quanto coube à pessoa.
                 </p>
               </div>
               <span className="rounded-full bg-[#f0efff] px-3 py-1 text-[10px] font-bold text-[#635bff]">
@@ -170,7 +189,10 @@ export default function SettlementPage() {
                           {participantName(participant.userId)}
                         </p>
                         <p className="mt-0.5 text-xs text-[#8a8c94]">
-                          Pagou {displayCents(participant.paidCents)} · Parte {displayCents(participant.owedCents)}
+                          Adiantou {displayCents(participant.paidCents)} · Parte {displayCents(participant.owedCents)}
+                          {participant.coveredByJointCents > 0
+                            ? ` · Dinheiro do casal cobriu ${displayCents(participant.coveredByJointCents)}`
+                            : ""}
                         </p>
                       </div>
                     </div>
@@ -201,16 +223,16 @@ export default function SettlementPage() {
               <div className="mt-5 space-y-3">
                 {settlement.transfers.map((transfer) => (
                   <div
-                    key={`${transfer.fromUserId}:${transfer.toUserId}`}
+                    key={`${transfer.from.kind}:${transfer.from.id}:${transfer.to.kind}:${transfer.to.id}`}
                     className="rounded-xl border border-[#ddd9ef] bg-white p-4"
                   >
                     <div className="flex items-center gap-2 text-xs font-semibold text-[#666872]">
                       <span className="min-w-0 flex-1 truncate">
-                        {participantName(transfer.fromUserId)}
+                        {partyName(transfer.from)}
                       </span>
                       <ArrowRight size={15} className="shrink-0 text-[#635bff]" />
                       <span className="min-w-0 flex-1 truncate text-right">
-                        {participantName(transfer.toUserId)}
+                        {partyName(transfer.to)}
                       </span>
                     </div>
                     <p className="mt-3 text-right text-xl font-black text-[#292a30]">
@@ -232,7 +254,7 @@ export default function SettlementPage() {
 
             <div className="mt-4 flex items-start gap-2 border-t border-[#e1ddef] pt-4 text-[11px] leading-relaxed text-[#777983]">
               <Info size={14} className="mt-0.5 shrink-0" />
-              Despesas pendentes, individuais e registros antigos sem divisão não entram no cálculo.
+              O acerto é somente uma transferência: não cria receita nem outra despesa. Gastos pendentes e registros sem divisão não entram no cálculo.
             </div>
           </section>
         </div>
@@ -240,7 +262,7 @@ export default function SettlementPage() {
 
       {settlement.ignoredTransactionCount > 0 && (
         <p className="mt-4 rounded-xl border border-[#eadfca] bg-[#fffaf0] px-4 py-3 text-xs text-[#806d4b]">
-          {settlement.ignoredTransactionCount} despesa compartilhada foi ignorada porque a divisão salva não fecha o valor total. Edite o lançamento para corrigir.
+          {settlement.ignoredTransactionCount} lançamento{settlement.ignoredTransactionCount === 1 ? " foi ignorado" : "s foram ignorados"} por ter divisão ou origem do dinheiro inconsistente. Edite para corrigir.
         </p>
       )}
     </div>
@@ -310,12 +332,12 @@ function EmptySettlement({ participantCount }: { participantCount: number }) {
         <h2 className="mt-4 text-lg font-bold text-[#292a30]">
           {participantCount < 2
             ? "O acerto começa com outra pessoa"
-            : "Nenhuma despesa compartilhada paga"}
+            : "Nenhuma despesa paga para acertar"}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-[#777983]">
           {participantCount < 2
             ? "Convide quem divide as finanças com você. Depois, cada despesa poderá ser individual ou compartilhada."
-            : "Ao cadastrar ou editar uma saída, marque-a como compartilhada e informe quem pagou. Ela aparecerá aqui automaticamente."}
+            : "Despesas compartilhadas pagas por uma conta pessoal e gastos de outra pessoa aparecerão aqui automaticamente."}
         </p>
       </div>
     </section>
