@@ -1,6 +1,6 @@
 import "server-only";
 
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, type DocumentData } from "firebase-admin/firestore";
 import { cookies } from "next/headers";
 import { adminDb } from "@/lib/firebase-admin";
 import { isWorkspaceMember } from "@/lib/workspace/membership";
@@ -71,7 +71,10 @@ export async function getFallbackWorkspaceId(
   return available?.id || null;
 }
 
-export async function getActiveWorkspaceId(userId?: string) {
+export async function getActiveWorkspace(userId?: string): Promise<{
+  id: string;
+  data: DocumentData;
+} | null> {
   const cookieStore = await cookies();
   const cookieWorkspaceId = cookieStore.get(ACTIVE_WORKSPACE_COOKIE)?.value;
 
@@ -84,21 +87,40 @@ export async function getActiveWorkspaceId(userId?: string) {
       .get();
 
     if (cookieDoc.exists && isWorkspaceMember(cookieDoc.data(), userId)) {
-      return cookieWorkspaceId;
+      return { id: cookieWorkspaceId, data: cookieDoc.data() || {} };
     }
 
     cookieStore.delete(ACTIVE_WORKSPACE_COOKIE);
   }
 
   const fallbackId = await getFallbackWorkspaceId(userId, cookieWorkspaceId);
-  if (fallbackId) await persistActiveWorkspace(userId, fallbackId);
+  if (!fallbackId) return null;
 
-  return fallbackId;
+  const fallbackDoc = await adminDb.collection("workspaces").doc(fallbackId).get();
+  if (!fallbackDoc.exists || !isWorkspaceMember(fallbackDoc.data(), userId)) {
+    return null;
+  }
+
+  await persistActiveWorkspace(userId, fallbackId);
+
+  return { id: fallbackId, data: fallbackDoc.data() || {} };
+}
+
+export async function getActiveWorkspaceId(userId?: string) {
+  return (await getActiveWorkspace(userId))?.id || null;
 }
 
 export async function getValidatedActiveWorkspaceId(userId: string) {
   try {
     return await getActiveWorkspaceId(userId);
+  } catch {
+    return null;
+  }
+}
+
+export async function getValidatedActiveWorkspace(userId: string) {
+  try {
+    return await getActiveWorkspace(userId);
   } catch {
     return null;
   }
