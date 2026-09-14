@@ -177,7 +177,7 @@ export function TransactionFormModalContent({
                     account?.ownership === "joint" ? "joint" : "participant",
                   paidByUserId:
                     account?.ownership === "joint"
-                      ? ""
+                      ? undefined
                       : account?.ownerUserId ||
                         formData.paidByUserId ||
                         currentUserId,
