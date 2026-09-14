@@ -21,6 +21,7 @@ export const FinancialAccountSchema = z.object({
   institutionName: z.string().trim().max(80).default(""),
   type: z.enum(FINANCIAL_ACCOUNT_TYPES),
   ownership: z.enum(ACCOUNT_OWNERSHIPS),
+  ownerUserId: AccountIdSchema.nullable().optional(),
   openingBalance: z.coerce
     .number()
     .finite()

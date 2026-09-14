@@ -1,9 +1,25 @@
 import { TransactionInput } from "@/lib/finance/transaction-schema";
+import type { TransactionStatus } from "@/lib/types";
 
 interface TransactionUser {
   uid: string;
   name?: string;
   email?: string;
+}
+
+export function getStatusAfterDateChange(
+  currentStatus: TransactionStatus,
+  nextDate: string,
+  todayKey: string,
+): TransactionStatus {
+  return nextDate > todayKey ? "pending" : currentStatus;
+}
+
+export function getRecurringOccurrenceStatus(
+  initialStatus: TransactionStatus,
+  occurrenceIndex: number,
+): TransactionStatus {
+  return occurrenceIndex === 0 ? initialStatus : "pending";
 }
 
 export function buildBaseTransaction(

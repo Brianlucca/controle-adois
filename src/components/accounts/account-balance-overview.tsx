@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Landmark, Loader2 } from "lucide-react";
-import { getAccountsOverview } from "@/actions/account-actions";
+import { getAccountBalanceOverview } from "@/actions/account-actions";
 import { usePreferences } from "@/contexts/preferences-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { FinancialAccount } from "@/lib/finance/account-types";
@@ -19,7 +19,7 @@ export function AccountBalanceOverview() {
 
   useEffect(() => {
     let mounted = true;
-    getAccountsOverview()
+    getAccountBalanceOverview()
       .then((result) => {
         if (mounted) {
           setAccounts(

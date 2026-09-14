@@ -35,6 +35,34 @@ describe("financial account schema", () => {
 
     expect(result.success).toBe(false);
   });
+
+  it("accepts a workspace user as the account owner", () => {
+    const result = FinancialAccountSchema.parse({
+      name: "Conta dela",
+      institutionName: "Banco",
+      type: "checking",
+      ownership: "partner",
+      ownerUserId: "partner-user-id",
+      openingBalance: 0,
+      openingBalanceDate: "2026-09-12",
+    });
+
+    expect(result.ownerUserId).toBe("partner-user-id");
+  });
+
+  it("rejects an owner identifier containing a path separator", () => {
+    const result = FinancialAccountSchema.safeParse({
+      name: "Conta dela",
+      institutionName: "Banco",
+      type: "checking",
+      ownership: "partner",
+      ownerUserId: "users/partner-user-id",
+      openingBalance: 0,
+      openingBalanceDate: "2026-09-12",
+    });
+
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("account transfer schema", () => {

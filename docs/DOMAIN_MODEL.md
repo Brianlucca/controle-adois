@@ -23,13 +23,23 @@ Campos atuais:
 - `id` e `name`, dentro da coleção do espaço autenticado.
 - `institutionName` opcional.
 - `type`: checking, savings, cash ou investment.
-- `ownership`: mine, partner ou joint.
-- `openingBalanceCents` e `openingBalanceDate`.
+- `ownerUserId` opcional, apontando para o participante titular da conta.
+- `ownership`: mine, partner ou joint, calculado em relação a quem está acessando quando `ownerUserId` existe.
+- `openingBalanceCents`, `openingBalanceDate` e `currentBalanceCents`.
 - `archivedAt` opcional.
+
+Nome, instituição, tipo, titular e saldo inicial podem ser editados. Alterar o
+saldo inicial aplica somente a diferença ao saldo atual, na mesma transação e com
+auditoria. A data inicial fica imutável depois da criação para impedir que uma
+edição comum inclua ou remova silenciosamente movimentações do histórico.
 
 O saldo inicial representa o início da data informada. Movimentações pagas nessa
 data são consideradas. Para uma movimentação paga, o cálculo usa a data efetiva
 do pagamento e recorre ao vencimento somente em registros antigos sem `paidAt`.
+Movimentações pendentes, sejam entradas ou saídas, não alteram o saldo da conta.
+Ao selecionar uma data futura, o formulário assume “a receber” ou “a pagar”; uma
+recorrência concluída mantém somente a primeira ocorrência como paga e cria as
+ocorrências seguintes como pendentes.
 
 Cartões não são tratados como contas disponíveis; continuam planejados como uma
 entidade de obrigação separada.
@@ -118,7 +128,11 @@ Exemplo com início de R$ 100 e incremento de R$ 100: R$ 100, R$ 200, R$ 300 e R
 ## Decisões confirmadas
 
 - Valores de contas e transferências são persistidos como centavos inteiros.
-- O saldo é calculado desde o saldo inicial, somando movimentações pagas e as duas pontas de transferências não estornadas.
+- O saldo atual é materializado e atualizado atomicamente a partir do saldo inicial,
+  das movimentações pagas e das duas pontas de transferências não estornadas.
+- A titularidade aponta para um participante real e permite qualquer quantidade de
+  pessoas no espaço; “mine” e “partner” permanecem apenas como visão relativa e
+  compatibilidade com registros antigos.
 - Contas arquivadas permanecem no histórico, mas não entram nos totais ativos.
 - Movimentações antigas podem continuar sem uma conta vinculada.
 
