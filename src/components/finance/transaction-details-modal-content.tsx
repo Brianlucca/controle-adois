@@ -16,6 +16,7 @@ import type { WorkspaceParticipant } from "@/contexts/workspace-context";
 import { Transaction, TransactionStatus } from "@/lib/types";
 import { getLocalDateKey } from "@/lib/finance/date";
 import { isOverduePendingExpense } from "@/lib/finance/transaction-calculations";
+import type { FinancialAccountOption } from "@/lib/finance/account-types";
 import { createGoogleCalendarLink, formatDate } from "@/lib/utils";
 
 interface TransactionDetailsModalContentProps {
@@ -23,7 +24,7 @@ interface TransactionDetailsModalContentProps {
   participants: WorkspaceParticipant[];
   copiedField: string | null;
   canRedeemInvestment: boolean;
-  accountName?: string;
+  account?: FinancialAccountOption;
   displayValue: (value: number) => string;
   onCopy: (text: string, field: string) => void;
   onStartEdit: () => void;
@@ -38,7 +39,7 @@ export function TransactionDetailsModalContent({
   participants,
   copiedField,
   canRedeemInvestment,
-  accountName,
+  account,
   displayValue,
   onCopy,
   onStartEdit,
@@ -126,14 +127,15 @@ export function TransactionDetailsModalContent({
           </p>
         </div>
       </div>
-      {accountName && (
+      {account && (
         <div className="grid grid-cols-1">
-          <InfoBox label="Conta movimentada" value={accountName} />
+          <InfoBox label="Conta movimentada" value={account.name} />
         </div>
       )}
       <ExpenseAllocationSummary
         transaction={transaction}
         participants={participants}
+        account={account}
       />
       <CopyableCode
         label="ID da transação"

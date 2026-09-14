@@ -14,12 +14,13 @@ import { ExpenseAllocationFields } from "@/components/finance/expense-allocation
 import type { WorkspaceParticipant } from "@/contexts/workspace-context";
 import { addMonthsToDateKey, getLocalDateKey } from "@/lib/finance/date";
 import { getStatusAfterDateChange } from "@/lib/finance/transaction-records";
+import type { FinancialAccountOption } from "@/lib/finance/account-types";
 import { TransactionFormData, TransactionStatus } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
 interface TransactionFormModalContentProps {
   categories: string[];
-  accountOptions: Array<{ id: string; name: string; institutionName: string }>;
+  accountOptions: FinancialAccountOption[];
   participants: WorkspaceParticipant[];
   formData: TransactionFormData;
   isEditing: boolean;
@@ -162,7 +163,26 @@ export function TransactionFormModalContent({
             <select
               className="h-12 w-full rounded-xl border border-[#dedce1] bg-white px-3 text-sm text-[#292a30] outline-none focus:border-[#8c86ec] focus:ring-2 focus:ring-[#635bff]/15"
               value={formData.accountId || ""}
-              onChange={(event) => updateForm({ accountId: event.target.value })}
+              onChange={(event) => {
+                const accountId = event.target.value;
+                const account = accountOptions.find(
+                  (option) => option.id === accountId,
+                );
+                const currentUserId =
+                  participants.find((participant) => participant.isCurrentUser)
+                    ?.userId || participants[0]?.userId || "";
+                updateForm({
+                  accountId,
+                  fundingSource:
+                    account?.ownership === "joint" ? "joint" : "participant",
+                  paidByUserId:
+                    account?.ownership === "joint"
+                      ? ""
+                      : account?.ownerUserId ||
+                        formData.paidByUserId ||
+                        currentUserId,
+                });
+              }}
             >
               <option value="">Sem conta vinculada</option>
               {accountOptions.map((account) => (
@@ -213,6 +233,7 @@ export function TransactionFormModalContent({
           <ExpenseAllocationFields
             formData={formData}
             participants={participants}
+            accountOptions={accountOptions}
             onChange={updateForm}
           />
 

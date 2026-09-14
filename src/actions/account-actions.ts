@@ -94,7 +94,7 @@ export async function getAccountBalanceOverview() {
   }
 }
 
-export async function getFinancialAccountOptions() {
+export async function getFinancialAccountOptions(includeArchived = false) {
   const context = await getAccountContext();
   if (!context) return [];
 
@@ -106,8 +106,14 @@ export async function getFinancialAccountOptions() {
 
     return documents
       .map((document) => toAccount(document, context.user.uid))
-      .filter((account) => !account.archivedAt)
-      .map(({ id, name, institutionName }) => ({ id, name, institutionName }))
+      .filter((account) => includeArchived || !account.archivedAt)
+      .map(({ id, name, institutionName, ownership, ownerUserId }) => ({
+        id,
+        name,
+        institutionName,
+        ownership,
+        ownerUserId,
+      }))
       .sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
   } catch {
     return [];

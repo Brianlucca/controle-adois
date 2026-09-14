@@ -3,6 +3,7 @@ import type { Transaction } from "@/lib/types";
 import {
   calculateCycleSettlement,
   resolveExpenseAllocation,
+  resolveExpenseFunding,
   splitCentsEqually,
 } from "./expense-splits";
 
@@ -27,6 +28,7 @@ describe("expense splits", () => {
       success: true,
       allocation: {
         scope: "individual",
+        fundingSource: "participant",
         paidByUserId: "ana",
         responsibleUserId: "ana",
         beneficiaryUserIds: ["ana"],
@@ -100,17 +102,40 @@ describe("expense splits", () => {
     expect(settlement.totalSharedCents).toBe(21_000);
     expect(settlement.amountToSettleCents).toBe(3_000);
     expect(settlement.eligibleTransactionCount).toBe(2);
+    expect(settlement.sharedTransactionCount).toBe(2);
     expect(settlement.participants).toEqual([
-      { userId: "ana", paidCents: 12_000, owedCents: 9_000, balanceCents: 3_000 },
-      { userId: "bia", paidCents: 9_000, owedCents: 9_000, balanceCents: 0 },
-      { userId: "caio", paidCents: 0, owedCents: 3_000, balanceCents: -3_000 },
+      {
+        userId: "ana",
+        paidCents: 12_000,
+        owedCents: 9_000,
+        coveredByJointCents: 0,
+        balanceCents: 3_000,
+      },
+      {
+        userId: "bia",
+        paidCents: 9_000,
+        owedCents: 9_000,
+        coveredByJointCents: 0,
+        balanceCents: 0,
+      },
+      {
+        userId: "caio",
+        paidCents: 0,
+        owedCents: 3_000,
+        coveredByJointCents: 0,
+        balanceCents: -3_000,
+      },
     ]);
     expect(settlement.transfers).toEqual([
-      { fromUserId: "caio", toUserId: "ana", amountCents: 3_000 },
+      {
+        from: { kind: "participant", id: "caio" },
+        to: { kind: "participant", id: "ana" },
+        amountCents: 3_000,
+      },
     ]);
   });
 
-  it("ignores pending, individual and malformed shared expenses", () => {
+  it("ignores pending and malformed allocations", () => {
     const pending = transaction({ id: "pending", status: "pending" });
     const individual = transaction({ id: "mine", scope: "individual" });
     const malformed = transaction({ id: "broken", shares: [] });
@@ -129,8 +154,125 @@ describe("expense splits", () => {
 
     expect(settlement.totalSharedCents).toBe(0);
     expect(settlement.eligibleTransactionCount).toBe(0);
-    expect(settlement.ignoredTransactionCount).toBe(2);
+    expect(settlement.ignoredTransactionCount).toBe(3);
     expect(settlement.transfers).toEqual([]);
+  });
+
+  it("suggests half back when one personal account pays a shared expense", () => {
+    const settlement = calculateCycleSettlement(
+      [transaction({ amount: 60, shares: [
+        { userId: "brian", amountCents: 3_000 },
+        { userId: "larissa", amountCents: 3_000 },
+      ], paidByUserId: "brian" })],
+      ["brian", "larissa"],
+    );
+
+    expect(settlement.amountToSettleCents).toBe(3_000);
+    expect(settlement.transfers).toEqual([
+      {
+        from: { kind: "participant", id: "larissa" },
+        to: { kind: "participant", id: "brian" },
+        amountCents: 3_000,
+      },
+    ]);
+  });
+
+  it("does not reimburse anyone when a joint account pays a shared expense", () => {
+    const settlement = calculateCycleSettlement(
+      [transaction({
+        accountId: "joint-account",
+        amount: 60,
+        fundingSource: "joint",
+        paidByUserId: null,
+        shares: [
+          { userId: "brian", amountCents: 3_000 },
+          { userId: "larissa", amountCents: 3_000 },
+        ],
+      })],
+      ["brian", "larissa"],
+      [{ id: "joint-account", ownership: "joint" }],
+    );
+
+    expect(settlement.totalSharedCents).toBe(6_000);
+    expect(settlement.jointPaidSharedCents).toBe(6_000);
+    expect(settlement.amountToSettleCents).toBe(0);
+    expect(settlement.participants.map((participant) => participant.coveredByJointCents)).toEqual([
+      3_000,
+      3_000,
+    ]);
+  });
+
+  it("reimburses a participant who paid another person's individual expense", () => {
+    const settlement = calculateCycleSettlement(
+      [transaction({
+        amount: 60,
+        scope: "individual",
+        paidByUserId: "brian",
+        beneficiaryUserIds: ["larissa"],
+        shares: [{ userId: "larissa", amountCents: 6_000 }],
+      })],
+      ["brian", "larissa"],
+    );
+
+    expect(settlement.transfers).toEqual([
+      {
+        from: { kind: "participant", id: "larissa" },
+        to: { kind: "participant", id: "brian" },
+        amountCents: 6_000,
+      },
+    ]);
+  });
+
+  it("asks the beneficiary to replenish a joint account used for an individual expense", () => {
+    const settlement = calculateCycleSettlement(
+      [transaction({
+        accountId: "joint-account",
+        amount: 60,
+        scope: "individual",
+        fundingSource: "joint",
+        paidByUserId: null,
+        beneficiaryUserIds: ["brian"],
+        shares: [{ userId: "brian", amountCents: 6_000 }],
+      })],
+      ["brian", "larissa"],
+      [{ id: "joint-account", ownership: "joint" }],
+    );
+
+    expect(settlement.transfers).toEqual([
+      {
+        from: { kind: "participant", id: "brian" },
+        to: { kind: "jointAccount", id: "joint-account" },
+        amountCents: 6_000,
+      },
+    ]);
+  });
+
+  it("derives the funding source from the linked account", () => {
+    expect(resolveExpenseFunding({
+      account: { id: "ours", ownership: "joint" },
+      actorUserId: "brian",
+      participantIds: ["brian", "larissa"],
+      requestedPaidByUserId: "brian",
+    })).toEqual({
+      success: true,
+      funding: { fundingSource: "joint", paidByUserId: null },
+    });
+
+    expect(resolveExpenseFunding({
+      account: { id: "larissa-bank", ownership: "partner", ownerUserId: "larissa" },
+      actorUserId: "brian",
+      participantIds: ["brian", "larissa"],
+      requestedPaidByUserId: "brian",
+    })).toEqual({
+      success: true,
+      funding: { fundingSource: "participant", paidByUserId: "larissa" },
+    });
+
+    expect(resolveExpenseFunding({
+      actorUserId: "brian",
+      participantIds: ["brian", "larissa"],
+      requestedFundingSource: "joint",
+    })).toMatchObject({ success: false });
   });
 });
 
@@ -147,6 +289,7 @@ function transaction(overrides: Partial<Transaction>): Transaction {
     userName: "Ana",
     createdAt: "2026-09-13T12:00:00.000Z",
     scope: "shared",
+    fundingSource: "participant",
     paidByUserId: "ana",
     responsibleUserId: "ana",
     beneficiaryUserIds: ["ana", "bia"],
