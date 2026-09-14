@@ -1,6 +1,7 @@
 # Arquitetura do Controle A Dois
 
-Este documento descreve apenas a arquitetura que existe hoje. Regras e decisões financeiras ficam no [modelo de domínio](DOMAIN_MODEL.md).
+Este documento descreve apenas a arquitetura que existe hoje. As invariantes
+financeiras centrais também permanecem registradas nas instruções do repositório.
 
 ## Stack
 
@@ -37,6 +38,7 @@ src/
 | `/dashboard` | Visão geral financeira |
 | `/dashboard/accounts` | Contas financeiras, saldos e transferências internas |
 | `/dashboard/transactions` | Movimentações e importação |
+| `/dashboard/settlement` | Divisão de despesas e sugestão de acerto do ciclo |
 | `/dashboard/payments` | Contas e Pix pendentes |
 | `/dashboard/calendar` | Calendário financeiro |
 | `/dashboard/reports` | Relatórios |
@@ -91,6 +93,19 @@ ela nunca é convertida em receita ou despesa.
 
 O vínculo `accountId` das movimentações é opcional para preservar os registros
 anteriores à criação das contas financeiras.
+
+Despesas novas podem guardar `scope`, pagador, responsável, beneficiários,
+método de divisão e partes em centavos dentro do próprio documento da
+movimentação. A Server Action reutiliza os participantes já obtidos na validação
+do espaço ativo, rejeita identificadores externos e normaliza a divisão antes da
+gravação. Isso evita uma consulta adicional por participante.
+
+O acerto do ciclo é derivado no cliente somente a partir das movimentações do
+período já carregado pelo contexto financeiro. O cálculo puro em
+`src/lib/finance/expense-splits.ts` considera apenas despesas compartilhadas e
+pagas, confere se as partes fecham o valor total e produz a menor sequência de
+transferências necessária para equilibrar os participantes. A sugestão não é
+persistida e não altera receitas, despesas ou patrimônio.
 
 ## Segurança
 
