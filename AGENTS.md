@@ -6,9 +6,7 @@ Este arquivo se aplica a todo o repositório.
 
 Antes de mudanças relevantes, consulte:
 
-- `README.md` para visão, linguagem e roadmap;
 - `docs/ARCHITECTURE.md` para a arquitetura existente;
-- `docs/DOMAIN_MODEL.md` para invariantes financeiras;
 - `docs/CONTRIBUTING.md` para o fluxo Git.
 
 Quando a tarefa envolver branch, commit, merge, rebase, cherry-pick, push ou pull request, leia e siga também `.agents/skills/controle-adois-workflow/SKILL.md`.
