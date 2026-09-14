@@ -20,6 +20,7 @@ export interface Transaction {
   recurrenceIndex?: number;
   recurrenceTotal?: number;
   scope?: ExpenseScope | null;
+  fundingSource?: ExpenseFundingSource | null;
   paidByUserId?: string | null;
   responsibleUserId?: string | null;
   beneficiaryUserIds?: string[];
@@ -43,6 +44,7 @@ export type TransactionSortMode = "priority" | "desc" | "asc";
 export type TransactionStatusFilter = "all" | "pending" | "paid" | "received";
 export type ExpenseScope = "individual" | "shared";
 export type ExpenseSplitMethod = "equal" | "custom";
+export type ExpenseFundingSource = "participant" | "joint";
 
 export interface ExpenseShare {
   userId: string;
@@ -73,6 +75,7 @@ export interface TransactionFormData {
   isRecurrent: boolean;
   recurrenceMonths: number;
   scope?: ExpenseScope;
+  fundingSource?: ExpenseFundingSource;
   paidByUserId?: string;
   responsibleUserId?: string;
   beneficiaryUserIds?: string[];
