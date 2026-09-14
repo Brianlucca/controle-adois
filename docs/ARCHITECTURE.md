@@ -94,18 +94,23 @@ ela nunca é convertida em receita ou despesa.
 O vínculo `accountId` das movimentações é opcional para preservar os registros
 anteriores à criação das contas financeiras.
 
-Despesas novas podem guardar `scope`, pagador, responsável, beneficiários,
-método de divisão e partes em centavos dentro do próprio documento da
-movimentação. A Server Action reutiliza os participantes já obtidos na validação
-do espaço ativo, rejeita identificadores externos e normaliza a divisão antes da
-gravação. Isso evita uma consulta adicional por participante.
+Despesas novas podem guardar `scope`, `fundingSource`, pagador, responsável,
+beneficiários, método de divisão e partes em centavos dentro do próprio documento
+da movimentação. A conta vinculada é a fonte de verdade do desembolso: conta
+pessoal identifica seu titular como pagador e conta conjunta registra o uso do
+dinheiro do casal. A Server Action resolve essa origem dentro da mesma transação
+que já lê a conta para atualizar o saldo, reutiliza os participantes obtidos na
+validação do espaço ativo e rejeita identificadores externos. Não há leitura
+adicional por participante ou por lançamento.
 
-O acerto do ciclo é derivado no cliente somente a partir das movimentações do
-período já carregado pelo contexto financeiro. O cálculo puro em
-`src/lib/finance/expense-splits.ts` considera apenas despesas compartilhadas e
-pagas, confere se as partes fecham o valor total e produz a menor sequência de
-transferências necessária para equilibrar os participantes. A sugestão não é
-persistida e não altera receitas, despesas ou patrimônio.
+O acerto do ciclo é derivado no cliente a partir das movimentações do período já
+carregado pelo contexto financeiro e de uma única leitura das contas do espaço.
+O cálculo puro em `src/lib/finance/expense-splits.ts` considera despesas pagas,
+confere se as partes fecham o valor total e distingue dinheiro pessoal de dinheiro
+do casal. Despesa compartilhada paga por conta conjunta não gera reembolso;
+despesa individual paga por outra pessoa ou por conta conjunta gera apenas a
+sugestão correspondente. A sugestão não é persistida e não altera receitas,
+despesas ou patrimônio.
 
 ## Segurança
 
