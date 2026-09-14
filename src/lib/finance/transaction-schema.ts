@@ -28,6 +28,7 @@ export const TransactionSchema = z.object({
   isRecurrent: z.boolean().optional().default(false),
   recurrenceMonths: z.coerce.number().int().min(1).max(60).optional().default(12),
   scope: z.enum(["individual", "shared"]).optional().nullable(),
+  fundingSource: z.enum(["participant", "joint"]).optional().nullable(),
   paidByUserId: ParticipantIdSchema.optional().nullable(),
   responsibleUserId: ParticipantIdSchema.optional().nullable(),
   beneficiaryUserIds: z.array(ParticipantIdSchema).max(20).optional().default([]),
