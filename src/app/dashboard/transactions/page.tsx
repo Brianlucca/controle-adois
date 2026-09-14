@@ -206,7 +206,7 @@ export default function TransactionsPage() {
       fundingSource,
       paidByUserId:
         fundingSource === "joint"
-          ? ""
+          ? undefined
           : selectedAccount?.ownerUserId ||
             selectedTx.paidByUserId ||
             user?.uid ||
@@ -241,7 +241,7 @@ export default function TransactionsPage() {
     recurrenceMonths: 12,
     scope: "individual",
     fundingSource: "participant",
-    paidByUserId: "",
+    paidByUserId: undefined,
     responsibleUserId: "",
     beneficiaryUserIds: [],
     splitMethod: "equal",
@@ -854,7 +854,9 @@ function defaultExpenseAllocation(
     scope: "individual",
     fundingSource: account?.ownership === "joint" ? "joint" : "participant",
     paidByUserId:
-      account?.ownership === "joint" ? "" : account?.ownerUserId || userId,
+      account?.ownership === "joint"
+        ? undefined
+        : account?.ownerUserId || userId,
     responsibleUserId: userId,
     beneficiaryUserIds: userId ? [userId] : [],
     splitMethod: "equal",
