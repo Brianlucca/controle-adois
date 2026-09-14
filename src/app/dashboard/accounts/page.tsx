@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ArchiveRestore,
@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { usePreferences } from "@/contexts/preferences-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { summarizeAccountBalances } from "@/lib/finance/account-balances";
+import { ACCOUNT_BALANCES_REPAIRED_EVENT } from "@/lib/finance/events";
 import {
   ACCOUNT_TYPE_LABELS,
   AccountFormValues,
@@ -55,11 +56,14 @@ export default function AccountsPage() {
   const [panel, setPanel] = useState<"account" | "transfer" | null>(null);
   const [editingAccount, setEditingAccount] =
     useState<FinancialAccount | null>(null);
+  const overviewRequestSequence = useRef(0);
 
   const loadOverview = useCallback(async () => {
+    const sequence = ++overviewRequestSequence.current;
     setLoading(true);
     setError("");
     const result = await getAccountsOverview();
+    if (sequence !== overviewRequestSequence.current) return;
     if (result.success) {
       setAccounts(result.accounts);
       setTransfers(result.transfers);
@@ -73,25 +77,22 @@ export default function AccountsPage() {
   }, [activeWorkspace?.id]);
 
   useEffect(() => {
-    let active = true;
-    void getAccountsOverview().then((result) => {
-      if (!active) return;
-      if (result.success) {
-        setAccounts(result.accounts);
-        setTransfers(result.transfers);
-        setOwnershipOptions(result.ownershipOptions);
-        setViewerUserId(result.viewerUserId);
-        setError("");
-      } else {
-        setError(result.error);
-      }
-      setLoadedWorkspaceId(activeWorkspace?.id);
-      setLoading(false);
-    });
+    const handleBalancesRepaired = () => void loadOverview();
+
+    window.addEventListener(
+      ACCOUNT_BALANCES_REPAIRED_EVENT,
+      handleBalancesRepaired,
+    );
+    const initialLoadTimer = window.setTimeout(() => void loadOverview(), 0);
     return () => {
-      active = false;
+      window.clearTimeout(initialLoadTimer);
+      window.removeEventListener(
+        ACCOUNT_BALANCES_REPAIRED_EVENT,
+        handleBalancesRepaired,
+      );
+      overviewRequestSequence.current += 1;
     };
-  }, [activeWorkspace?.id]);
+  }, [loadOverview]);
 
   const activeAccounts = useMemo(
     () => accounts.filter((account) => !account.archivedAt),
