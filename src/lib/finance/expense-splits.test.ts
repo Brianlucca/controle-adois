@@ -202,6 +202,26 @@ describe("expense splits", () => {
     ]);
   });
 
+  it("does not infer personal funding before a linked account is available", () => {
+    const settlement = calculateCycleSettlement(
+      [transaction({
+        accountId: "joint-account",
+        amount: 60,
+        fundingSource: "participant",
+        paidByUserId: "brian",
+        shares: [
+          { userId: "brian", amountCents: 3_000 },
+          { userId: "larissa", amountCents: 3_000 },
+        ],
+      })],
+      ["brian", "larissa"],
+    );
+
+    expect(settlement.ignoredTransactionCount).toBe(1);
+    expect(settlement.amountToSettleCents).toBe(0);
+    expect(settlement.transfers).toEqual([]);
+  });
+
   it("reimburses a participant who paid another person's individual expense", () => {
     const settlement = calculateCycleSettlement(
       [transaction({
