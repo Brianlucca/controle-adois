@@ -1,7 +1,10 @@
 import "server-only";
 import { getAuth } from "firebase-admin/auth";
 import { cookies } from "next/headers";
-export { getValidatedActiveWorkspaceId } from "@/lib/server/workspace-session";
+export {
+  getValidatedActiveWorkspace,
+  getValidatedActiveWorkspaceId,
+} from "@/lib/server/workspace-session";
 
 export async function getAuthenticatedUser() {
   try {
