@@ -19,6 +19,12 @@ export interface Transaction {
   recurrenceGroupId?: string;
   recurrenceIndex?: number;
   recurrenceTotal?: number;
+  scope?: ExpenseScope | null;
+  paidByUserId?: string | null;
+  responsibleUserId?: string | null;
+  beneficiaryUserIds?: string[];
+  splitMethod?: ExpenseSplitMethod | null;
+  shares?: ExpenseShare[];
   createdAt: string;
   deletedAt?: string | null;
   deletedBy?: string | null;
@@ -35,6 +41,18 @@ export type TransactionType = "income" | "expense";
 export type TransactionStatus = "paid" | "pending";
 export type TransactionSortMode = "priority" | "desc" | "asc";
 export type TransactionStatusFilter = "all" | "pending" | "paid" | "received";
+export type ExpenseScope = "individual" | "shared";
+export type ExpenseSplitMethod = "equal" | "custom";
+
+export interface ExpenseShare {
+  userId: string;
+  amountCents: number;
+}
+
+export interface ExpenseShareFormData {
+  userId: string;
+  amount: string;
+}
 
 export interface DateRange {
   from: string;
@@ -54,9 +72,16 @@ export interface TransactionFormData {
   accountId?: string;
   isRecurrent: boolean;
   recurrenceMonths: number;
+  scope?: ExpenseScope;
+  paidByUserId?: string;
+  responsibleUserId?: string;
+  beneficiaryUserIds?: string[];
+  splitMethod?: ExpenseSplitMethod;
+  shares?: ExpenseShareFormData[];
 }
 
 export interface TransactionPayload
-  extends Omit<TransactionFormData, "amount"> {
+  extends Omit<TransactionFormData, "amount" | "shares"> {
   amount: number;
+  shares?: ExpenseShare[];
 }
