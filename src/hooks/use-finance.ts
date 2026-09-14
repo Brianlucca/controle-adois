@@ -8,6 +8,7 @@ import { getTransactions, getTransactionsThrough, addTransaction, deleteTransact
 import { logout } from "@/actions/auth-actions";
 import { Transaction } from "@/lib/types";
 import { getFinancialCycleRange } from "@/lib/finance/financial-cycle";
+import { ACCOUNT_BALANCES_REPAIRED_EVENT } from "@/lib/finance/events";
 import { getFinancialCyclePreferences, updateFinancialCyclePreferences } from "@/actions/user-actions";
 import { mergeTransactionRange, readFinanceCache, writeFinanceCache } from "@/lib/finance/finance-cache";
 import { useWorkspace } from "@/contexts/workspace-context";
@@ -117,16 +118,18 @@ function useFinanceController() {
     const syncEnd = new Date();
     syncEnd.setFullYear(syncEnd.getFullYear() + 1);
     const syncRange = { from: cycle.from, to: syncEnd.toISOString().slice(0, 10) };
-    const serverData = await retryOnce(() =>
+    const serverResult = await retryOnce(() =>
       getTransactions(uid, syncRange.from, syncRange.to),
     );
     if (sequence !== requestSequence.current) return;
+    const serverData = serverResult.transactions;
     const merged = cached
       ? mergeTransactionRange(cached.transactions, serverData, syncRange)
       : serverData;
     setSnapshotTransactions(merged);
     loadedRanges.current.add(`${syncRange.from}:${syncRange.to}`);
     cacheReady.current = true;
+    notifyAccountBalancesRepaired(serverResult.repairedAccountBalances);
     await writeFinanceCache(scope, merged).catch(() => undefined);
     } catch {
       cacheReady.current = true;
@@ -140,18 +143,26 @@ function useFinanceController() {
     const key = `${range.from}:${range.to}`;
     if (!force && loadedRanges.current.has(key)) return;
     try {
-      const serverData = await retryOnce(() => getTransactions(user.uid, range.from, range.to));
+      const serverResult = await retryOnce(() =>
+        getTransactions(user.uid, range.from, range.to),
+      );
+      const serverData = serverResult.transactions;
       setSnapshotTransactions((items) => mergeTransactionRange(items, serverData, range));
       loadedRanges.current.add(key);
+      notifyAccountBalancesRepaired(serverResult.repairedAccountBalances);
     } catch { /* preserve cached data when a deployment changes */ }
   }, [user, cacheScope]);
 
   const loadAllTransactions = useCallback(async () => {
     if (!user || !cacheScope) return;
     try {
-      const serverData = await retryOnce(() => getTransactionsThrough("2100-12-31"));
+      const serverResult = await retryOnce(() =>
+        getTransactionsThrough("2100-12-31"),
+      );
+      const serverData = serverResult.transactions;
       setSnapshotTransactions(serverData);
       loadedRanges.current.add("all");
+      notifyAccountBalancesRepaired(serverResult.repairedAccountBalances);
       await writeFinanceCache(cacheScope, serverData).catch(() => undefined);
     } catch { /* preserve cached data when a deployment changes */ }
   }, [user, cacheScope]);
@@ -278,6 +289,12 @@ export function useFinance() {
   const value = useContext(FinanceContext);
   if (!value) throw new Error("useFinance precisa estar dentro de FinanceProvider.");
   return value;
+}
+
+function notifyAccountBalancesRepaired(repaired: boolean) {
+  if (repaired) {
+    window.dispatchEvent(new Event(ACCOUNT_BALANCES_REPAIRED_EVENT));
+  }
 }
 
 async function retryOnce<T>(operation: () => Promise<T>) {

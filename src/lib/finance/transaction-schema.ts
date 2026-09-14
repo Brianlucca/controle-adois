@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+const ParticipantIdSchema = z.string().trim().min(1).max(128);
+const ExpenseShareSchema = z.object({
+  userId: ParticipantIdSchema,
+  amountCents: z.coerce.number().int().positive(),
+});
+
 export const TransactionSchema = z.object({
   description: z.string().min(2, "A descricao deve ter pelo menos 2 caracteres").max(200),
   amount: z.coerce.number().positive("O valor deve ser maior que zero"),
@@ -21,6 +27,12 @@ export const TransactionSchema = z.object({
   linkedInvestmentId: z.string().optional().nullable(),
   isRecurrent: z.boolean().optional().default(false),
   recurrenceMonths: z.coerce.number().int().min(1).max(60).optional().default(12),
+  scope: z.enum(["individual", "shared"]).optional().nullable(),
+  paidByUserId: ParticipantIdSchema.optional().nullable(),
+  responsibleUserId: ParticipantIdSchema.optional().nullable(),
+  beneficiaryUserIds: z.array(ParticipantIdSchema).max(20).optional().default([]),
+  splitMethod: z.enum(["equal", "custom"]).optional().nullable(),
+  shares: z.array(ExpenseShareSchema).max(20).optional().default([]),
 });
 
 export const StatusSchema = z.enum(["paid", "pending"]);

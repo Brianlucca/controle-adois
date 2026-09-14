@@ -14,9 +14,13 @@ import { TransactionList } from "@/components/finance/transaction-list";
 import { TransactionsSummaryCards } from "@/components/finance/transactions-summary-cards";
 import { AuditHistoryModal } from "@/components/finance/audit-history-modal";
 import { usePreferences } from "@/contexts/preferences-context";
-import { useWorkspace } from "@/contexts/workspace-context";
+import {
+  useWorkspace,
+  type WorkspaceParticipant,
+} from "@/contexts/workspace-context";
 import { getFinancialAccountOptions } from "@/actions/account-actions";
 import { getLocalDateKey } from "@/lib/finance/date";
+import { moneyToCents } from "@/lib/finance/expense-splits";
 import { parseTransactionsWorkbook } from "@/lib/finance/import-transactions";
 import {
   calculateFinanceOverview,
@@ -57,6 +61,7 @@ export default function TransactionsPage() {
     transactions,
     snapshotTransactions,
     loading,
+    user,
     addTransaction,
     editTransaction,
     deleteTransaction,
@@ -77,6 +82,18 @@ export default function TransactionsPage() {
   const [accountOptions, setAccountOptions] = useState<
     Array<{ id: string; name: string; institutionName: string }>
   >([]);
+  const participants = useMemo<WorkspaceParticipant[]>(() => {
+    if (activeWorkspace?.participants.length) return activeWorkspace.participants;
+    if (!user) return [];
+    return [
+      {
+        userId: user.uid,
+        displayName: user.displayName || user.email?.split("@")[0] || "Você",
+        email: user.email || "",
+        isCurrentUser: true,
+      },
+    ];
+  }, [activeWorkspace?.participants, user]);
 
   const [isModalOpen, setIsModalOpen] = useState(
     () => searchParams.get("new") === "1",
@@ -150,6 +167,7 @@ export default function TransactionsPage() {
       accountId: accountOptions.length === 1 ? accountOptions[0].id : "",
       isRecurrent: false,
       recurrenceMonths: 12,
+      ...defaultExpenseAllocation(participants, user?.uid),
     });
     setIsModalOpen(true);
   };
@@ -175,6 +193,19 @@ export default function TransactionsPage() {
       accountId: selectedTx.accountId || "",
       isRecurrent: selectedTx.isRecurrent || false,
       recurrenceMonths: selectedTx.recurrenceMonths || 12,
+      scope: selectedTx.scope || "individual",
+      paidByUserId: selectedTx.paidByUserId || user?.uid || "",
+      responsibleUserId:
+        selectedTx.responsibleUserId || selectedTx.paidByUserId || user?.uid || "",
+      beneficiaryUserIds:
+        selectedTx.beneficiaryUserIds?.length
+          ? selectedTx.beneficiaryUserIds
+          : [user?.uid || ""].filter(Boolean),
+      splitMethod: selectedTx.splitMethod || "equal",
+      shares: (selectedTx.shares || []).map((share) => ({
+        userId: share.userId,
+        amount: (share.amountCents / 100).toFixed(2),
+      })),
     });
     setIsEditing(true);
   };
@@ -192,7 +223,28 @@ export default function TransactionsPage() {
     accountId: "",
     isRecurrent: false,
     recurrenceMonths: 12,
+    scope: "individual",
+    paidByUserId: "",
+    responsibleUserId: "",
+    beneficiaryUserIds: [],
+    splitMethod: "equal",
+    shares: [],
   });
+
+  useEffect(() => {
+    if (
+      selectedTx ||
+      formData.type !== "expense" ||
+      formData.paidByUserId ||
+      participants.length === 0
+    ) {
+      return;
+    }
+    setFormData((current) => ({
+      ...current,
+      ...defaultExpenseAllocation(participants, user?.uid),
+    }));
+  }, [formData.paidByUserId, formData.type, participants, selectedTx, user?.uid]);
 
   const handleSaveWrapper = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,16 +253,25 @@ export default function TransactionsPage() {
     let result;
     const amountNumber = Number(formData.amount);
 
+    const payload = {
+      ...formData,
+      amount: amountNumber,
+      shares: (formData.shares || []).map((share) => ({
+        userId: share.userId,
+        amountCents: moneyToCents(Number(share.amount)),
+      })),
+    };
+
     if (isEditing && selectedTx) {
       result = await editTransaction(selectedTx.id, {
-        ...formData,
-        amount: amountNumber,
+        ...payload,
       });
     } else {
-      result = await addTransaction({ ...formData, amount: amountNumber });
+      result = await addTransaction(payload);
     }
 
     if (handleAuthError(result)) return;
+    if (!result?.success) return;
 
     if (
       !isEditing &&
@@ -267,7 +328,7 @@ export default function TransactionsPage() {
   ) => {
     const result = await updateTransactionStatus(id, newStatus);
     if (handleAuthError(result)) return;
-    if (selectedTx) {
+    if (result.success && selectedTx) {
       setSelectedTx({ ...selectedTx, status: newStatus });
     }
   };
@@ -707,6 +768,7 @@ export default function TransactionsPage() {
                         )?.name || "Conta arquivada"
                       : undefined
                   }
+                  participants={participants}
                   copiedField={copiedField}
                   canRedeemInvestment={
                     selectedTx.category === "Investimento" &&
@@ -728,6 +790,7 @@ export default function TransactionsPage() {
                   categories={CATEGORIES}
                   accountOptions={accountOptions}
                   formData={formData}
+                  participants={participants}
                   isEditing={isEditing}
                   onFormDataChange={setFormData}
                   onCancelEdit={() => setIsEditing(false)}
@@ -746,4 +809,26 @@ export default function TransactionsPage() {
       )}
     </div>
   );
+}
+
+function defaultExpenseAllocation(
+  participants: WorkspaceParticipant[],
+  currentUserId?: string,
+): Partial<TransactionFormData> {
+  const userId =
+    participants.find((participant) => participant.userId === currentUserId)
+      ?.userId ||
+    participants.find((participant) => participant.isCurrentUser)?.userId ||
+    participants[0]?.userId ||
+    currentUserId ||
+    "";
+
+  return {
+    scope: "individual",
+    paidByUserId: userId,
+    responsibleUserId: userId,
+    beneficiaryUserIds: userId ? [userId] : [],
+    splitMethod: "equal",
+    shares: [],
+  };
 }

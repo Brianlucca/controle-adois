@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ExpenseAllocationFields } from "@/components/finance/expense-allocation-fields";
+import type { WorkspaceParticipant } from "@/contexts/workspace-context";
 import { addMonthsToDateKey, getLocalDateKey } from "@/lib/finance/date";
 import { getStatusAfterDateChange } from "@/lib/finance/transaction-records";
 import { TransactionFormData, TransactionStatus } from "@/lib/types";
@@ -18,6 +20,7 @@ import { formatDate } from "@/lib/utils";
 interface TransactionFormModalContentProps {
   categories: string[];
   accountOptions: Array<{ id: string; name: string; institutionName: string }>;
+  participants: WorkspaceParticipant[];
   formData: TransactionFormData;
   isEditing: boolean;
   onFormDataChange: Dispatch<SetStateAction<TransactionFormData>>;
@@ -28,6 +31,7 @@ interface TransactionFormModalContentProps {
 export function TransactionFormModalContent({
   categories,
   accountOptions,
+  participants,
   formData,
   isEditing,
   onFormDataChange,
@@ -35,6 +39,7 @@ export function TransactionFormModalContent({
   onSubmit,
 }: TransactionFormModalContentProps) {
   const todayKey = getLocalDateKey(new Date());
+  const isScheduledForFuture = formData.dueDate > todayKey;
   const updateForm = (patch: Partial<TransactionFormData>) => {
     onFormDataChange((current) => ({ ...current, ...patch }));
   };
@@ -176,13 +181,18 @@ export function TransactionFormModalContent({
             <select
               className="h-12 w-full rounded-xl border border-[#dedce1] bg-white px-3 text-sm text-[#292a30] outline-none focus:border-[#8c86ec] focus:ring-2 focus:ring-[#635bff]/15"
               value={formData.status}
-              onChange={(event) =>
+              onChange={(event) => {
+                const status = event.target.value as TransactionStatus;
                 updateForm({
-                  status: event.target.value as TransactionStatus,
-                })
-              }
+                  status: getStatusAfterDateChange(
+                    status,
+                    formData.dueDate,
+                    todayKey,
+                  ),
+                });
+              }}
             >
-              <option value="paid">
+              <option value="paid" disabled={isScheduledForFuture}>
                 {formData.type === "income" ? "Recebido" : "Já pago"}
               </option>
               <option value="pending">
@@ -190,7 +200,9 @@ export function TransactionFormModalContent({
               </option>
             </select>
             <span className="block pl-1 text-[11px] leading-4 text-[#858891]">
-              Somente valores concluídos alteram o saldo da conta.
+              {isScheduledForFuture
+                ? "Data futura: ficará pendente. Na data, confirme para atualizar o saldo da conta."
+                : "Somente valores concluídos alteram o saldo da conta."}
             </span>
           </label>
         </div>
@@ -198,6 +210,12 @@ export function TransactionFormModalContent({
 
       {formData.type === "expense" && (
         <div className="space-y-4 rounded-xl border border-[#e3e1e4] bg-[#faf9fb] p-4">
+          <ExpenseAllocationFields
+            formData={formData}
+            participants={participants}
+            onChange={updateForm}
+          />
+
           <button
             type="button"
             onClick={() => updateForm({ isRecurrent: !formData.isRecurrent })}
