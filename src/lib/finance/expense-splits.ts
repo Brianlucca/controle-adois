@@ -338,6 +338,10 @@ export function calculateCycleSettlement(
     const account = transaction.accountId
       ? accountById.get(transaction.accountId)
       : undefined;
+    if (transaction.accountId && !account) {
+      ignoredTransactionCount += 1;
+      return;
+    }
     const fundingSource = account
       ? account.ownership === "joint"
         ? "joint"
