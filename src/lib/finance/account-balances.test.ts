@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  calculateOpeningBalanceDeltaCents,
+  calculateTransactionBalanceChanges,
   calculateAccountBalances,
+  getTransactionBalanceImpactCents,
   projectTransferBalances,
   summarizeAccountBalances,
 } from "./account-balances";
@@ -63,6 +66,31 @@ describe("account balances", () => {
     expect(result.currentBalance).toBe(900);
   });
 
+  it("does not change the bank balance for scheduled income or expenses", () => {
+    const [result] = calculateAccountBalances(
+      [account("a", 1_000)],
+      [
+        {
+          accountId: "a",
+          amount: 500,
+          dueDate: "2026-10-10",
+          type: "income",
+          status: "pending",
+        },
+        {
+          accountId: "a",
+          amount: 250,
+          dueDate: "2026-10-15",
+          type: "expense",
+          status: "pending",
+        },
+      ],
+      [],
+    );
+
+    expect(result.currentBalance).toBe(1_000);
+  });
+
   it("uses the payment date when it is available", () => {
     const [result] = calculateAccountBalances(
       [account("a", 1_000)],
@@ -116,7 +144,39 @@ describe("account balances", () => {
       total: 100,
       mine: 100,
       partner: 0,
+      others: 0,
+      otherParticipantCount: 0,
       joint: 0,
+    });
+  });
+
+  it("groups every other account owner without assuming a single partner", () => {
+    const accounts: FinancialAccount[] = [
+      {
+        ...account("mine", 100, "mine"),
+        ownerUserId: "viewer",
+        currentBalance: 100,
+      },
+      {
+        ...account("person-2", 200, "partner"),
+        ownerUserId: "user-2",
+        currentBalance: 200,
+      },
+      {
+        ...account("person-3", 300, "partner"),
+        ownerUserId: "user-3",
+        currentBalance: 300,
+      },
+      { ...account("joint", 400, "joint"), currentBalance: 400 },
+    ];
+
+    expect(summarizeAccountBalances(accounts, "viewer")).toEqual({
+      total: 1_000,
+      mine: 100,
+      partner: 500,
+      others: 500,
+      otherParticipantCount: 2,
+      joint: 400,
     });
   });
 
@@ -125,5 +185,76 @@ describe("account balances", () => {
       sourceBalance: 70.05,
       destinationBalance: 50.25,
     });
+  });
+
+  it("adjusts the current balance only by the opening balance difference", () => {
+    expect(calculateOpeningBalanceDeltaCents(10_000, 17_550)).toBe(7_550);
+    expect(calculateOpeningBalanceDeltaCents(10_000, -2_000)).toBe(-12_000);
+  });
+
+  it("computes the balance impact of a paid transaction", () => {
+    expect(
+      getTransactionBalanceImpactCents(
+        {
+          accountId: "a",
+          amount: 19.99,
+          dueDate: "2026-09-12",
+          paidAt: "2026-09-12T12:00:00.000Z",
+          type: "expense",
+          status: "paid",
+        },
+        "2026-09-01",
+      ),
+    ).toBe(-1_999);
+  });
+
+  it("returns account deltas when a transaction changes accounts and value", () => {
+    const openingDates = new Map([
+      ["a", "2026-09-01"],
+      ["b", "2026-09-01"],
+    ]);
+    const changes = calculateTransactionBalanceChanges(
+      {
+        accountId: "a",
+        amount: 100,
+        dueDate: "2026-09-12",
+        type: "expense",
+        status: "paid",
+      },
+      {
+        accountId: "b",
+        amount: 75,
+        dueDate: "2026-09-12",
+        type: "expense",
+        status: "paid",
+      },
+      openingDates,
+    );
+
+    expect(Object.fromEntries(changes)).toEqual({ a: 10_000, b: -7_500 });
+  });
+
+  it("reverses a deleted paid transaction from its account balance", () => {
+    const openingDates = new Map([["a", "2026-09-01"]]);
+    const changes = calculateTransactionBalanceChanges(
+      {
+        accountId: "a",
+        amount: 42.5,
+        dueDate: "2026-09-12",
+        type: "income",
+        status: "paid",
+      },
+      {
+        accountId: "a",
+        amount: 42.5,
+        dueDate: "2026-09-12",
+        type: "income",
+        status: "paid",
+        deletedAt: "2026-09-13T00:00:00.000Z",
+      },
+      openingDates,
+    );
+
+    expect(changes.get("a")).toBe(-4_250);
   });
 });

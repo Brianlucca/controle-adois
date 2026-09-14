@@ -2,7 +2,6 @@ import { Dispatch, FormEvent, SetStateAction } from "react";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
-  CheckCircle2,
   Plus,
   Repeat2,
   Save,
@@ -11,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { addMonthsToDateKey } from "@/lib/finance/date";
+import { addMonthsToDateKey, getLocalDateKey } from "@/lib/finance/date";
+import { getStatusAfterDateChange } from "@/lib/finance/transaction-records";
 import { TransactionFormData, TransactionStatus } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
@@ -34,6 +34,7 @@ export function TransactionFormModalContent({
   onCancelEdit,
   onSubmit,
 }: TransactionFormModalContentProps) {
+  const todayKey = getLocalDateKey(new Date());
   const updateForm = (patch: Partial<TransactionFormData>) => {
     onFormDataChange((current) => ({ ...current, ...patch }));
   };
@@ -46,7 +47,6 @@ export function TransactionFormModalContent({
           onClick={() =>
             updateForm({
               type: "income",
-              status: "paid",
               isRecurrent: false,
               recurrenceMonths: 12,
             })
@@ -119,7 +119,17 @@ export function TransactionFormModalContent({
             <Input
               type="date"
               value={formData.dueDate}
-              onChange={(event) => updateForm({ dueDate: event.target.value })}
+              onChange={(event) => {
+                const dueDate = event.target.value;
+                updateForm({
+                  dueDate,
+                  status: getStatusAfterDateChange(
+                    formData.status,
+                    dueDate,
+                    todayKey,
+                  ),
+                });
+              }}
               required
               className="h-12 rounded-xl border-[#dedce1] bg-white text-[#292a30]"
             />
@@ -159,35 +169,30 @@ export function TransactionFormModalContent({
             </select>
           </label>
 
-          {formData.type === "expense" ? (
-            <label className="space-y-1.5">
-              <span className="block pl-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                Status
-              </span>
-              <select
-                className="h-12 w-full rounded-xl border border-[#dedce1] bg-white px-3 text-sm text-[#292a30] outline-none focus:border-[#8c86ec] focus:ring-2 focus:ring-[#635bff]/15"
-                value={formData.status}
-                onChange={(event) =>
-                  updateForm({
-                    status: event.target.value as TransactionStatus,
-                  })
-                }
-              >
-                <option value="paid">Já pago</option>
-                <option value="pending">Pendente</option>
-              </select>
-            </label>
-          ) : (
-            <div className="space-y-1.5">
-              <span className="block pl-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                Status
-              </span>
-              <div className="flex h-12 items-center gap-2 rounded-xl border border-[#cce9de] bg-white px-3 text-sm font-bold text-[#168267]">
-                <CheckCircle2 size={16} />
-                Recebido
-              </div>
-            </div>
-          )}
+          <label className="space-y-1.5">
+            <span className="block pl-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Status
+            </span>
+            <select
+              className="h-12 w-full rounded-xl border border-[#dedce1] bg-white px-3 text-sm text-[#292a30] outline-none focus:border-[#8c86ec] focus:ring-2 focus:ring-[#635bff]/15"
+              value={formData.status}
+              onChange={(event) =>
+                updateForm({
+                  status: event.target.value as TransactionStatus,
+                })
+              }
+            >
+              <option value="paid">
+                {formData.type === "income" ? "Recebido" : "Já pago"}
+              </option>
+              <option value="pending">
+                {formData.type === "income" ? "A receber" : "A pagar"}
+              </option>
+            </select>
+            <span className="block pl-1 text-[11px] leading-4 text-[#858891]">
+              Somente valores concluídos alteram o saldo da conta.
+            </span>
+          </label>
         </div>
       </div>
 
