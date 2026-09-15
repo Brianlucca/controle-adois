@@ -102,6 +102,7 @@ describe("expense splits", () => {
     expect(settlement.totalSharedCents).toBe(21_000);
     expect(settlement.amountToSettleCents).toBe(3_000);
     expect(settlement.eligibleTransactionCount).toBe(2);
+    expect(settlement.settlementExpenses).toHaveLength(2);
     expect(settlement.sharedTransactionCount).toBe(2);
     expect(settlement.participants).toEqual([
       {
@@ -168,6 +169,23 @@ describe("expense splits", () => {
     );
 
     expect(settlement.amountToSettleCents).toBe(3_000);
+    expect(settlement.settlementExpenses).toEqual([
+      {
+        transactionId: "transaction",
+        description: "Despesa compartilhada",
+        dueDate: "2026-09-13",
+        accountId: null,
+        amountCents: 6_000,
+        paidByUserId: "brian",
+        debts: [
+          {
+            fromUserId: "larissa",
+            toUserId: "brian",
+            amountCents: 3_000,
+          },
+        ],
+      },
+    ]);
     expect(settlement.transfers).toEqual([
       {
         from: { kind: "participant", id: "larissa" },
@@ -195,6 +213,9 @@ describe("expense splits", () => {
 
     expect(settlement.totalSharedCents).toBe(6_000);
     expect(settlement.jointPaidSharedCents).toBe(6_000);
+    expect(settlement.jointFundedCents).toBe(6_000);
+    expect(settlement.jointFundedTransactionCount).toBe(1);
+    expect(settlement.eligibleTransactionCount).toBe(0);
     expect(settlement.amountToSettleCents).toBe(0);
     expect(settlement.participants.map((participant) => participant.coveredByJointCents)).toEqual([
       3_000,
@@ -243,7 +264,7 @@ describe("expense splits", () => {
     ]);
   });
 
-  it("asks the beneficiary to replenish a joint account used for an individual expense", () => {
+  it("never asks participants to replenish a joint account", () => {
     const settlement = calculateCycleSettlement(
       [transaction({
         accountId: "joint-account",
@@ -258,13 +279,11 @@ describe("expense splits", () => {
       [{ id: "joint-account", ownership: "joint" }],
     );
 
-    expect(settlement.transfers).toEqual([
-      {
-        from: { kind: "participant", id: "brian" },
-        to: { kind: "jointAccount", id: "joint-account" },
-        amountCents: 6_000,
-      },
-    ]);
+    expect(settlement.jointFundedCents).toBe(6_000);
+    expect(settlement.jointFundedTransactionCount).toBe(1);
+    expect(settlement.eligibleTransactionCount).toBe(0);
+    expect(settlement.settlementExpenses).toEqual([]);
+    expect(settlement.transfers).toEqual([]);
   });
 
   it("derives the funding source from the linked account", () => {
