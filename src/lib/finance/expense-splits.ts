@@ -39,9 +39,7 @@ export interface ParticipantSettlement {
   balanceCents: number;
 }
 
-export type SettlementParty =
-  | { kind: "participant"; id: string }
-  | { kind: "jointAccount"; id: string };
+export type SettlementParty = { kind: "participant"; id: string };
 
 export interface SettlementTransfer {
   from: SettlementParty;
@@ -49,14 +47,33 @@ export interface SettlementTransfer {
   amountCents: number;
 }
 
+export interface SettlementExpenseDebt {
+  fromUserId: string;
+  toUserId: string;
+  amountCents: number;
+}
+
+export interface SettlementExpense {
+  transactionId: string;
+  description: string;
+  dueDate: string;
+  accountId: string | null;
+  amountCents: number;
+  paidByUserId: string;
+  debts: SettlementExpenseDebt[];
+}
+
 export interface CycleSettlement {
   totalSharedCents: number;
   jointPaidSharedCents: number;
+  jointFundedCents: number;
+  jointFundedTransactionCount: number;
   amountToSettleCents: number;
   eligibleTransactionCount: number;
   sharedTransactionCount: number;
   ignoredTransactionCount: number;
   participants: ParticipantSettlement[];
+  settlementExpenses: SettlementExpense[];
   transfers: SettlementTransfer[];
 }
 
@@ -290,9 +307,12 @@ export function calculateCycleSettlement(
 
   let totalSharedCents = 0;
   let jointPaidSharedCents = 0;
+  let jointFundedCents = 0;
+  let jointFundedTransactionCount = 0;
   let eligibleTransactionCount = 0;
   let sharedTransactionCount = 0;
   let ignoredTransactionCount = 0;
+  const settlementExpenses: SettlementExpense[] = [];
   const accountById = new Map(accounts.map((account) => [account.id, account]));
   const partyBalances = new Map<string, { party: SettlementParty; balanceCents: number }>();
   balances.forEach((participant) => {
@@ -357,65 +377,61 @@ export function calculateCycleSettlement(
       return;
     }
 
-    if (
-      fundingSource === "joint" &&
-      transaction.scope === "individual" &&
-      !transaction.accountId
-    ) {
-      ignoredTransactionCount += 1;
-      return;
-    }
-
-    if (
-      transaction.scope === "individual" &&
-      fundingSource === "participant" &&
-      paidByUserId === shares[0].userId
-    ) {
-      return;
-    }
-
-    shares.forEach((share) => {
-      const participant = getOrCreateParticipant(balances, share.userId);
-      participant.owedCents += share.amountCents;
-      if (fundingSource === "joint" && transaction.scope === "shared") {
-        participant.coveredByJointCents += share.amountCents;
-      }
-    });
-
-    if (fundingSource === "participant" && paidByUserId) {
-      const payer = getOrCreateParticipant(balances, paidByUserId);
-      payer.paidCents += amountCents;
-      addPartyBalance(
-        partyBalances,
-        { kind: "participant", id: paidByUserId },
-        amountCents,
-      );
-      shares.forEach((share) => {
-        addPartyBalance(
-          partyBalances,
-          { kind: "participant", id: share.userId },
-          -share.amountCents,
-        );
-      });
-    } else if (transaction.scope === "individual" && transaction.accountId) {
-      const beneficiary = shares[0];
-      addPartyBalance(
-        partyBalances,
-        { kind: "participant", id: beneficiary.userId },
-        -beneficiary.amountCents,
-      );
-      addPartyBalance(
-        partyBalances,
-        { kind: "jointAccount", id: transaction.accountId },
-        amountCents,
-      );
-    }
-
     if (transaction.scope === "shared") {
       totalSharedCents += amountCents;
       sharedTransactionCount += 1;
       if (fundingSource === "joint") jointPaidSharedCents += amountCents;
     }
+
+    if (fundingSource === "joint") {
+      jointFundedCents += amountCents;
+      jointFundedTransactionCount += 1;
+      if (transaction.scope === "shared") {
+        shares.forEach((share) => {
+          const participant = getOrCreateParticipant(balances, share.userId);
+          participant.coveredByJointCents += share.amountCents;
+        });
+      }
+      return;
+    }
+
+    if (!paidByUserId) return;
+    const debts = shares
+      .filter((share) => share.userId !== paidByUserId)
+      .map((share) => ({
+        fromUserId: share.userId,
+        toUserId: paidByUserId,
+        amountCents: share.amountCents,
+      }));
+    if (debts.length === 0) return;
+
+    const payer = getOrCreateParticipant(balances, paidByUserId);
+    payer.paidCents += amountCents;
+    shares.forEach((share) => {
+      const participant = getOrCreateParticipant(balances, share.userId);
+      participant.owedCents += share.amountCents;
+    });
+    debts.forEach((debt) => {
+      addPartyBalance(
+        partyBalances,
+        { kind: "participant", id: debt.fromUserId },
+        -debt.amountCents,
+      );
+      addPartyBalance(
+        partyBalances,
+        { kind: "participant", id: debt.toUserId },
+        debt.amountCents,
+      );
+    });
+    settlementExpenses.push({
+      transactionId: transaction.id,
+      description: transaction.description,
+      dueDate: transaction.dueDate,
+      accountId: transaction.accountId || null,
+      amountCents,
+      paidByUserId,
+      debts,
+    });
     eligibleTransactionCount += 1;
   });
 
@@ -431,6 +447,8 @@ export function calculateCycleSettlement(
   return {
     totalSharedCents,
     jointPaidSharedCents,
+    jointFundedCents,
+    jointFundedTransactionCount,
     amountToSettleCents: transfers.reduce(
       (total, transfer) => total + transfer.amountCents,
       0,
@@ -439,6 +457,7 @@ export function calculateCycleSettlement(
     sharedTransactionCount,
     ignoredTransactionCount,
     participants,
+    settlementExpenses,
     transfers,
   };
 }
