@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 const ParticipantIdSchema = z.string().trim().min(1).max(128);
+const OptionalParticipantIdSchema = z.preprocess(
+  (value) =>
+    typeof value === "string" && value.trim() === "" ? null : value,
+  ParticipantIdSchema.optional().nullable(),
+);
 const ExpenseShareSchema = z.object({
   userId: ParticipantIdSchema,
   amountCents: z.coerce.number().int().positive(),
@@ -29,8 +34,8 @@ export const TransactionSchema = z.object({
   recurrenceMonths: z.coerce.number().int().min(1).max(60).optional().default(12),
   scope: z.enum(["individual", "shared"]).optional().nullable(),
   fundingSource: z.enum(["participant", "joint"]).optional().nullable(),
-  paidByUserId: ParticipantIdSchema.optional().nullable(),
-  responsibleUserId: ParticipantIdSchema.optional().nullable(),
+  paidByUserId: OptionalParticipantIdSchema,
+  responsibleUserId: OptionalParticipantIdSchema,
   beneficiaryUserIds: z.array(ParticipantIdSchema).max(20).optional().default([]),
   splitMethod: z.enum(["equal", "custom"]).optional().nullable(),
   shares: z.array(ExpenseShareSchema).max(20).optional().default([]),

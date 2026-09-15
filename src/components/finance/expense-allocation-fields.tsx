@@ -39,9 +39,10 @@ export function ExpenseAllocationFields({
     selectedAccount?.ownerUserId ||
     (selectedAccount?.ownership === "mine" ? fallbackUserId : "");
   const paidByUserId = isJointFunding
-    ? ""
+    ? undefined
     : accountOwnerUserId || formData.paidByUserId || fallbackUserId;
-  const responsibleUserId = formData.responsibleUserId || paidByUserId;
+  const responsibleUserId =
+    formData.responsibleUserId || paidByUserId || fallbackUserId;
   const splitMethod = formData.splitMethod || "equal";
   const amountCents = moneyToCents(Number(formData.amount));
   const equalShares = splitCentsEqually(amountCents, selectedIds);
@@ -173,7 +174,7 @@ export function ExpenseAllocationFields({
         ) : (
           <ParticipantSelect
             label="Quem pagou?"
-            value={paidByUserId}
+            value={paidByUserId || fallbackUserId}
             participants={participants}
             onChange={(userId) =>
               onChange({ fundingSource: "participant", paidByUserId: userId })

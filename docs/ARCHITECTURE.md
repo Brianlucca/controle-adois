@@ -107,10 +107,11 @@ O acerto do ciclo é derivado no cliente a partir das movimentações do períod
 carregado pelo contexto financeiro e de uma única leitura das contas do espaço.
 O cálculo puro em `src/lib/finance/expense-splits.ts` considera despesas pagas,
 confere se as partes fecham o valor total e distingue dinheiro pessoal de dinheiro
-do casal. Despesa compartilhada paga por conta conjunta não gera reembolso;
-despesa individual paga por outra pessoa ou por conta conjunta gera apenas a
-sugestão correspondente. A sugestão não é persistida e não altera receitas,
-despesas ou patrimônio.
+do casal. Nenhuma despesa paga por conta conjunta gera reembolso, pois o saldo da
+conta já pertence ao casal. Somente dinheiro pessoal usado para assumir a parte
+de outra pessoa entra no acerto. O resultado inclui os lançamentos que explicam
+cada dívida e a menor sequência final de transferências. A sugestão não é
+persistida e não altera receitas, despesas ou patrimônio.
 
 ## Segurança
 
