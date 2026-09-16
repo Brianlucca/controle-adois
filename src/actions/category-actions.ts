@@ -20,12 +20,15 @@ import {
   MAX_CATEGORY_RECORDS_PER_WORKSPACE,
   readFinancialCategoryCatalog,
 } from "@/lib/server/category-store";
+import { consumeWorkspaceActionRateLimit } from "@/lib/server/action-rate-limit";
 import {
   getAuthenticatedUser,
   getValidatedActiveWorkspace,
   handleAuthFailure,
 } from "@/lib/server/action-context";
 import { canEditWorkspace } from "@/lib/workspace/membership";
+
+const CATEGORY_MUTATION_RATE_LIMIT = { limit: 12, windowMs: 5 * 60_000 };
 
 export async function getFinancialCategories(rawWorkspaceId: unknown) {
   const context = await getCategoryContext();
@@ -61,6 +64,8 @@ export async function createFinancialCategory(
   if (!context) return await handleAuthFailure();
   const guard = validateMutationContext(context, rawWorkspaceId);
   if (guard) return guard;
+  const rateLimitError = await getCategoryRateLimitError(context);
+  if (rateLimitError) return rateLimitError;
 
   const parsed = CategoryInputSchema.safeParse(rawData);
   if (!parsed.success) {
@@ -131,6 +136,8 @@ export async function updateFinancialCategory(
   if (!context) return await handleAuthFailure();
   const guard = validateMutationContext(context, rawWorkspaceId);
   if (guard) return guard;
+  const rateLimitError = await getCategoryRateLimitError(context);
+  if (rateLimitError) return rateLimitError;
 
   const categoryId = CategoryIdSchema.safeParse(rawCategoryId);
   const parsed = CategoryInputSchema.safeParse(rawData);
@@ -307,6 +314,33 @@ function categoryMutationError(error: unknown, operation: "criar" | "atualizar")
   }
   console.error(`financial_category_${operation}_failed`, error);
   return { success: false, error: `Não foi possível ${operation} a categoria.` };
+}
+
+async function getCategoryRateLimitError(context: CategoryContext) {
+  try {
+    const rate = await consumeWorkspaceActionRateLimit({
+      workspaceRef: context.workspaceRef,
+      userId: context.user.uid,
+      scope: "categories:write",
+      policy: CATEGORY_MUTATION_RATE_LIMIT,
+    });
+    if (rate.allowed) return null;
+    console.warn("security_event", {
+      type: "category_mutation_rate_limit",
+      workspaceId: context.workspaceRef.id,
+    });
+    const minutes = Math.max(1, Math.ceil(rate.retryAfterSeconds / 60));
+    return {
+      success: false,
+      error: `Muitas alterações de categoria. Aguarde ${minutes} minuto${minutes > 1 ? "s" : ""}.`,
+    };
+  } catch (error) {
+    console.error("category_rate_limit_failed", error);
+    return {
+      success: false,
+      error: "Não foi possível validar o limite de alterações. Tente novamente.",
+    };
+  }
 }
 
 function revalidateCategoryPaths() {
