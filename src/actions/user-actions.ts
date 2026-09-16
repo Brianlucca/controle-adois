@@ -1,7 +1,6 @@
 "use server";
 
 import { db } from "@/lib/firebase-admin"; 
-import { revalidatePath } from "next/cache";
 import { getAuthenticatedUser } from "@/lib/server/action-context";
 import { isSameIdentity } from "@/lib/security/authorization";
 
@@ -36,24 +35,21 @@ export async function deleteFullAccountData(uid: string) {
   }
 
   try {
-    const batch = db.batch();
-
     const ownedWorkspacesSnapshot = await db
       .collection("workspaces")
       .where("ownerId", "==", uid)
       .get();
 
-    ownedWorkspacesSnapshot.docs.forEach((doc: any) => {
-      batch.delete(doc.ref);
-    });
-
-    const userRef = db.collection("users").doc(uid);
-    batch.delete(userRef);
-
-    await batch.commit();
+    for (const workspaceDocument of ownedWorkspacesSnapshot.docs) {
+      await db.recursiveDelete(workspaceDocument.ref);
+    }
+    await db.collection("users").doc(uid).delete();
 
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Não foi possível excluir os dados.",
+    };
   }
 }
