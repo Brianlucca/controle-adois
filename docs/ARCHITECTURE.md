@@ -39,11 +39,12 @@ src/
 | `/dashboard/accounts` | Contas financeiras, saldos e transferências internas |
 | `/dashboard/transactions` | Movimentações e importação |
 | `/dashboard/settlement` | Divisão de despesas e sugestão de acerto do ciclo |
+| `/dashboard/budgets` | Limites individuais e compartilhados por categoria no ciclo |
 | `/dashboard/payments` | Contas e Pix pendentes |
 | `/dashboard/calendar` | Calendário financeiro |
 | `/dashboard/reports` | Relatórios |
 | `/dashboard/workspace` | Espaços, convites e pessoas |
-| `/dashboard/settings` | Preferências e conta |
+| `/dashboard/settings` | Preferências, conta e catálogo de categorias financeiras |
 | `/api/auth/session` | Sessão autenticada |
 | `/api/cron/financial-reminders` | Processamento de lembretes financeiros |
 
@@ -66,6 +67,10 @@ workspaces/{workspaceId}
 workspaces/{workspaceId}/transactions/{transactionId}
 workspaces/{workspaceId}/accounts/{accountId}
 workspaces/{workspaceId}/transfers/{transferId}
+workspaces/{workspaceId}/budgets/{budgetId}
+workspaces/{workspaceId}/categories/{categoryId}
+workspaces/{workspaceId}/categoryNameKeys/{normalizedNameHash}
+workspaces/{workspaceId}/actionRateLimits/{subjectScopeHash}
 workspaces/{workspaceId}/auditLogs/{auditLogId}
 workspaces/{workspaceId}/goals/{goalId}
 terms_acceptances/{acceptanceId}
@@ -113,6 +118,44 @@ de outra pessoa entra no acerto. O resultado inclui os lançamentos que explicam
 cada dívida e a menor sequência final de transferências. A sugestão não é
 persistida e não altera receitas, despesas ou patrimônio.
 
+Os orçamentos são limites recorrentes por ciclo e nunca movimentam saldo. Cada
+registro define categoria, escopo compartilhado ou individual, titular quando
+aplicável, responsável pelo acompanhamento e valor em centavos. O uso é derivado
+no cliente das movimentações do ciclo já carregadas: despesas pagas formam o
+realizado e despesas pendentes formam a projeção. Limites compartilhados consideram
+somente despesas compartilhadas; limites individuais consideram somente a parte da
+pessoa em despesas individuais, evitando dupla contagem entre os dois escopos.
+
+O cálculo puro em `src/lib/finance/budgets.ts` produz progresso, saldo disponível,
+uso por participante, alertas progressivos e sugestão diária baseada nos dias
+restantes. O servidor valida todos os identificadores contra os participantes do
+espaço, mantém uma cota atômica de 48 registros e registra criação, edição,
+arquivamento e restauração na auditoria. A listagem é limitada a 48 documentos e
+não relê movimentações.
+
+As categorias financeiras formam um catálogo por espaço, administrado somente em
+Configurações e consumido pelas telas de Movimentações e Orçamento. A aplicação oferece um
+conjunto de categorias prontas, permite criar categorias personalizadas e permite
+renomear tanto categorias prontas quanto personalizadas. O identificador da
+categoria permanece estável e seus nomes anteriores são preservados como aliases;
+assim, um orçamento continua reconhecendo movimentações antigas sem reescrever nem
+reler o histórico inteiro.
+
+O catálogo executa uma única consulta limitada a 64 documentos por espaço. Criação
+e edição exigem permissão de edição, validam o espaço ativo e registram auditoria.
+Uma cota atômica limita os registros e chaves normalizadas com hash impedem nomes
+duplicados ou ambíguos sem expor o texto da categoria no identificador do documento.
+
+As mutações de categorias e orçamentos possuem duas camadas de limitação. O proxy
+aplica um limite geral por sessão antes da Server Action; depois da autenticação e
+autorização, um contador atômico no Firestore limita cada usuário e espaço a 12
+alterações de categoria ou 30 alterações de orçamento por janela de cinco minutos.
+Cada escopo usa um documento fixo: uma operação aceita acrescenta uma leitura e uma
+gravação, enquanto uma operação bloqueada faz somente a leitura e não cria auditoria.
+Listagens e cálculos financeiros não recebem leituras adicionais por essa proteção.
+Ao excluir um espaço ou a conta proprietária, o servidor usa exclusão recursiva para
+remover também todas as subcoleções financeiras, de auditoria e de segurança.
+
 ## Segurança
 
 - Rotas de dashboard exigem sessão.
@@ -122,6 +165,9 @@ persistida e não altera receitas, despesas ou patrimônio.
 - Cabeçalhos de segurança são configurados no Next.js.
 - Segredos ficam em `.env*` e não entram no Git.
 - Qualquer nova entidade financeira deve ser isolada por espaço e passar pelas mesmas verificações de autorização.
+- Orçamentos aceitam somente categorias conhecidas, participantes do espaço e valores inteiros em centavos dentro dos limites definidos.
+- Categorias personalizadas e renomeadas são isoladas por espaço, limitadas por cota e protegidas contra nomes duplicados normalizados.
+- Mutações de categorias e orçamentos possuem rate limit geral no proxy e limite atômico por usuário e espaço.
 
 ## Regras de implementação
 

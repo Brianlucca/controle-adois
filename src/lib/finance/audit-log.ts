@@ -30,7 +30,7 @@ export function buildEntityAuditRecord({
   after = null,
 }: {
   action: EntityAuditAction;
-  entityType: "transaction" | "account" | "transfer";
+  entityType: "transaction" | "account" | "transfer" | "budget" | "category";
   entityId: string;
   user: { uid: string; name?: string; email?: string };
   before?: Record<string, unknown> | null;
