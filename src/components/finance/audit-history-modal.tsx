@@ -17,13 +17,19 @@ import { Input } from "@/components/ui/input";
 type AuditLog = {
   id: string;
   action: string;
-  entityType?: "transaction" | "account" | "transfer";
+  entityType?: AuditEntityType;
   entityId: string;
   actorName: string;
   createdAt: string;
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
 };
+type AuditEntityType =
+  | "transaction"
+  | "account"
+  | "transfer"
+  | "budget"
+  | "category";
 const labels: Record<string, string> = {
   created: "Adicionada",
   imported: "Importada",
@@ -48,6 +54,10 @@ const fields: Record<string, string> = {
   date: "Data",
   openingBalanceCents: "Saldo inicial",
   openingBalanceDate: "Data de início",
+  limitCents: "Limite",
+  scope: "Escopo",
+  participantUserId: "Titular",
+  responsibleUserId: "Quem acompanha",
   sourceAccountId: "Conta de origem",
   destinationAccountId: "Conta de destino",
   responsibleName: "Responsável",
@@ -58,6 +68,8 @@ const entityLabels = {
   transaction: "Movimentação",
   account: "Conta",
   transfer: "Transferência",
+  budget: "Orçamento",
+  category: "Categoria",
 };
 
 export function AuditHistoryModal({
@@ -291,7 +303,7 @@ function Changes({
   before,
   after,
 }: {
-  entityType: "transaction" | "account" | "transfer";
+  entityType: AuditEntityType;
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
 }) {
@@ -325,9 +337,14 @@ function Changes({
 function formatValue(
   key: string,
   value: unknown,
-  entityType: "transaction" | "account" | "transfer",
+  entityType: AuditEntityType,
 ) {
-  if (key === "amount" || key === "amountCents" || key === "openingBalanceCents") {
+  if (
+    key === "amount" ||
+    key === "amountCents" ||
+    key === "openingBalanceCents" ||
+    key === "limitCents"
+  ) {
     const amount = key.endsWith("Cents") ? Number(value || 0) / 100 : Number(value || 0);
     return amount.toLocaleString("pt-BR", {
       style: "currency",
@@ -341,6 +358,9 @@ function formatValue(
     return accountTypeLabel(String(value));
   }
   if (key === "ownership") return ownershipLabel(String(value));
+  if (key === "scope" && entityType === "budget") {
+    return value === "shared" ? "Do casal" : "Individual";
+  }
   if (key === "status") return value === "paid" ? "Pago" : "Pendente";
   if (["dueDate", "date", "openingBalanceDate"].includes(key) && value)
     return new Date(`${value}T12:00:00`).toLocaleDateString("pt-BR");
@@ -350,7 +370,7 @@ function formatValue(
 function getEntityTitle(log: AuditLog) {
   const entity = log.after || log.before || {};
   const fallback = entityLabels[log.entityType || "transaction"];
-  return String(entity.name || entity.description || fallback);
+  return String(entity.name || entity.description || entity.category || fallback);
 }
 
 function accountTypeLabel(value: string) {

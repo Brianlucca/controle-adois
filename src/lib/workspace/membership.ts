@@ -22,6 +22,18 @@ export function isWorkspaceMember(
   );
 }
 
+export function canEditWorkspace(
+  workspace: WorkspaceLike | undefined,
+  userId: string,
+) {
+  if (!workspace) return false;
+  if (workspace.ownerId === userId) return true;
+  const member = (workspace.members || []).find(
+    (candidate) => getWorkspaceMemberId(candidate) === userId,
+  );
+  return typeof member === "string" || Boolean(member && member.canEdit !== false);
+}
+
 export function removeWorkspaceMember(
   members: WorkspaceMember[] = [],
   userId: string

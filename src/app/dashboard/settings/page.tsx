@@ -23,6 +23,7 @@ import {
 import { FirebaseError } from "firebase/app";
 import { logout } from "@/actions/auth-actions";
 import { deleteFullAccountData } from "@/actions/user-actions";
+import { FinancialCategorySettings } from "@/components/settings/financial-category-settings";
 import { useAuth } from "@/contexts/auth-context";
 import { usePreferences } from "@/contexts/preferences-context";
 
@@ -120,7 +121,7 @@ export default function SettingsPage() {
         <p className="app-kicker">Sua conta</p>
         <h1 className="app-title mt-1">Configurações</h1>
         <p className="mt-2 text-sm text-[#7e818a]">
-          Gerencie seus dados, privacidade e notificações.
+          Gerencie seus dados, preferências e categorias financeiras.
         </p>
       </div>
 
@@ -167,6 +168,8 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <FinancialCategorySettings />
 
       <Card className="border-white/10 bg-[#121722]">
         <CardHeader>

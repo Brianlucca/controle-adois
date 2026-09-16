@@ -407,23 +407,7 @@ export async function deleteWorkspace(userId: string, workspaceId: string) {
       };
     }
 
-    const transactions = await workspaceRef.collection("transactions").get();
-    let batch = adminDb.batch();
-    let operationCount = 0;
-
-    for (const transactionDoc of transactions.docs) {
-      batch.delete(transactionDoc.ref);
-      operationCount += 1;
-
-      if (operationCount === 450) {
-        await batch.commit();
-        batch = adminDb.batch();
-        operationCount = 0;
-      }
-    }
-
-    batch.delete(workspaceRef);
-    await batch.commit();
+    await adminDb.recursiveDelete(workspaceRef);
 
     if (fallbackWorkspaceId) {
       await persistActiveWorkspace(userId, fallbackWorkspaceId);

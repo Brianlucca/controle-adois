@@ -19,6 +19,7 @@ import {
   type WorkspaceParticipant,
 } from "@/contexts/workspace-context";
 import { getFinancialAccountOptions } from "@/actions/account-actions";
+import { getFinancialCategories } from "@/actions/category-actions";
 import { getLocalDateKey } from "@/lib/finance/date";
 import { moneyToCents } from "@/lib/finance/expense-splits";
 import type { FinancialAccountOption } from "@/lib/finance/account-types";
@@ -34,24 +35,16 @@ import {
   TransactionSortMode,
   TransactionStatusFilter,
 } from "@/lib/types";
+import {
+  INCOME_CATEGORIES,
+} from "@/lib/finance/categories";
+import {
+  buildFinancialCategoryCatalog,
+  uniqueCategoryNames,
+} from "@/lib/finance/category-catalog";
+import type { FinancialCategory } from "@/lib/finance/category-types";
 
-const CATEGORIES = [
-  "Todas",
-  "Outros",
-  "Alimentação",
-  "Moradia",
-  "Transporte",
-  "Lazer",
-  "Saúde",
-  "Educação",
-  "Salário",
-  "Investimento",
-  "Rendimento de Investimento",
-  "Cartão de Crédito",
-  "Empréstimo",
-  "Assinatura",
-  "Compras",
-];
+const DEFAULT_EXPENSE_CATEGORIES = buildFinancialCategoryCatalog([]);
 
 const ITEMS_PER_PAGE = 15;
 
@@ -81,6 +74,17 @@ export default function TransactionsPage() {
   const { hideValues, toggleHideValues } = usePreferences();
   const { activeWorkspace } = useWorkspace();
   const [accountOptions, setAccountOptions] = useState<FinancialAccountOption[]>([]);
+  const [categoryCatalog, setCategoryCatalog] = useState<FinancialCategory[]>(
+    DEFAULT_EXPENSE_CATEGORIES,
+  );
+  const [categoryWorkspaceId, setCategoryWorkspaceId] = useState<string>();
+  const activeCategoryCatalog =
+    categoryWorkspaceId === activeWorkspace?.id
+      ? categoryCatalog
+      : DEFAULT_EXPENSE_CATEGORIES;
+  const defaultExpenseCategoryName =
+    activeCategoryCatalog.find((category) => category.id === "builtin-outros")
+      ?.name || "Outros";
   const participants = useMemo<WorkspaceParticipant[]>(() => {
     if (activeWorkspace?.participants.length) return activeWorkspace.participants;
     if (!user) return [];
@@ -137,6 +141,25 @@ export default function TransactionsPage() {
     };
   }, [activeWorkspace?.id]);
 
+  useEffect(() => {
+    const workspaceId = activeWorkspace?.id;
+    if (!workspaceId) return;
+    let active = true;
+    void (async () => {
+      let result = await getFinancialCategories(workspaceId);
+      if (!result.success && result.error === "workspace_changed") {
+        await new Promise((resolve) => window.setTimeout(resolve, 350));
+        result = await getFinancialCategories(workspaceId);
+      }
+      if (!active) return;
+      if (result.success) setCategoryCatalog(result.categories);
+      setCategoryWorkspaceId(workspaceId);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [activeWorkspace?.id]);
+
   const handleAuthError = (response: unknown) => {
     if (
       typeof response === "object" &&
@@ -158,7 +181,7 @@ export default function TransactionsPage() {
     setFormData({
       description: "",
       amount: "",
-      category: "Outros",
+      category: defaultExpenseCategoryName,
       type: "expense",
       status: "paid",
       dueDate: getLocalDateKey(new Date()),
@@ -247,6 +270,29 @@ export default function TransactionsPage() {
     splitMethod: "equal",
     shares: [],
   });
+
+  const currentCategoryNames = useMemo(
+    () =>
+      uniqueCategoryNames([
+        ...activeCategoryCatalog.map((category) => category.name),
+        ...INCOME_CATEGORIES,
+      ]),
+    [activeCategoryCatalog],
+  );
+  const filterCategories = useMemo(
+    () => [
+      "Todas",
+      ...uniqueCategoryNames([
+        ...currentCategoryNames,
+        ...transactions.map((transaction) => transaction.category),
+      ]),
+    ],
+    [currentCategoryNames, transactions],
+  );
+  const formCategories = useMemo(
+    () => uniqueCategoryNames([...currentCategoryNames, formData.category]),
+    [currentCategoryNames, formData.category],
+  );
 
   useEffect(() => {
     if (
@@ -630,7 +676,7 @@ export default function TransactionsPage() {
       />
 
       <TransactionsFilters
-        categories={CATEGORIES}
+        categories={filterCategories}
         filterTerm={filterTerm}
         selectedCategory={selectedCategory}
         statusFilter={statusFilter}
@@ -813,7 +859,7 @@ export default function TransactionsPage() {
                 />
               ) : (
                 <TransactionFormModalContent
-                  categories={CATEGORIES}
+                  categories={formCategories}
                   accountOptions={accountOptions}
                   formData={formData}
                   participants={participants}
