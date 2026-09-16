@@ -18,6 +18,7 @@ import type { FinancialCategory } from "@/lib/finance/category-types";
 import { findFinancialCategory } from "@/lib/finance/category-catalog";
 import { buildEntityAuditRecord } from "@/lib/finance/audit-log";
 import { readFinancialCategoryCatalog } from "@/lib/server/category-store";
+import { consumeWorkspaceActionRateLimit } from "@/lib/server/action-rate-limit";
 import {
   getAuthenticatedUser,
   getValidatedActiveWorkspace,
@@ -29,6 +30,7 @@ import {
 } from "@/lib/workspace/membership";
 
 const MAX_BUDGETS_PER_WORKSPACE = 48;
+const BUDGET_MUTATION_RATE_LIMIT = { limit: 30, windowMs: 5 * 60_000 };
 
 export async function getFinancialBudgets(rawWorkspaceId: unknown) {
   const context = await getBudgetContext();
@@ -95,6 +97,8 @@ export async function saveFinancialBudget(
   if (!context.canEdit) {
     return { success: false, error: "Você não pode alterar este espaço." };
   }
+  const rateLimitError = await getBudgetRateLimitError(context);
+  if (rateLimitError) return rateLimitError;
 
   const parsed = FinancialBudgetSchema.safeParse(rawData);
   if (!parsed.success) {
@@ -334,6 +338,8 @@ async function changeBudgetArchiveState(
   if (!context.canEdit) {
     return { success: false, error: "Você não pode alterar este espaço." };
   }
+  const rateLimitError = await getBudgetRateLimitError(context);
+  if (rateLimitError) return rateLimitError;
   const id = BudgetIdSchema.safeParse(rawBudgetId);
   if (!id.success) return { success: false, error: "Orçamento inválido." };
 
@@ -466,6 +472,33 @@ function toIsoString(value: unknown) {
   if (value instanceof Timestamp) return value.toDate().toISOString();
   if (value instanceof Date) return value.toISOString();
   return null;
+}
+
+async function getBudgetRateLimitError(context: BudgetContext) {
+  try {
+    const rate = await consumeWorkspaceActionRateLimit({
+      workspaceRef: context.workspaceRef,
+      userId: context.user.uid,
+      scope: "budgets:write",
+      policy: BUDGET_MUTATION_RATE_LIMIT,
+    });
+    if (rate.allowed) return null;
+    console.warn("security_event", {
+      type: "budget_mutation_rate_limit",
+      workspaceId: context.workspaceRef.id,
+    });
+    const minutes = Math.max(1, Math.ceil(rate.retryAfterSeconds / 60));
+    return {
+      success: false,
+      error: `Muitas alterações de orçamento. Aguarde ${minutes} minuto${minutes > 1 ? "s" : ""}.`,
+    };
+  } catch (error) {
+    console.error("budget_rate_limit_failed", error);
+    return {
+      success: false,
+      error: "Não foi possível validar o limite de alterações. Tente novamente.",
+    };
+  }
 }
 
 function revalidateBudgetPaths() {
