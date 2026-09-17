@@ -190,6 +190,7 @@ export async function addTransaction(rawData: unknown) {
             recurrenceGroupId,
             recurrenceIndex: index + 1,
             recurrenceTotal: recurrenceCount,
+            recurrenceActive: true,
           };
           mergeBalanceChanges(
             balanceChanges,
@@ -428,15 +429,30 @@ export async function deleteRecurrence(id: string) {
     let deletedCount = 0;
 
     snapshot.docs.forEach((transactionDoc) => {
-      if (
-        transactionDoc.data().status === "pending" &&
-        !transactionDoc.data().deletedAt
-      ) {
+      const transactionData = transactionDoc.data();
+      if (transactionData.deletedAt) return;
+
+      if (transactionData.status === "pending") {
         const deletedAt = new Date();
-        batch.update(transactionDoc.ref, { deletedAt, deletedBy: user.uid });
-        batch.set(collection.parent!.collection("auditLogs").doc(), buildAuditRecord({ action: "deleted", user, transactionId: transactionDoc.id, before: transactionDoc.data(), after: { ...transactionDoc.data(), deletedAt, deletedBy: user.uid } }));
+        const after = {
+          ...transactionData,
+          recurrenceActive: false,
+          deletedAt,
+          deletedBy: user.uid,
+        };
+        batch.update(transactionDoc.ref, {
+          recurrenceActive: false,
+          deletedAt,
+          deletedBy: user.uid,
+        });
+        batch.set(collection.parent!.collection("auditLogs").doc(), buildAuditRecord({ action: "deleted", user, transactionId: transactionDoc.id, before: transactionData, after }));
         deletedCount += 1;
+        return;
       }
+
+      const after = { ...transactionData, recurrenceActive: false };
+      batch.update(transactionDoc.ref, { recurrenceActive: false });
+      batch.set(collection.parent!.collection("auditLogs").doc(), buildAuditRecord({ action: "updated", user, transactionId: transactionDoc.id, before: transactionData, after }));
     });
     await batch.commit();
 
@@ -466,14 +482,33 @@ export async function getRecurringTransactions() {
       .collection("workspaces")
       .doc(workspaceId)
       .collection("transactions")
-      .where("recurrenceIndex", "==", 1)
-      .limit(100)
+      .where("isRecurrent", "==", true)
+      .limit(500)
       .get();
     const todayKey = getBahiaDateKey(new Date());
+    const activeDocuments = snapshot.docs.filter((document) => {
+      const data = document.data();
+      return !data.deletedAt && data.recurrenceActive !== false;
+    });
+    const representatives = new Map<string, (typeof activeDocuments)[number]>();
+    for (const document of activeDocuments) {
+      const data = document.data();
+      const groupId =
+        typeof data.recurrenceGroupId === "string"
+          ? data.recurrenceGroupId
+          : document.id;
+      const current = representatives.get(groupId);
+      if (
+        !current ||
+        (Number(data.recurrenceIndex) || 1) <
+          (Number(current.data().recurrenceIndex) || 1)
+      ) {
+        representatives.set(groupId, document);
+      }
+    }
     return {
       success: true as const,
-      transactions: snapshot.docs
-        .filter((document) => !document.data().deletedAt)
+      transactions: [...representatives.values()]
         .map((document) => toClientTransaction(document, todayKey)),
     };
   } catch (error) {
@@ -663,6 +698,7 @@ export async function editTransaction(id: string, rawData: unknown) {
           recurrenceGroupId,
           recurrenceIndex: 1,
           recurrenceTotal: recurrenceCount,
+          recurrenceActive: true,
           paidAt: fundedData.status === "paid" ? new Date() : null,
         };
         const firstAfter = { ...currentData, ...firstChanges };
@@ -710,6 +746,7 @@ export async function editTransaction(id: string, rawData: unknown) {
               recurrenceGroupId,
               recurrenceIndex: index + 2,
               recurrenceTotal: recurrenceCount,
+              recurrenceActive: true,
             };
             mergeBalanceChanges(
               balanceChanges,
@@ -806,6 +843,7 @@ export async function editTransaction(id: string, rawData: unknown) {
             recurrenceGroupId,
             recurrenceIndex: occurrenceIndex,
             recurrenceTotal,
+            recurrenceActive: true,
           };
           const occurrenceAfter = { ...before, ...occurrenceChanges };
           mergeBalanceChanges(
@@ -847,6 +885,7 @@ export async function editTransaction(id: string, rawData: unknown) {
             recurrenceGroupId,
             recurrenceIndex: occurrenceIndex,
             recurrenceTotal,
+            recurrenceActive: true,
           };
           mergeBalanceChanges(
             balanceChanges,
@@ -1084,6 +1123,10 @@ function toClientTransaction(
     recurrenceGroupId: optionalString(data.recurrenceGroupId),
     recurrenceIndex: optionalNumber(data.recurrenceIndex),
     recurrenceTotal: optionalNumber(data.recurrenceTotal),
+    recurrenceActive:
+      typeof data.recurrenceActive === "boolean"
+        ? data.recurrenceActive
+        : undefined,
     scope:
       data.scope === "individual" || data.scope === "shared"
         ? data.scope

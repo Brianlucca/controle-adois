@@ -108,10 +108,13 @@ Recorrências mensais são materializadas como movimentações ligadas por
 controle: uma edição atualiza as ocorrências ativas do grupo e a exclusão envia
 as ocorrências pendentes para a lixeira. Ocorrências pagas são preservadas para não
 reescrever o histórico nem alterar o saldo já realizado.
-Para listar a central, somente a ocorrência de índice 1 de cada grupo é lida; os
-campos `recurrenceTotal` e `recurrenceMonths` fornecem o resumo sem reler todas as
-parcelas materializadas. O resultado permanece em memória enquanto o espaço ativo
-não muda e é atualizado após mutações da recorrência.
+Para listar a central, as ocorrências recorrentes são agrupadas no servidor e a
+ocorrência ativa de menor índice representa cada grupo. Isso mantém compatibilidade
+com registros antigos, mesmo quando a primeira ocorrência foi removida ou não tem
+os metadados mais recentes. Ao interromper um grupo, `recurrenceActive` é marcado
+como falso também nas ocorrências pagas preservadas, retirando-o da central sem
+reescrever o histórico ou o saldo. O resultado permanece em memória enquanto o
+espaço ativo não muda e é atualizado após mutações da recorrência.
 
 Despesas novas podem guardar `scope`, `fundingSource`, pagador, responsável,
 beneficiários, método de divisão e partes em centavos dentro do próprio documento
