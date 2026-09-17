@@ -14,12 +14,14 @@ import {
   Plus,
   RotateCcw,
   TrendingUp,
+  Trash2,
   Users,
   WalletCards,
 } from "lucide-react";
 import {
   archiveFinancialAccount,
   createAccountTransfer,
+  deleteFinancialAccount,
   getAccountsOverview,
   reverseAccountTransfer,
   saveFinancialAccount,
@@ -181,6 +183,20 @@ export default function AccountsPage() {
     await loadOverview();
   }
 
+  async function handleDelete(account: FinancialAccount) {
+    if (!window.confirm(`Excluir definitivamente “${account.name}”? Contas com movimentações ou transferências não podem ser excluídas.`)) return;
+    const result = await deleteFinancialAccount(account.id);
+    if (!result.success) {
+      setError(
+        ("error" in result && result.error) ||
+          "Não foi possível excluir a conta.",
+      );
+      return;
+    }
+    if (editingAccount?.id === account.id) closeAccountPanel();
+    await loadOverview();
+  }
+
   async function handleReverse(transfer: AccountTransfer) {
     if (!window.confirm("Estornar esta transferência nas duas contas?")) return;
     const result = await reverseAccountTransfer(transfer.id);
@@ -303,6 +319,7 @@ export default function AccountsPage() {
                 )}
                 onEdit={() => openEditAccountPanel(account)}
                 onArchive={() => handleArchive(account)}
+                onDelete={() => handleDelete(account)}
               />
             ))}
           </div>
@@ -396,6 +413,7 @@ export default function AccountsPage() {
                   viewerUserId,
                 )}
                 onUnarchive={() => handleUnarchive(account)}
+                onDelete={() => handleDelete(account)}
               />
             ))}
           </div>
@@ -449,6 +467,7 @@ function AccountCard({
   onEdit,
   onArchive,
   onUnarchive,
+  onDelete,
 }: {
   account: FinancialAccount;
   displayValue: (value: number) => string;
@@ -456,6 +475,7 @@ function AccountCard({
   onEdit?: () => void;
   onArchive?: () => void;
   onUnarchive?: () => void;
+  onDelete?: () => void;
 }) {
   return (
     <article className={`app-card p-5 ${account.archivedAt ? "opacity-65" : ""}`}>
@@ -469,7 +489,7 @@ function AccountCard({
             {account.institutionName || ACCOUNT_TYPE_LABELS[account.type]}
           </p>
         </div>
-        {(onEdit || onArchive) && (
+        {(onEdit || onArchive || onDelete) && (
           <div className="flex shrink-0 items-center gap-1">
             {onEdit && (
               <button
@@ -491,6 +511,17 @@ function AccountCard({
                 className="rounded-lg p-2 text-[#a0a2a9] hover:bg-[#f4f2f5] hover:text-[#5b5d65]"
               >
                 <Archive size={15} />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                aria-label={`Excluir ${account.name}`}
+                title="Excluir conta"
+                onClick={onDelete}
+                className="rounded-lg p-2 text-[#b84e45] hover:bg-[#fff0ef] hover:text-[#9f3f37]"
+              >
+                <Trash2 size={15} />
               </button>
             )}
           </div>
