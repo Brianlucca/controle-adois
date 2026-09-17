@@ -23,10 +23,11 @@ export function RecurrencesModal({
   const recurrences = useMemo(() => {
     const groups = new Map<string, Transaction[]>();
     for (const item of transactions) {
-      if (!item.recurrenceGroupId || item.deletedAt) continue;
-      const group = groups.get(item.recurrenceGroupId) || [];
+      if (item.deletedAt || item.recurrenceActive === false) continue;
+      const groupId = item.recurrenceGroupId || item.id;
+      const group = groups.get(groupId) || [];
       group.push(item);
-      groups.set(item.recurrenceGroupId, group);
+      groups.set(groupId, group);
     }
     return [...groups.entries()].map(([id, items]) => {
       const ordered = [...items].sort((a, b) =>
