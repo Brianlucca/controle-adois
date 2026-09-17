@@ -19,6 +19,7 @@ export interface Transaction {
   recurrenceGroupId?: string;
   recurrenceIndex?: number;
   recurrenceTotal?: number;
+  recurrenceActive?: boolean;
   scope?: ExpenseScope | null;
   fundingSource?: ExpenseFundingSource | null;
   paidByUserId?: string | null;
