@@ -7,6 +7,8 @@ import {
   buildBaseTransaction,
   buildEditableTransactionFields,
   getRecurringOccurrenceStatus,
+  getRecurrenceEditRange,
+  getRecurrenceDisplayKey,
   getStatusAfterDateChange,
   isFutureCompletedTransaction,
 } from "@/lib/finance/transaction-records";
@@ -498,18 +500,33 @@ export async function getRecurringTransactions() {
           ? data.recurrenceGroupId
           : document.id;
       const current = representatives.get(groupId);
+      const currentData = current?.data();
+      const isPending = data.status === "pending";
+      const currentIsPending = currentData?.status === "pending";
       if (
         !current ||
-        (Number(data.recurrenceIndex) || 1) <
-          (Number(current.data().recurrenceIndex) || 1)
+        (isPending && !currentIsPending) ||
+        (isPending === currentIsPending &&
+          (Number(data.recurrenceIndex) || 1) <
+            (Number(currentData?.recurrenceIndex) || 1))
       ) {
         representatives.set(groupId, document);
       }
     }
+    const recurrenceCandidates = [...representatives.values()].map((document) =>
+      toClientTransaction(document, todayKey),
+    );
+    const uniqueRecurrences = new Map<string, Transaction>();
+    for (const candidate of recurrenceCandidates) {
+      const key = getRecurrenceDisplayKey(candidate);
+      const current = uniqueRecurrences.get(key);
+      if (!current || candidate.dueDate < current.dueDate) {
+        uniqueRecurrences.set(key, candidate);
+      }
+    }
     return {
       success: true as const,
-      transactions: [...representatives.values()]
-        .map((document) => toClientTransaction(document, todayKey)),
+      transactions: [...uniqueRecurrences.values()],
     };
   } catch (error) {
     console.error("get_recurring_transactions_failed", error);
@@ -776,13 +793,13 @@ export async function editTransaction(id: string, rawData: unknown) {
           : null,
       );
       if (recurrenceSnapshot) {
-        const selectedIndex = Number(currentData.recurrenceIndex) || 1;
-        const recurrenceTotal = fundedData.recurrenceMonths;
+        const { startIndex: selectedIndex, endIndex: recurrenceTotal } =
+          getRecurrenceEditRange(
+            Number(currentData.recurrenceIndex) || 1,
+            fundedData.recurrenceMonths,
+          );
+        const recurrenceDuration = fundedData.recurrenceMonths;
         const recurrenceGroupId = String(currentData.recurrenceGroupId);
-        const firstDueDate = addMonthsToDateKey(
-          fundedData.dueDate,
-          1 - selectedIndex,
-        );
         const paidOutsideRange = recurrenceSnapshot.docs.some((occurrence) => {
           const value = occurrence.data();
           return (
@@ -799,6 +816,8 @@ export async function editTransaction(id: string, rawData: unknown) {
           if (before.deletedAt) continue;
           const occurrenceIndex = Number(before.recurrenceIndex) || selectedIndex;
           activeByIndex.set(occurrenceIndex, occurrence);
+
+          if (before.status === "paid") continue;
 
           if (occurrenceIndex > recurrenceTotal) {
             if (before.status === "paid") continue;
@@ -835,11 +854,17 @@ export async function editTransaction(id: string, rawData: unknown) {
 
           const occurrenceChanges = {
             ...changes,
-            dueDate: addMonthsToDateKey(firstDueDate, occurrenceIndex - 1),
-            status: before.status === "paid" ? "paid" : "pending",
-            paidAt: before.status === "paid" ? before.paidAt || new Date() : null,
+            dueDate:
+              occurrenceIndex < selectedIndex
+                ? before.dueDate
+                : addMonthsToDateKey(
+                    fundedData.dueDate,
+                    occurrenceIndex - selectedIndex,
+                  ),
+            status: "pending",
+            paidAt: null,
             isRecurrent: true,
-            recurrenceMonths: recurrenceTotal,
+            recurrenceMonths: recurrenceDuration,
             recurrenceGroupId,
             recurrenceIndex: occurrenceIndex,
             recurrenceTotal,
@@ -867,13 +892,16 @@ export async function editTransaction(id: string, rawData: unknown) {
           );
         }
 
-        for (let occurrenceIndex = 1; occurrenceIndex <= recurrenceTotal; occurrenceIndex += 1) {
+        for (let occurrenceIndex = selectedIndex; occurrenceIndex <= recurrenceTotal; occurrenceIndex += 1) {
           if (activeByIndex.has(occurrenceIndex)) continue;
           const transactionRef = collection.doc();
-          const occurrenceDueDate = addMonthsToDateKey(firstDueDate, occurrenceIndex - 1);
+          const occurrenceDueDate = addMonthsToDateKey(
+            fundedData.dueDate,
+            occurrenceIndex - selectedIndex,
+          );
           const occurrenceStatus = getRecurringOccurrenceStatus(
             getStatusAfterDateChange(fundedData.status, occurrenceDueDate, todayKey),
-            occurrenceIndex - 1,
+            occurrenceIndex - selectedIndex,
           );
           const record = {
             ...buildBaseTransaction(
@@ -881,7 +909,7 @@ export async function editTransaction(id: string, rawData: unknown) {
               user,
             ),
             dueDate: occurrenceDueDate,
-            recurrenceMonths: recurrenceTotal,
+            recurrenceMonths: recurrenceDuration,
             recurrenceGroupId,
             recurrenceIndex: occurrenceIndex,
             recurrenceTotal,
@@ -904,7 +932,7 @@ export async function editTransaction(id: string, rawData: unknown) {
         }
 
         writeAccountBalanceChanges(transaction, accounts, balanceChanges);
-        return recurrenceTotal;
+        return recurrenceDuration;
       }
 
       const after = { ...currentData, ...changes };
