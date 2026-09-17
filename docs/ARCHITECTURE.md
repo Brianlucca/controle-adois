@@ -115,6 +115,13 @@ os metadados mais recentes. Ao interromper um grupo, `recurrenceActive` é marca
 como falso também nas ocorrências pagas preservadas, retirando-o da central sem
 reescrever o histórico ou o saldo. O resultado permanece em memória enquanto o
 espaço ativo não muda e é atualizado após mutações da recorrência.
+Ao editar uma ocorrência, a duração informada começa nela: ocorrências anteriores
+são preservadas e somente ela e as seguintes são atualizadas. A central prioriza
+a primeira ocorrência pendente para que a edição não volte a uma parcela histórica
+já paga. Os campos editáveis são propagados para todas as ocorrências pendentes do
+grupo, inclusive pendências anteriores, sem modificar ocorrências pagas. Séries
+legadas duplicadas com a mesma descrição, valor, categoria, conta e dia de vencimento
+são consolidadas visualmente na central.
 
 Despesas novas podem guardar `scope`, `fundingSource`, pagador, responsável,
 beneficiários, método de divisão e partes em centavos dentro do próprio documento
