@@ -203,7 +203,10 @@ export function DashboardSidebar() {
               collapsed ? "justify-center" : "gap-3",
             )}
           >
-            <LogOut size={18} />
+            <LogOut
+              size={collapsed ? 21 : 18}
+              className="shrink-0"
+            />
             {!collapsed && "Sair"}
           </button>
           <button
@@ -215,9 +218,9 @@ export function DashboardSidebar() {
             title={collapsed ? "Expandir menu" : "Recolher menu"}
           >
             {collapsed ? (
-              <PanelLeftOpen size={18} />
+              <PanelLeftOpen size={21} className="shrink-0" />
             ) : (
-              <PanelLeftClose size={18} />
+              <PanelLeftClose size={18} className="shrink-0" />
             )}{" "}
             {!collapsed && "Recolher menu"}
           </button>
@@ -274,7 +277,10 @@ function NavGroup({
                 : "text-[#70737b] hover:bg-white hover:text-[#282a30]",
             )}
           >
-            <item.icon size={18} />
+            <item.icon
+              size={collapsed ? 21 : 18}
+              className="shrink-0"
+            />
             {!collapsed && <span>{item.label}</span>}
           </Link>
         );
