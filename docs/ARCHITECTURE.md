@@ -99,6 +99,20 @@ ela nunca é convertida em receita ou despesa.
 O vínculo `accountId` das movimentações é opcional para preservar os registros
 anteriores à criação das contas financeiras.
 
+Uma conta pode ser excluída definitivamente somente quando não possui nenhuma
+movimentação ou transferência vinculada. Contas com histórico financeiro devem
+ser arquivadas, preservando seus vínculos, saldos materializados e auditoria.
+
+Recorrências mensais são materializadas como movimentações ligadas por
+`recurrenceGroupId`. A central de recorrências usa esse grupo como unidade de
+controle: uma edição atualiza as ocorrências ativas do grupo e a exclusão envia
+as ocorrências pendentes para a lixeira. Ocorrências pagas são preservadas para não
+reescrever o histórico nem alterar o saldo já realizado.
+Para listar a central, somente a ocorrência de índice 1 de cada grupo é lida; os
+campos `recurrenceTotal` e `recurrenceMonths` fornecem o resumo sem reler todas as
+parcelas materializadas. O resultado permanece em memória enquanto o espaço ativo
+não muda e é atualizado após mutações da recorrência.
+
 Despesas novas podem guardar `scope`, `fundingSource`, pagador, responsável,
 beneficiários, método de divisão e partes em centavos dentro do próprio documento
 da movimentação. A conta vinculada é a fonte de verdade do desembolso: conta
@@ -130,7 +144,8 @@ O cálculo puro em `src/lib/finance/budgets.ts` produz progresso, saldo disponí
 uso por participante, alertas progressivos e sugestão diária baseada nos dias
 restantes. O servidor valida todos os identificadores contra os participantes do
 espaço, mantém uma cota atômica de 48 registros e registra criação, edição,
-arquivamento e restauração na auditoria. A listagem é limitada a 48 documentos e
+arquivamento, restauração e exclusão na auditoria. Excluir um orçamento remove
+somente o limite e não altera movimentações ou saldos. A listagem é limitada a 48 documentos e
 não relê movimentações.
 
 As categorias financeiras formam um catálogo por espaço, administrado somente em

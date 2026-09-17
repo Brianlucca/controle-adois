@@ -449,6 +449,39 @@ export async function deleteRecurrence(id: string) {
   }
 }
 
+export async function getRecurringTransactions() {
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    await handleAuthFailure();
+    return { success: false as const, transactions: [] as Transaction[] };
+  }
+
+  const workspaceId = await getValidatedActiveWorkspaceId(user.uid);
+  if (!workspaceId) {
+    return { success: false as const, transactions: [] as Transaction[] };
+  }
+
+  try {
+    const snapshot = await adminDb
+      .collection("workspaces")
+      .doc(workspaceId)
+      .collection("transactions")
+      .where("recurrenceIndex", "==", 1)
+      .limit(100)
+      .get();
+    const todayKey = getBahiaDateKey(new Date());
+    return {
+      success: true as const,
+      transactions: snapshot.docs
+        .filter((document) => !document.data().deletedAt)
+        .map((document) => toClientTransaction(document, todayKey)),
+    };
+  } catch (error) {
+    console.error("get_recurring_transactions_failed", error);
+    return { success: false as const, transactions: [] as Transaction[] };
+  }
+}
+
 export async function updateTransactionStatus(id: string, status: string) {
   const user = await getAuthenticatedUser();
   if (!user) return await handleAuthFailure();
@@ -576,6 +609,16 @@ export async function editTransaction(id: string, rawData: unknown) {
       const currentData = currentDoc.data() || {};
       if (currentData.deletedAt) throw new Error("transaction_deleted_edit");
 
+      const recurrenceSnapshot = currentData.recurrenceGroupId
+        ? await transaction.get(
+            collection.where(
+              "recurrenceGroupId",
+              "==",
+              currentData.recurrenceGroupId,
+            ),
+          )
+        : null;
+
       const currentAccountId =
         typeof currentData.accountId === "string"
           ? currentData.accountId
@@ -583,7 +626,14 @@ export async function editTransaction(id: string, rawData: unknown) {
       const accounts = await readAccountBalanceStates(
         transaction,
         workspaceRef,
-        [currentAccountId, data.accountId],
+        [
+          currentAccountId,
+          data.accountId,
+          ...(recurrenceSnapshot?.docs.map((document) => {
+            const accountId = document.data().accountId;
+            return typeof accountId === "string" ? accountId : null;
+          }) || []),
+        ],
       );
       assertActiveAccount(accounts, data.accountId);
       const fundedData = resolveTransactionFunding(
@@ -688,6 +738,136 @@ export async function editTransaction(id: string, rawData: unknown) {
           ? currentData.linkedInvestmentId
           : null,
       );
+      if (recurrenceSnapshot) {
+        const selectedIndex = Number(currentData.recurrenceIndex) || 1;
+        const recurrenceTotal = fundedData.recurrenceMonths;
+        const recurrenceGroupId = String(currentData.recurrenceGroupId);
+        const firstDueDate = addMonthsToDateKey(
+          fundedData.dueDate,
+          1 - selectedIndex,
+        );
+        const paidOutsideRange = recurrenceSnapshot.docs.some((occurrence) => {
+          const value = occurrence.data();
+          return (
+            !value.deletedAt &&
+            value.status === "paid" &&
+            Number(value.recurrenceIndex) > recurrenceTotal
+          );
+        });
+        if (paidOutsideRange) throw new Error("recurrence_paid_outside_range");
+        const activeByIndex = new Map<number, FirebaseFirestore.QueryDocumentSnapshot>();
+
+        for (const occurrence of recurrenceSnapshot.docs) {
+          const before = occurrence.data();
+          if (before.deletedAt) continue;
+          const occurrenceIndex = Number(before.recurrenceIndex) || selectedIndex;
+          activeByIndex.set(occurrenceIndex, occurrence);
+
+          if (occurrenceIndex > recurrenceTotal) {
+            if (before.status === "paid") continue;
+            const deletedAt = new Date();
+            const occurrenceAfter = {
+              ...before,
+              deletedAt,
+              deletedBy: user.uid,
+            };
+            mergeBalanceChanges(
+              balanceChanges,
+              calculateStoredTransactionBalanceChanges(
+                before,
+                occurrenceAfter,
+                accounts,
+              ),
+            );
+            transaction.update(occurrence.ref, {
+              deletedAt,
+              deletedBy: user.uid,
+            });
+            transaction.set(
+              workspaceRef.collection("auditLogs").doc(),
+              buildAuditRecord({
+                action: "deleted",
+                user,
+                transactionId: occurrence.id,
+                before,
+                after: occurrenceAfter,
+              }),
+            );
+            continue;
+          }
+
+          const occurrenceChanges = {
+            ...changes,
+            dueDate: addMonthsToDateKey(firstDueDate, occurrenceIndex - 1),
+            status: before.status === "paid" ? "paid" : "pending",
+            paidAt: before.status === "paid" ? before.paidAt || new Date() : null,
+            isRecurrent: true,
+            recurrenceMonths: recurrenceTotal,
+            recurrenceGroupId,
+            recurrenceIndex: occurrenceIndex,
+            recurrenceTotal,
+          };
+          const occurrenceAfter = { ...before, ...occurrenceChanges };
+          mergeBalanceChanges(
+            balanceChanges,
+            calculateStoredTransactionBalanceChanges(
+              before,
+              occurrenceAfter,
+              accounts,
+            ),
+          );
+          transaction.update(occurrence.ref, occurrenceChanges);
+          transaction.set(
+            workspaceRef.collection("auditLogs").doc(),
+            buildAuditRecord({
+              action: "updated",
+              user,
+              transactionId: occurrence.id,
+              before,
+              after: occurrenceAfter,
+            }),
+          );
+        }
+
+        for (let occurrenceIndex = 1; occurrenceIndex <= recurrenceTotal; occurrenceIndex += 1) {
+          if (activeByIndex.has(occurrenceIndex)) continue;
+          const transactionRef = collection.doc();
+          const occurrenceDueDate = addMonthsToDateKey(firstDueDate, occurrenceIndex - 1);
+          const occurrenceStatus = getRecurringOccurrenceStatus(
+            getStatusAfterDateChange(fundedData.status, occurrenceDueDate, todayKey),
+            occurrenceIndex - 1,
+          );
+          const record = {
+            ...buildBaseTransaction(
+              { ...fundedData, status: occurrenceStatus },
+              user,
+            ),
+            dueDate: occurrenceDueDate,
+            recurrenceMonths: recurrenceTotal,
+            recurrenceGroupId,
+            recurrenceIndex: occurrenceIndex,
+            recurrenceTotal,
+          };
+          mergeBalanceChanges(
+            balanceChanges,
+            calculateStoredTransactionBalanceChanges(null, record, accounts),
+          );
+          transaction.set(transactionRef, record);
+          transaction.set(
+            workspaceRef.collection("auditLogs").doc(),
+            buildAuditRecord({
+              action: "created",
+              user,
+              transactionId: transactionRef.id,
+              after: record,
+            }),
+          );
+        }
+
+        writeAccountBalanceChanges(transaction, accounts, balanceChanges);
+        return recurrenceTotal;
+      }
+
       const after = { ...currentData, ...changes };
       mergeBalanceChanges(
         balanceChanges,
@@ -864,6 +1044,9 @@ function getAccountMutationError(error: unknown, fallback: string) {
   }
   if (message === "future_transaction_cannot_be_completed") {
     return "Movimentações futuras permanecem pendentes até a data informada.";
+  }
+  if (message === "recurrence_paid_outside_range") {
+    return "A duração não pode terminar antes de uma ocorrência já paga.";
   }
   return fallback;
 }

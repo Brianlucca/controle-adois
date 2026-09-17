@@ -381,6 +381,78 @@ export async function unarchiveFinancialAccount(rawAccountId: unknown) {
   }
 }
 
+export async function deleteFinancialAccount(rawAccountId: unknown) {
+  const context = await getAccountContext();
+  if (!context) return await handleAuthFailure();
+  const id = AccountIdSchema.safeParse(rawAccountId);
+  if (!id.success) return { success: false, error: "Conta inválida." };
+
+  const workspaceRef = adminDb.collection("workspaces").doc(context.workspaceId);
+  const accountRef = workspaceRef.collection("accounts").doc(id.data);
+  try {
+    await adminDb.runTransaction(async (transaction) => {
+      const [current, linkedTransactions, sourceTransfers, destinationTransfers] =
+        await Promise.all([
+          transaction.get(accountRef),
+          transaction.get(
+            workspaceRef
+              .collection("transactions")
+              .where("accountId", "==", id.data)
+              .limit(1),
+          ),
+          transaction.get(
+            workspaceRef
+              .collection("transfers")
+              .where("sourceAccountId", "==", id.data)
+              .limit(1),
+          ),
+          transaction.get(
+            workspaceRef
+              .collection("transfers")
+              .where("destinationAccountId", "==", id.data)
+              .limit(1),
+          ),
+        ]);
+      if (!current.exists) throw new Error("account_not_found");
+      if (
+        !linkedTransactions.empty ||
+        !sourceTransfers.empty ||
+        !destinationTransfers.empty
+      ) {
+        throw new Error("account_has_history");
+      }
+
+      const before = current.data() || {};
+      transaction.delete(accountRef);
+      transaction.set(
+        workspaceRef.collection("auditLogs").doc(),
+        buildEntityAuditRecord({
+          action: "deleted",
+          entityType: "account",
+          entityId: accountRef.id,
+          user: context.user,
+          before,
+        }),
+      );
+    });
+    revalidateAccountPaths();
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message === "account_not_found") {
+      return { success: false, error: "Conta não encontrada." };
+    }
+    if (message === "account_has_history") {
+      return {
+        success: false,
+        error: "Esta conta possui movimentações ou transferências. Arquive-a para preservar o histórico financeiro.",
+      };
+    }
+    console.error("delete_financial_account_failed", error);
+    return { success: false, error: "Não foi possível excluir a conta." };
+  }
+}
+
 export async function createAccountTransfer(rawData: unknown) {
   const context = await getAccountContext();
   if (!context) return await handleAuthFailure();

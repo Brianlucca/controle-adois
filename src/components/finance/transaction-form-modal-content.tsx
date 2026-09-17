@@ -284,7 +284,10 @@ export function TransactionFormModalContent({
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[#5d55dd]">
                     Quantidade de meses
                   </span>
-                  <select
+                  <input
+                    type="number"
+                    min={1}
+                    max={60}
                     value={formData.recurrenceMonths}
                     onChange={(event) =>
                       updateForm({
@@ -292,12 +295,7 @@ export function TransactionFormModalContent({
                       })
                     }
                     className="mt-1 h-11 w-full rounded-xl border border-[#cbc7fa] bg-white px-3 text-sm text-[#292a30] outline-none focus:ring-2 focus:ring-[#635bff]/15 sm:w-44"
-                  >
-                    <option value={3}>3 meses</option>
-                    <option value={6}>6 meses</option>
-                    <option value={12}>12 meses</option>
-                    <option value={24}>24 meses</option>
-                  </select>
+                  />
                 </label>
                 <div className="text-xs text-[#716bb8]">
                   Serão criados {formData.recurrenceMonths} lançamentos.

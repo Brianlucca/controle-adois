@@ -13,6 +13,7 @@ import { TransactionFormModalContent } from "@/components/finance/transaction-fo
 import { TransactionList } from "@/components/finance/transaction-list";
 import { TransactionsSummaryCards } from "@/components/finance/transactions-summary-cards";
 import { AuditHistoryModal } from "@/components/finance/audit-history-modal";
+import { RecurrencesModal } from "@/components/finance/recurrences-modal";
 import { usePreferences } from "@/contexts/preferences-context";
 import {
   useWorkspace,
@@ -20,6 +21,7 @@ import {
 } from "@/contexts/workspace-context";
 import { getFinancialAccountOptions } from "@/actions/account-actions";
 import { getFinancialCategories } from "@/actions/category-actions";
+import { getRecurringTransactions } from "@/actions/finance-actions";
 import { getLocalDateKey } from "@/lib/finance/date";
 import { moneyToCents } from "@/lib/finance/expense-splits";
 import type { FinancialAccountOption } from "@/lib/finance/account-types";
@@ -116,10 +118,29 @@ export default function TransactionsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isImporting, setIsImporting] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isRecurrencesOpen, setIsRecurrencesOpen] = useState(false);
+  const [recurrenceTransactions, setRecurrenceTransactions] = useState<Transaction[]>([]);
+  const [loadingRecurrences, setLoadingRecurrences] = useState(false);
+  const [recurrencesWorkspaceId, setRecurrencesWorkspaceId] = useState<string>();
   const [sortMode, setSortMode] = useState<TransactionSortMode>("priority");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const todayKey = getLocalDateKey(new Date());
+
+  const loadRecurrences = async () => {
+    setLoadingRecurrences(true);
+    const result = await getRecurringTransactions();
+    if (result.success) {
+      setRecurrenceTransactions(result.transactions);
+      setRecurrencesWorkspaceId(activeWorkspace?.id);
+    }
+    setLoadingRecurrences(false);
+  };
+
+  const openRecurrences = () => {
+    setIsRecurrencesOpen(true);
+    if (recurrencesWorkspaceId !== activeWorkspace?.id) void loadRecurrences();
+  };
 
   const [uiDateRange, setUiDateRange] = useState(dateRange);
 
@@ -202,46 +223,46 @@ export default function TransactionsPage() {
     setIsModalOpen(true);
   };
 
-  const handleStartEdit = () => {
-    if (!selectedTx) return;
+  const prepareTransactionEdit = (target: Transaction) => {
+    setSelectedTx(target);
     const selectedAccount = accountOptions.find(
-      (account) => account.id === selectedTx.accountId,
+      (account) => account.id === target.accountId,
     );
     const fundingSource = selectedAccount
       ? selectedAccount.ownership === "joint"
         ? "joint"
         : "participant"
-      : selectedTx.fundingSource || "participant";
+      : target.fundingSource || "participant";
     setFormData({
-      description: selectedTx.description,
-      amount: selectedTx.amount.toString(),
-      category: selectedTx.category,
-      type: selectedTx.type,
-      status: selectedTx.status,
-      dueDate: selectedTx.dueDate.split("T")[0],
-      pixCode: selectedTx.pixCode || "",
-      barCode: selectedTx.barCode || "",
-      observation: selectedTx.observation || "",
-      accountId: selectedTx.accountId || "",
-      isRecurrent: selectedTx.isRecurrent || false,
-      recurrenceMonths: selectedTx.recurrenceMonths || 12,
-      scope: selectedTx.scope || "individual",
+      description: target.description,
+      amount: target.amount.toString(),
+      category: target.category,
+      type: target.type,
+      status: target.status,
+      dueDate: target.dueDate.split("T")[0],
+      pixCode: target.pixCode || "",
+      barCode: target.barCode || "",
+      observation: target.observation || "",
+      accountId: target.accountId || "",
+      isRecurrent: target.isRecurrent || false,
+      recurrenceMonths: target.recurrenceMonths || 12,
+      scope: target.scope || "individual",
       fundingSource,
       paidByUserId:
         fundingSource === "joint"
           ? undefined
           : selectedAccount?.ownerUserId ||
-            selectedTx.paidByUserId ||
+            target.paidByUserId ||
             user?.uid ||
             "",
       responsibleUserId:
-        selectedTx.responsibleUserId || selectedTx.paidByUserId || user?.uid || "",
+        target.responsibleUserId || target.paidByUserId || user?.uid || "",
       beneficiaryUserIds:
-        selectedTx.beneficiaryUserIds?.length
-          ? selectedTx.beneficiaryUserIds
+        target.beneficiaryUserIds?.length
+          ? target.beneficiaryUserIds
           : [user?.uid || ""].filter(Boolean),
-      splitMethod: selectedTx.splitMethod || "equal",
-      shares: (selectedTx.shares || []).map((share) => ({
+      splitMethod: target.splitMethod || "equal",
+      shares: (target.shares || []).map((share) => ({
         userId: share.userId,
         amount: (share.amountCents / 100).toFixed(2),
       })),
@@ -335,6 +356,10 @@ export default function TransactionsPage() {
 
     if (handleAuthError(result)) return;
     if (!result?.success) return;
+
+    if (formData.isRecurrent) {
+      setRecurrencesWorkspaceId(undefined);
+    }
 
     if (
       !isEditing &&
@@ -625,6 +650,14 @@ export default function TransactionsPage() {
           <Button
             type="button"
             variant="outline"
+            onClick={openRecurrences}
+            className="h-10 rounded-lg border-[#d7d2ff] bg-white px-3 text-[#5d55dd] hover:bg-[#f0efff]"
+          >
+            Recorrências
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => setIsHistoryOpen(true)}
             className="h-10 rounded-lg border-[#d7d2ff] bg-[#f0efff] px-3 text-[#5d55dd] hover:bg-[#e8e5ff]"
           >
@@ -713,7 +746,15 @@ export default function TransactionsPage() {
       />
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e5e3e4] bg-white/95 p-3 backdrop-blur lg:hidden">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={openRecurrences}
+            className="h-11 rounded-lg border-[#d7d2ff] bg-white px-1 text-[11px] text-[#5d55dd]"
+          >
+            Recorrências
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -851,7 +892,9 @@ export default function TransactionsPage() {
                   }
                   displayValue={displayValue}
                   onCopy={handleCopy}
-                  onStartEdit={handleStartEdit}
+                  onStartEdit={() => {
+                    if (selectedTx) prepareTransactionEdit(selectedTx);
+                  }}
                   onDelete={handleDeleteWrapper}
                   onDeleteRecurrence={handleDeleteRecurrenceWrapper}
                   onStatusChange={handleStatusWrapper}
@@ -877,6 +920,22 @@ export default function TransactionsPage() {
         <AuditHistoryModal
           onClose={() => setIsHistoryOpen(false)}
           onRestored={refresh}
+        />
+      )}
+      {isRecurrencesOpen && (
+        <RecurrencesModal
+          transactions={recurrenceTransactions}
+          loading={loadingRecurrences}
+          onClose={() => setIsRecurrencesOpen(false)}
+          onEdit={(transaction) => {
+            setIsRecurrencesOpen(false);
+            setIsModalOpen(true);
+            prepareTransactionEdit(transaction);
+          }}
+          onDelete={async (transaction) => {
+            await handleDeleteRecurrenceWrapper(transaction.id);
+            await loadRecurrences();
+          }}
         />
       )}
     </div>
