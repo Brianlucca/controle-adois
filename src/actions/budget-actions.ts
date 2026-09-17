@@ -249,6 +249,63 @@ export async function unarchiveFinancialBudget(
   return changeBudgetArchiveState(rawBudgetId, rawWorkspaceId, false);
 }
 
+export async function deleteFinancialBudget(
+  rawBudgetId: unknown,
+  rawWorkspaceId: unknown,
+) {
+  const context = await getBudgetContext();
+  if (!context) return await handleAuthFailure();
+  if (!isExpectedWorkspace(rawWorkspaceId, context.workspaceRef.id)) {
+    return { success: false, error: "O espaço ativo mudou. Tente novamente." };
+  }
+  if (!context.canEdit) {
+    return { success: false, error: "Você não pode alterar este espaço." };
+  }
+  const rateLimitError = await getBudgetRateLimitError(context);
+  if (rateLimitError) return rateLimitError;
+  const id = BudgetIdSchema.safeParse(rawBudgetId);
+  if (!id.success) return { success: false, error: "Orçamento inválido." };
+
+  const budgetRef = context.workspaceRef.collection("budgets").doc(id.data);
+  try {
+    await adminDb.runTransaction(async (transaction) => {
+      const [workspaceSnapshot, current] = await Promise.all([
+        transaction.get(context.workspaceRef),
+        transaction.get(budgetRef),
+      ]);
+      if (!workspaceSnapshot.exists) throw new Error("workspace_not_found");
+      if (!current.exists) throw new Error("budget_not_found");
+      const before = current.data() || {};
+      const currentBudgetCount = Number(workspaceSnapshot.data()?.budgetCount) || 0;
+
+      transaction.delete(budgetRef);
+      transaction.update(context.workspaceRef, {
+        budgetCount: Math.max(0, currentBudgetCount - 1),
+      });
+      transaction.set(
+        context.workspaceRef.collection("auditLogs").doc(),
+        buildEntityAuditRecord({
+          action: "deleted",
+          entityType: "budget",
+          entityId: budgetRef.id,
+          user: context.user,
+          before,
+        }),
+      );
+    });
+
+    revalidateBudgetPaths();
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message === "budget_not_found") {
+      return { success: false, error: "Orçamento não encontrado." };
+    }
+    console.error("delete_financial_budget_failed", error);
+    return { success: false, error: "Não foi possível excluir o orçamento." };
+  }
+}
+
 async function updateBudget({
   context,
   id,
