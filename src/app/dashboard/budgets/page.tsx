@@ -12,11 +12,13 @@ import {
   Pencil,
   Plus,
   ReceiptText,
+  Trash2,
   UsersRound,
   WalletCards,
 } from "lucide-react";
 import {
   archiveFinancialBudget,
+  deleteFinancialBudget,
   getFinancialBudgets,
   saveFinancialBudget,
   unarchiveFinancialBudget,
@@ -261,6 +263,20 @@ export default function BudgetsPage() {
     await loadBudgets();
   }
 
+  async function handleDelete(budget: FinancialBudget) {
+    if (!window.confirm(`Excluir definitivamente o orçamento de ${budget.category}? Essa ação não altera as transações nem os saldos.`)) return;
+    const result = await deleteFinancialBudget(budget.id, activeWorkspace?.id);
+    if (!result.success) {
+      setError(
+        ("error" in result && result.error) ||
+          "Não foi possível excluir o orçamento.",
+      );
+      return;
+    }
+    if (editingBudget?.id === budget.id) closeForm();
+    await loadBudgets();
+  }
+
   return (
     <div className="space-y-6 pb-20">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -347,6 +363,7 @@ export default function BudgetsPage() {
               displayCents={displayCents}
               onEdit={effectiveCanEdit ? () => openEditForm(usage.budget) : undefined}
               onArchive={effectiveCanEdit ? () => handleArchive(usage.budget) : undefined}
+              onDelete={effectiveCanEdit ? () => handleDelete(usage.budget) : undefined}
             />
           ))}
         </section>
@@ -372,15 +389,14 @@ export default function BudgetsPage() {
                     </p>
                   </div>
                   {effectiveCanEdit && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleUnarchive(budget)}
-                      className="shrink-0 text-xs text-[#5d55dd]"
-                    >
-                      <ArchiveRestore size={14} className="mr-2" /> Desarquivar
-                    </Button>
+                    <div className="flex shrink-0 gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => handleUnarchive(budget)} className="text-xs text-[#5d55dd]">
+                        <ArchiveRestore size={14} className="mr-2" /> Desarquivar
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => handleDelete(budget)} aria-label={`Excluir orçamento de ${budget.category}`} className="border-[#f0d3cf] px-2 text-[#b84e45] hover:bg-[#fff3f1]">
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
                   )}
                 </div>
               </article>
@@ -422,12 +438,14 @@ function BudgetCard({
   displayCents,
   onEdit,
   onArchive,
+  onDelete,
 }: {
   usage: BudgetUsage;
   participantName: (userId: string) => string;
   displayCents: (valueCents: number) => string;
   onEdit?: () => void;
   onArchive?: () => void;
+  onDelete?: () => void;
 }) {
   const { budget } = usage;
   const progressWidth = Math.min(100, Math.max(0, usage.usedPercentage));
@@ -455,7 +473,7 @@ function BudgetCard({
             Acompanhado por {participantName(budget.responsibleUserId)}
           </p>
         </div>
-        {(onEdit || onArchive) && (
+        {(onEdit || onArchive || onDelete) && (
           <div className="flex shrink-0 items-center gap-1">
           {onEdit && <button
             type="button"
@@ -474,6 +492,15 @@ function BudgetCard({
             className="rounded-lg p-2 text-[#9a9ca3] transition hover:bg-[#f4f2f5] hover:text-[#5b5d65]"
           >
             <Archive size={15} />
+          </button>}
+          {onDelete && <button
+            type="button"
+            aria-label={`Excluir orçamento de ${budget.category}`}
+            title="Excluir orçamento"
+            onClick={onDelete}
+            className="rounded-lg p-2 text-[#b84e45] transition hover:bg-[#fff0ef] hover:text-[#9f3f37]"
+          >
+            <Trash2 size={15} />
           </button>}
           </div>
         )}
