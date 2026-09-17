@@ -30,6 +30,48 @@ export function getRecurringOccurrenceStatus(
   return occurrenceIndex === 0 ? initialStatus : "pending";
 }
 
+export function getRecurrenceEditRange(
+  selectedIndex: number | undefined,
+  durationMonths: number,
+) {
+  const startIndex = Math.max(1, selectedIndex || 1);
+  return {
+    startIndex,
+    endIndex: startIndex + Math.max(1, durationMonths) - 1,
+  };
+}
+
+export function getRemainingRecurrenceMonths(
+  recurrenceIndex: number | undefined,
+  recurrenceTotal: number | undefined,
+  fallbackMonths: number | undefined,
+) {
+  const startIndex = Math.max(1, recurrenceIndex || 1);
+  const endIndex = Math.max(startIndex, recurrenceTotal || fallbackMonths || startIndex);
+  return endIndex - startIndex + 1;
+}
+
+export function getRecurrenceDisplayKey(
+  transaction: {
+    description: string;
+    amount: number;
+    category: string;
+    accountId?: string | null;
+    dueDate: string;
+  },
+) {
+  const normalizedDescription = transaction.description.trim().toLocaleLowerCase("pt-BR");
+  const normalizedCategory = transaction.category.trim().toLocaleLowerCase("pt-BR");
+  const dueDay = transaction.dueDate.slice(8, 10);
+  return [
+    normalizedDescription,
+    Math.round(transaction.amount * 100),
+    normalizedCategory,
+    transaction.accountId || "",
+    dueDay,
+  ].join("|");
+}
+
 export function buildBaseTransaction(
   data: TransactionInput,
   user: TransactionUser

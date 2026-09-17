@@ -24,6 +24,7 @@ import { getFinancialCategories } from "@/actions/category-actions";
 import { getRecurringTransactions } from "@/actions/finance-actions";
 import { getLocalDateKey } from "@/lib/finance/date";
 import { moneyToCents } from "@/lib/finance/expense-splits";
+import { getRemainingRecurrenceMonths } from "@/lib/finance/transaction-records";
 import type { FinancialAccountOption } from "@/lib/finance/account-types";
 import { parseTransactionsWorkbook } from "@/lib/finance/import-transactions";
 import {
@@ -245,7 +246,13 @@ export default function TransactionsPage() {
       observation: target.observation || "",
       accountId: target.accountId || "",
       isRecurrent: target.isRecurrent || false,
-      recurrenceMonths: target.recurrenceMonths || 12,
+      recurrenceMonths: target.isRecurrent
+        ? getRemainingRecurrenceMonths(
+            target.recurrenceIndex,
+            target.recurrenceTotal,
+            target.recurrenceMonths,
+          )
+        : target.recurrenceMonths || 12,
       scope: target.scope || "individual",
       fundingSource,
       paidByUserId:

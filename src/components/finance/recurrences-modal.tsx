@@ -5,6 +5,7 @@ import { CalendarDays, Loader2, Pencil, Repeat2, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import type { Transaction } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { getRemainingRecurrenceMonths } from "@/lib/finance/transaction-records";
 
 export function RecurrencesModal({
   transactions,
@@ -62,7 +63,11 @@ export function RecurrencesModal({
               {recurrences.map(({ id, representative, items }) => {
                 const day = Number(representative.dueDate.slice(8, 10));
                 const busy = busyGroup === id;
-                const total = representative.recurrenceTotal || representative.recurrenceMonths || items.length;
+                const total = getRemainingRecurrenceMonths(
+                  representative.recurrenceIndex,
+                  representative.recurrenceTotal,
+                  representative.recurrenceMonths || items.length,
+                );
                 return (
                   <article key={id} className="rounded-xl border border-[#e5e3e7] p-4">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -71,7 +76,7 @@ export function RecurrencesModal({
                         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#73757d]">
                           <span className="inline-flex items-center gap-1"><CalendarDays size={13} /> Todo dia {day}</span>
                           <span>{formatCurrency(representative.amount)}</span>
-                          <span>{total} {total === 1 ? "mês" : "meses"}</span>
+                          <span>{total} {total === 1 ? "mês restante" : "meses restantes"}</span>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
