@@ -10,7 +10,10 @@ import {
 } from "lucide-react";
 import { BrandIcon } from "@/components/brand-icon";
 import { ExpenseAllocationSummary } from "@/components/finance/expense-allocation-summary";
-import { TransactionStatusBadge } from "@/components/finance/transaction-status-badge";
+import {
+  formatPaidAtDate,
+  TransactionStatusBadge,
+} from "@/components/finance/transaction-status-badge";
 import { Button } from "@/components/ui/button";
 import type { WorkspaceParticipant } from "@/contexts/workspace-context";
 import { Transaction, TransactionStatus } from "@/lib/types";
@@ -50,7 +53,7 @@ export function TransactionDetailsModalContent({
 }: TransactionDetailsModalContentProps) {
   const todayKey = getLocalDateKey(new Date());
   const isOverdue = isOverduePendingExpense(transaction, todayKey);
-  const isScheduledForFuture = transaction.dueDate > todayKey;
+  const paidDateLabel = formatPaidAtDate(transaction.paidAt);
   return (
     <div className="space-y-4 pb-2 text-[#292a30]">
       <div
@@ -82,6 +85,7 @@ export function TransactionDetailsModalContent({
             <TransactionStatusBadge
               transaction={transaction}
               todayKey={todayKey}
+              showPaidDate={false}
             />
           </div>
           <p
@@ -125,6 +129,11 @@ export function TransactionDetailsModalContent({
                 ? "Recebido"
                 : "Pago"}
           </p>
+          {transaction.status === "paid" && paidDateLabel && (
+            <p className="mt-1 text-[10px] font-medium text-[#858891]">
+              em {paidDateLabel}
+            </p>
+          )}
         </div>
       </div>
       {account && (
@@ -252,12 +261,6 @@ export function TransactionDetailsModalContent({
         </Button>
 
         <Button
-          disabled={isScheduledForFuture}
-          title={
-            isScheduledForFuture
-              ? "Na data informada, confirme para atualizar o saldo da conta."
-              : undefined
-          }
           className={`h-12 rounded-xl text-xs font-bold text-white sm:text-sm ${
             transaction.type === "income"
               ? "bg-[#168267] shadow-[0_8px_20px_-12px_#168267] hover:bg-[#126e58]"
@@ -272,11 +275,9 @@ export function TransactionDetailsModalContent({
         >
           {transaction.status === "paid"
             ? "Pendente"
-            : isScheduledForFuture
-              ? "Agendada"
-              : transaction.type === "income"
-                ? "Receber"
-                : "Pagar"}
+            : transaction.type === "income"
+              ? "Receber"
+              : "Pagar"}
         </Button>
 
         <Button

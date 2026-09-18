@@ -82,6 +82,8 @@ Cada conta mantém `currentBalanceCents` materializado. Criação, edição, pag
 exclusão e restauração de movimentações, além de transferências e estornos,
 atualizam o saldo e a auditoria na mesma transação do Firestore. A regra pura que
 calcula o impacto permanece em `src/lib/finance`.
+Uma receita ou despesa pode ser marcada como recebida ou paga antes da data prevista;
+a data futura representa o agendamento, mas não bloqueia a confirmação antecipada.
 
 Contas anteriores a esse campo são materializadas uma única vez: somente as
 movimentações vinculadas às contas legadas e as transferências são consultadas.

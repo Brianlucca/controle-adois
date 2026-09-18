@@ -2,15 +2,13 @@
 
 import { adminDb } from "@/lib/firebase-admin";
 import { revalidatePath } from "next/cache";
-import { addMonthsToDateKey, getBahiaDateKey } from "@/lib/finance/date";
+import { addMonthsToDateKey } from "@/lib/finance/date";
 import {
   buildBaseTransaction,
   buildEditableTransactionFields,
   getRecurringOccurrenceStatus,
   getRecurrenceEditRange,
   getRecurrenceDisplayKey,
-  getStatusAfterDateChange,
-  isFutureCompletedTransaction,
 } from "@/lib/finance/transaction-records";
 import {
   ImportTransactionsSchema,
@@ -62,20 +60,9 @@ export async function getTransactions(uid: string, startDate: string, endDate: s
     const documents = snapshot.docs.filter(
       (document) => !document.data().deletedAt,
     );
-    const todayKey = getBahiaDateKey(new Date());
-
-    const repairedCount = await repairFutureCompletedTransactions(
-      workspaceRef,
-      documents,
-      user,
-      todayKey,
-    );
-
     return {
-      transactions: documents.map((document) =>
-        toClientTransaction(document, todayKey),
-      ),
-      repairedAccountBalances: repairedCount > 0,
+      transactions: documents.map((document) => toClientTransaction(document)),
+      repairedAccountBalances: false,
     };
   } catch (error) {
     console.error("get_transactions_failed", error);
@@ -102,20 +89,9 @@ export async function getTransactionsThrough(endDate: string) {
     const documents = snapshot.docs.filter(
       (document) => !document.data().deletedAt,
     );
-    const todayKey = getBahiaDateKey(new Date());
-
-    const repairedCount = await repairFutureCompletedTransactions(
-      workspaceRef,
-      documents,
-      user,
-      todayKey,
-    );
-
     return {
-      transactions: documents.map((document) =>
-        toClientTransaction(document, todayKey),
-      ),
-      repairedAccountBalances: repairedCount > 0,
+      transactions: documents.map((document) => toClientTransaction(document)),
+      repairedAccountBalances: false,
     };
   } catch (error) {
     console.error("get_transactions_through_failed", error);
@@ -144,8 +120,7 @@ export async function addTransaction(rawData: unknown) {
       participantIds,
     );
     if (!normalized.success) return normalized;
-    const todayKey = getBahiaDateKey(new Date());
-    const data = normalizeTransactionDateStatus(normalized.data, todayKey);
+    const data = normalized.data;
 
     const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
     const collection = workspaceRef.collection("transactions");
@@ -176,11 +151,7 @@ export async function addTransaction(rawData: unknown) {
               ? data.dueDate
               : addMonthsToDateKey(data.dueDate, index);
           const occurrenceStatus = getRecurringOccurrenceStatus(
-            getStatusAfterDateChange(
-              data.status,
-              occurrenceDueDate,
-              todayKey,
-            ),
+            data.status,
             index,
           );
           const record = {
@@ -258,7 +229,6 @@ export async function importTransactions(rawItems: unknown) {
       activeWorkspace?.data || {},
       user.uid,
     );
-    const todayKey = getBahiaDateKey(new Date());
     const normalizedItems: TransactionInput[] = [];
     for (const item of validation.data) {
       const normalized = normalizeTransactionAllocation(
@@ -267,9 +237,7 @@ export async function importTransactions(rawItems: unknown) {
         participantIds,
       );
       if (!normalized.success) return normalized;
-      normalizedItems.push(
-        normalizeTransactionDateStatus(normalized.data, todayKey),
-      );
+      normalizedItems.push(normalized.data);
     }
 
     const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
@@ -487,7 +455,6 @@ export async function getRecurringTransactions() {
       .where("isRecurrent", "==", true)
       .limit(500)
       .get();
-    const todayKey = getBahiaDateKey(new Date());
     const activeDocuments = snapshot.docs.filter((document) => {
       const data = document.data();
       return !data.deletedAt && data.recurrenceActive !== false;
@@ -514,7 +481,7 @@ export async function getRecurringTransactions() {
       }
     }
     const recurrenceCandidates = [...representatives.values()].map((document) =>
-      toClientTransaction(document, todayKey),
+      toClientTransaction(document),
     );
     const uniqueRecurrences = new Map<string, Transaction>();
     for (const candidate of recurrenceCandidates) {
@@ -553,17 +520,6 @@ export async function updateTransactionStatus(id: string, status: string) {
       if (!current.exists) throw new Error("transaction_not_found");
       const before = current.data() || {};
       if (before.deletedAt) throw new Error("transaction_deleted_status");
-      const dueDate =
-        typeof before.dueDate === "string" ? before.dueDate : "";
-      if (
-        isFutureCompletedTransaction(
-          validStatus,
-          dueDate,
-          getBahiaDateKey(new Date()),
-        )
-      ) {
-        throw new Error("future_transaction_cannot_be_completed");
-      }
 
       const accounts = await readAccountBalanceStates(
         transaction,
@@ -647,8 +603,7 @@ export async function editTransaction(id: string, rawData: unknown) {
       participantIds,
     );
     if (!normalized.success) return normalized;
-    const todayKey = getBahiaDateKey(new Date());
-    const data = normalizeTransactionDateStatus(normalized.data, todayKey);
+    const data = normalized.data;
 
     const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
     const collection = workspaceRef.collection("transactions");
@@ -747,11 +702,7 @@ export async function editTransaction(id: string, rawData: unknown) {
               index + 1,
             );
             const occurrenceStatus = getRecurringOccurrenceStatus(
-              getStatusAfterDateChange(
-                data.status,
-                occurrenceDueDate,
-                todayKey,
-              ),
+              data.status,
               index + 1,
             );
             const record = {
@@ -900,7 +851,7 @@ export async function editTransaction(id: string, rawData: unknown) {
             occurrenceIndex - selectedIndex,
           );
           const occurrenceStatus = getRecurringOccurrenceStatus(
-            getStatusAfterDateChange(fundedData.status, occurrenceDueDate, todayKey),
+            fundedData.status,
             occurrenceIndex - selectedIndex,
           );
           const record = {
@@ -982,107 +933,6 @@ function mergeBalanceChanges(
   }
 }
 
-function normalizeTransactionDateStatus(
-  data: TransactionInput,
-  todayKey: string,
-): TransactionInput {
-  const status = getStatusAfterDateChange(
-    data.status,
-    data.dueDate,
-    todayKey,
-  );
-  return status === data.status ? data : { ...data, status };
-}
-
-async function repairFutureCompletedTransactions(
-  workspaceRef: FirebaseFirestore.DocumentReference,
-  documents: FirebaseFirestore.QueryDocumentSnapshot[],
-  user: { uid: string; name?: string; email?: string },
-  todayKey: string,
-) {
-  const candidates = documents.filter((document) => {
-    const data = document.data();
-    return (
-      !data.deletedAt &&
-      typeof data.dueDate === "string" &&
-      isFutureCompletedTransaction(
-        data.status === "paid" ? "paid" : "pending",
-        data.dueDate,
-        todayKey,
-      )
-    );
-  });
-
-  // The documents came from the screen's existing query. Only candidates are
-  // re-read transactionally, avoiding a second scan of the collection.
-  let repairedCount = 0;
-  for (let index = 0; index < candidates.length; index += 100) {
-    const chunk = candidates.slice(index, index + 100);
-    repairedCount += await runAccountBalanceTransaction(
-      workspaceRef,
-      async (transaction) => {
-        const currentDocuments = await Promise.all(
-          chunk.map((document) => transaction.get(document.ref)),
-        );
-        const repairableDocuments = currentDocuments.filter((document) => {
-          const data = document.data() || {};
-          return (
-            document.exists &&
-            !data.deletedAt &&
-            typeof data.dueDate === "string" &&
-            isFutureCompletedTransaction(
-              data.status === "paid" ? "paid" : "pending",
-              data.dueDate,
-              todayKey,
-            )
-          );
-        });
-        if (!repairableDocuments.length) return 0;
-
-        const accountIds = repairableDocuments.map((document) => {
-          const accountId = document.data()?.accountId;
-          return typeof accountId === "string" ? accountId : null;
-        });
-        const accounts = await readAccountBalanceStates(
-          transaction,
-          workspaceRef,
-          accountIds,
-        );
-        const balanceChanges = new Map<string, number>();
-
-        for (const document of repairableDocuments) {
-          const before = document.data() || {};
-          const after = { ...before, status: "pending", paidAt: null };
-          const accountId =
-            typeof before.accountId === "string" ? before.accountId : null;
-
-          if (!accountId || accounts.has(accountId)) {
-            mergeBalanceChanges(
-              balanceChanges,
-              calculateStoredTransactionBalanceChanges(before, after, accounts),
-            );
-          }
-          transaction.update(document.ref, { status: "pending", paidAt: null });
-          transaction.set(
-            workspaceRef.collection("auditLogs").doc(),
-            buildAuditRecord({
-              action: "status_changed",
-              user,
-              transactionId: document.id,
-              before,
-              after,
-            }),
-          );
-        }
-
-        writeAccountBalanceChanges(transaction, accounts, balanceChanges);
-        return repairableDocuments.length;
-      },
-    );
-  }
-  return repairedCount;
-}
-
 function getAccountMutationError(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : "";
   if (message.startsWith("expense_funding:")) {
@@ -1109,9 +959,6 @@ function getAccountMutationError(error: unknown, fallback: string) {
   if (message === "transaction_deleted_edit") {
     return "Restaure a transação antes de editá-la.";
   }
-  if (message === "future_transaction_cannot_be_completed") {
-    return "Movimentações futuras permanecem pendentes até a data informada.";
-  }
   if (message === "recurrence_paid_outside_range") {
     return "A duração não pode terminar antes de uma ocorrência já paga.";
   }
@@ -1120,13 +967,11 @@ function getAccountMutationError(error: unknown, fallback: string) {
 
 function toClientTransaction(
   document: FirebaseFirestore.QueryDocumentSnapshot,
-  todayKey: string,
 ): Transaction {
   const data = document.data();
   const amount = Number(data.amount);
   const dueDate = typeof data.dueDate === "string" ? data.dueDate : "";
-  const storedStatus = data.status === "paid" ? "paid" : "pending";
-  const status = getStatusAfterDateChange(storedStatus, dueDate, todayKey);
+  const status = data.status === "paid" ? "paid" : "pending";
   return {
     id: document.id,
     description:

@@ -7,22 +7,6 @@ interface TransactionUser {
   email?: string;
 }
 
-export function getStatusAfterDateChange(
-  currentStatus: TransactionStatus,
-  nextDate: string,
-  todayKey: string,
-): TransactionStatus {
-  return nextDate > todayKey ? "pending" : currentStatus;
-}
-
-export function isFutureCompletedTransaction(
-  status: TransactionStatus,
-  dueDate: string,
-  todayKey: string,
-) {
-  return status === "paid" && dueDate > todayKey;
-}
-
 export function getRecurringOccurrenceStatus(
   initialStatus: TransactionStatus,
   occurrenceIndex: number,
