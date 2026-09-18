@@ -12,8 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ExpenseAllocationFields } from "@/components/finance/expense-allocation-fields";
 import type { WorkspaceParticipant } from "@/contexts/workspace-context";
-import { addMonthsToDateKey, getLocalDateKey } from "@/lib/finance/date";
-import { getStatusAfterDateChange } from "@/lib/finance/transaction-records";
+import { addMonthsToDateKey } from "@/lib/finance/date";
 import type { FinancialAccountOption } from "@/lib/finance/account-types";
 import { TransactionFormData, TransactionStatus } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
@@ -39,8 +38,6 @@ export function TransactionFormModalContent({
   onCancelEdit,
   onSubmit,
 }: TransactionFormModalContentProps) {
-  const todayKey = getLocalDateKey(new Date());
-  const isScheduledForFuture = formData.dueDate > todayKey;
   const updateForm = (patch: Partial<TransactionFormData>) => {
     onFormDataChange((current) => ({ ...current, ...patch }));
   };
@@ -129,11 +126,6 @@ export function TransactionFormModalContent({
                 const dueDate = event.target.value;
                 updateForm({
                   dueDate,
-                  status: getStatusAfterDateChange(
-                    formData.status,
-                    dueDate,
-                    todayKey,
-                  ),
                 });
               }}
               required
@@ -203,16 +195,10 @@ export function TransactionFormModalContent({
               value={formData.status}
               onChange={(event) => {
                 const status = event.target.value as TransactionStatus;
-                updateForm({
-                  status: getStatusAfterDateChange(
-                    status,
-                    formData.dueDate,
-                    todayKey,
-                  ),
-                });
+                updateForm({ status });
               }}
             >
-              <option value="paid" disabled={isScheduledForFuture}>
+              <option value="paid">
                 {formData.type === "income" ? "Recebido" : "Já pago"}
               </option>
               <option value="pending">
@@ -220,9 +206,8 @@ export function TransactionFormModalContent({
               </option>
             </select>
             <span className="block pl-1 text-[11px] leading-4 text-[#858891]">
-              {isScheduledForFuture
-                ? "Data futura: ficará pendente. Na data, confirme para atualizar o saldo da conta."
-                : "Somente valores concluídos alteram o saldo da conta."}
+              Valores marcados como pagos ou recebidos alteram o saldo da conta,
+              mesmo antes da data informada.
             </span>
           </label>
         </div>
