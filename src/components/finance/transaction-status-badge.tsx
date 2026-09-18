@@ -3,13 +3,29 @@ import { isOverduePendingExpense } from "@/lib/finance/transaction-calculations"
 import { Transaction } from "@/lib/types";
 
 interface TransactionStatusBadgeProps {
-  transaction: Pick<Transaction, "status" | "type" | "dueDate">;
+  transaction: Pick<Transaction, "status" | "type" | "dueDate" | "paidAt">;
   todayKey: string;
+  showPaidDate?: boolean;
+}
+
+const paidAtFormatter = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Bahia",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+export function formatPaidAtDate(paidAt?: string) {
+  const paidDate = paidAt ? new Date(paidAt) : null;
+  return paidDate && !Number.isNaN(paidDate.getTime())
+    ? paidAtFormatter.format(paidDate)
+    : null;
 }
 
 export function TransactionStatusBadge({
   transaction,
   todayKey,
+  showPaidDate = true,
 }: TransactionStatusBadgeProps) {
   if (isOverduePendingExpense(transaction, todayKey)) {
     return (
@@ -29,15 +45,46 @@ export function TransactionStatusBadge({
 
   if (transaction.type === "expense") {
     return (
-      <span className="inline-flex items-center rounded-md bg-[#fff1ef] px-2.5 py-1 text-[10px] font-bold text-[#b9564d] ring-1 ring-[#ffd1cc]">
-        <CheckCircle2 size={12} className="mr-1.5" /> PAGO
-      </span>
+      <CompletedStatus
+        label="PAGO"
+        paidAt={showPaidDate ? transaction.paidAt : undefined}
+        badgeClass="bg-[#fff1ef] text-[#b9564d] ring-[#ffd1cc]"
+      />
     );
   }
 
   return (
-    <span className="inline-flex items-center rounded-md bg-[#edf9f5] px-2.5 py-1 text-[10px] font-bold text-[#168267] ring-1 ring-[#bfe8d9]">
-      <CheckCircle2 size={12} className="mr-1.5" /> RECEBIDO
+    <CompletedStatus
+      label="RECEBIDO"
+      paidAt={showPaidDate ? transaction.paidAt : undefined}
+      badgeClass="bg-[#edf9f5] text-[#168267] ring-[#bfe8d9]"
+    />
+  );
+}
+
+function CompletedStatus({
+  label,
+  paidAt,
+  badgeClass,
+}: {
+  label: "PAGO" | "RECEBIDO";
+  paidAt?: string;
+  badgeClass: string;
+}) {
+  const paidDateLabel = formatPaidAtDate(paidAt);
+
+  return (
+    <span className="inline-flex flex-col items-start gap-1">
+      <span
+        className={`inline-flex items-center rounded-md px-2.5 py-1 text-[10px] font-bold ring-1 ${badgeClass}`}
+      >
+        <CheckCircle2 size={12} className="mr-1.5" /> {label}
+      </span>
+      {paidDateLabel && (
+        <span className="pl-0.5 text-[10px] font-medium text-[#858891]">
+          em {paidDateLabel}
+        </span>
+      )}
     </span>
   );
 }
