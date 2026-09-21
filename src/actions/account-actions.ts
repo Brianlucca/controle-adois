@@ -16,6 +16,7 @@ import {
 } from "@/lib/finance/account-types";
 import { buildEntityAuditRecord } from "@/lib/finance/audit-log";
 import {
+  ACCOUNT_BALANCE_CALCULATION_VERSION,
   assertActiveAccount,
   getMaterializedAccountDocuments,
   readAccountBalanceStates,
@@ -152,6 +153,7 @@ export async function saveFinancialAccount(rawData: unknown) {
     ownerUserId,
     openingBalanceCents: toCents(parsed.data.openingBalance),
     currentBalanceCents: toCents(parsed.data.openingBalance),
+    balanceCalculationVersion: ACCOUNT_BALANCE_CALCULATION_VERSION,
     openingBalanceDate: parsed.data.openingBalanceDate,
     updatedAt: new Date(),
   };
@@ -221,7 +223,11 @@ export async function updateFinancialAccount(
       if (before.openingBalanceDate !== parsed.data.openingBalanceDate) {
         throw new Error("opening_date_locked");
       }
-      if (!Object.hasOwn(before, "currentBalanceCents")) {
+      if (
+        !Object.hasOwn(before, "currentBalanceCents") ||
+        before.balanceCalculationVersion !==
+          ACCOUNT_BALANCE_CALCULATION_VERSION
+      ) {
         throw new Error("account_balance_not_materialized");
       }
 
@@ -251,6 +257,7 @@ export async function updateFinancialAccount(
         ownerUserId,
         openingBalanceCents: nextOpeningBalanceCents,
         currentBalanceCents: nextCurrentBalanceCents,
+        balanceCalculationVersion: ACCOUNT_BALANCE_CALCULATION_VERSION,
         updatedAt: new Date(),
         updatedBy: context.user.uid,
         balanceUpdatedAt: new Date(),
