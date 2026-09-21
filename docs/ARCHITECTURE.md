@@ -85,8 +85,10 @@ calcula o impacto permanece em `src/lib/finance`.
 Uma receita ou despesa pode ser marcada como recebida ou paga antes da data prevista;
 a data futura representa o agendamento, mas não bloqueia a confirmação antecipada.
 
-Contas anteriores a esse campo são materializadas uma única vez: somente as
-movimentações vinculadas às contas legadas e as transferências são consultadas.
+Contas sem a versão atual do cálculo materializado são reconciliadas uma única vez:
+o saldo é reconstruído pelo saldo inicial, por todas as movimentações vinculadas e
+pelas transferências. A conta guarda a versão e os valores anterior e reconstruído
+para auditoria da migração; depois disso, as telas voltam a ler o saldo diretamente.
 Depois disso, a visão geral lê as contas diretamente e limita o histórico recente
 a 12 transferências; o resumo do dashboard lê somente as contas. Assim, nenhuma
 tela reconstrói o saldo relendo todo o histórico financeiro.
