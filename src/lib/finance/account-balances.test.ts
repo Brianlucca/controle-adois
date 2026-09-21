@@ -110,6 +110,25 @@ describe("account balances", () => {
     expect(result.currentBalance).toBe(750);
   });
 
+  it("subtracts a future expense paid before its due date", () => {
+    const [result] = calculateAccountBalances(
+      [account("a", 180)],
+      [
+        {
+          accountId: "a",
+          amount: 50,
+          dueDate: "2026-10-10",
+          paidAt: "2026-09-21T12:00:00.000Z",
+          type: "expense",
+          status: "paid",
+        },
+      ],
+      [],
+    );
+
+    expect(result.currentBalance).toBe(130);
+  });
+
   it("moves money without changing the couple total", () => {
     const result = calculateAccountBalances(
       [account("a", 1_000, "mine"), account("b", 500, "joint")],
