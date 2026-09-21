@@ -11,6 +11,8 @@ import {
   FinancialAccount,
 } from "@/lib/finance/account-types";
 
+export const ACCOUNT_BALANCE_CALCULATION_VERSION = 1;
+
 export interface AccountBalanceState {
   id: string;
   ref: FirebaseFirestore.DocumentReference;
@@ -52,14 +54,14 @@ export async function getMaterializedAccountDocuments(
 ) {
   const accountCollection = workspaceRef.collection("accounts");
   const accountSnapshot = await accountCollection.get();
-  const missingBalance = accountSnapshot.docs.filter(
-    (document) => !Object.hasOwn(document.data(), "currentBalanceCents"),
+  const accountsToRebuild = accountSnapshot.docs.filter(
+    (document) => !hasCurrentBalanceVersion(document.data()),
   );
-  if (!missingBalance.length) return accountSnapshot.docs;
+  if (!accountsToRebuild.length) return accountSnapshot.docs;
 
   const [transactionSnapshots, transferSnapshot] = await Promise.all([
     Promise.all(
-      missingBalance.map((account) =>
+      accountsToRebuild.map((account) =>
         workspaceRef
           .collection("transactions")
           .where("accountId", "==", account.id)
@@ -80,8 +82,8 @@ export async function getMaterializedAccountDocuments(
     ),
   );
 
-  for (let index = 0; index < missingBalance.length; index += 400) {
-    const legacyAccounts = missingBalance.slice(index, index + 400);
+  for (let index = 0; index < accountsToRebuild.length; index += 400) {
+    const legacyAccounts = accountsToRebuild.slice(index, index + 400);
     await accountCollection.firestore.runTransaction(async (transaction) => {
       const currentDocuments = await Promise.all(
         legacyAccounts.map((account) => transaction.get(account.ref)),
@@ -89,13 +91,27 @@ export async function getMaterializedAccountDocuments(
       for (const account of currentDocuments) {
         if (
           !account.exists ||
-          Object.hasOwn(account.data() || {}, "currentBalanceCents")
+          hasCurrentBalanceVersion(account.data() || {})
         ) {
           continue;
         }
+        const data = account.data() || {};
+        const previousBalanceCents = Object.hasOwn(data, "currentBalanceCents")
+          ? toSafeCents(data.currentBalanceCents)
+          : toSafeCents(data.openingBalanceCents);
+        const rebuiltBalanceCents = balances.get(account.id) || 0;
+        const repairedAt = new Date();
         transaction.update(account.ref, {
-          currentBalanceCents: balances.get(account.id) || 0,
-          balanceMaterializedAt: new Date(),
+          currentBalanceCents: rebuiltBalanceCents,
+          balanceCalculationVersion: ACCOUNT_BALANCE_CALCULATION_VERSION,
+          balanceMaterializedAt: repairedAt,
+          balanceUpdatedAt: repairedAt,
+          balanceReconciliation: {
+            previousCents: previousBalanceCents,
+            rebuiltCents: rebuiltBalanceCents,
+            version: ACCOUNT_BALANCE_CALCULATION_VERSION,
+            repairedAt,
+          },
         });
       }
     });
@@ -125,7 +141,7 @@ export async function readAccountBalanceStates(
       .map((snapshot) => {
         const data = snapshot.data() || {};
         const openingBalanceCents = toSafeCents(data.openingBalanceCents);
-        const materialized = Object.hasOwn(data, "currentBalanceCents");
+        const materialized = hasCurrentBalanceVersion(data);
         const ownerUserId =
           typeof data.ownerUserId === "string" ? data.ownerUserId : null;
         const ownership = isAccountOwnership(data.ownership)
@@ -188,6 +204,7 @@ export function writeAccountBalanceChanges(
     }
     transaction.update(account.ref, {
       currentBalanceCents: nextBalanceCents,
+      balanceCalculationVersion: ACCOUNT_BALANCE_CALCULATION_VERSION,
       balanceUpdatedAt: new Date(),
     });
   }
@@ -285,6 +302,13 @@ function toSafeCents(value: unknown) {
 
 function isAccountOwnership(value: unknown): value is AccountOwnership {
   return value === "mine" || value === "partner" || value === "joint";
+}
+
+function hasCurrentBalanceVersion(data: Record<string, unknown>) {
+  return (
+    Object.hasOwn(data, "currentBalanceCents") &&
+    data.balanceCalculationVersion === ACCOUNT_BALANCE_CALCULATION_VERSION
+  );
 }
 
 function toIsoString(value: unknown): string | null {
